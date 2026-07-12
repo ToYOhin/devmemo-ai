@@ -1,0 +1,46 @@
+services:
+  memos:
+    image: neosmemo/memos:v0.29.1
+    ports:
+      - "5230:5230"
+    volumes:
+      - memos-data:/var/opt/memos
+
+  ai-service:
+    build:
+      context: ./ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      AI_PROVIDER: ${AI_PROVIDER:-deterministic}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      AI_NOTES_DB: /app/data/ai_notes.db
+    volumes:
+      - ai-data:/app/data
+    depends_on:
+      - qdrant
+      - ollama
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  memos-data:
+  ai-data:
+  qdrant-data:
+  ollama-data:
