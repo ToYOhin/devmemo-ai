@@ -99,7 +99,11 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 ## Phase 5a internal evaluation boundary
 
-Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalEvaluator` run offline against the existing `RetrievalService`, reporting Recall@K and first relevant rank without changing the `POST /api/ai/chat` response. Chunking remains a separate Phase 5b design step.
+Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalEvaluator` run offline against the existing `RetrievalService`, reporting Recall@K and first relevant rank without changing the `POST /api/ai/chat` response. Phase 5b adds the separate pure-function chunking boundary; Phase 5c will evaluate chunk retrieval offline.
+
+## Phase 5b internal chunking boundary
+
+Phase 5b adds no public HTTP endpoint and does not change `POST /api/ai/embed`, Webhook or `POST /api/ai/chat`. `MemoChunk`/`chunk_memo` are provider-neutral pure functions: empty/whitespace content produces no chunks; chunk content preserves the original Markdown character sequence; metadata uses `source_type=memo_chunk`, `index_mode=chunk` and `index_version=memo-chunk-v1`. Stable IDs are derived from Memo ID, version and position so a future update/delete coordinator can upsert current positions and explicitly remove stale positions. The current production index remains `source_type=memo`/`memo-v1`.
 
 ## GET /api/ai/ops/outbox
 
@@ -165,4 +169,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a 已完成内部离线评估，下一阶段为 Phase 5b chunking 边界。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a 离线评估和 Phase 5b chunking 边界已完成，下一阶段为 Phase 5c chunk 离线检索评估。

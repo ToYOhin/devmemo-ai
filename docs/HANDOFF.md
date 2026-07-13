@@ -1,5 +1,15 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 5b
+
+Phase 5b 已完成 Memo chunking 纯函数/内存边界：
+
+- 新增 provider-neutral `MemoChunk` 与 `chunk_memo`，按换行边界和字符上限切分，拼接 chunk 内容可还原原始 Markdown。
+- chunk ID 由 Memo ID、`index_version` 和位置稳定派生；metadata 使用 `memo-chunk-v1`/`index_mode=chunk`，与现有 `memo-v1` 完整 Memo 索引隔离。
+- 更新时同位置复用 ID，内容缩短时通过旧 chunk 数量计算 stale IDs，供未来显式 delete；重复 ID 会在生命周期边界被拒绝。
+- 本次没有接入 Webhook、Qdrant、FastEmbed、Compose 或 Memos 核心，也没有新增公共 HTTP API。
+- AI Service 全量 129 passed；下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5c chunk 离线检索评估。
+
 ## 2026-07-13 Phase 5a
 
 Phase 5a 已完成离线检索质量评估边界：
@@ -146,4 +156,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5 检索质量增强。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5c chunk 离线检索评估。

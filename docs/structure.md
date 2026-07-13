@@ -190,3 +190,16 @@ RetrievalEvaluationCase
   -> Recall@K + relevant_memo_ids + first_relevant_rank
   -> offline unit/contract test only
 ~~~
+
+## Memo chunking boundary flow
+
+~~~text
+raw Memo Markdown
+  -> chunk_memo(memo_id, max_chars, metadata)
+  -> tuple[MemoChunk]
+  -> memo-chunk-v1 + index_mode=chunk metadata
+  -> stable chunk ID: Memo digest + version + position
+  -> future upsert/delete coordinator (not connected in Phase 5b)
+~~~
+
+The existing `MemoIndexDocument` path remains `memo-v1` and continues to be the only production Webhook/RAG indexing path. `MemoChunk` is provider-neutral and does not import FastAPI, FastEmbed, Qdrant or SQLite types.

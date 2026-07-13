@@ -117,3 +117,9 @@ Phase 4g 使用两步式清理：retention preview 返回 `cutoff`、`preview_li
 当前索引以完整 Memo 为一个向量，embedding_id、Webhook upsert/delete 和 citations 都依赖这一边界。Phase 5a 先新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`，测量 Recall@K、相关 Memo 命中和首个相关结果排名；评估器复用 `RetrievalService`，不依赖 FastAPI、FastEmbed、Qdrant 或外部网络。
 
 在离线评估集证明当前检索基线前，不替换现有完整 Memo 索引。后续 Phase 5b 才定义 chunk 文档、稳定 chunk ID、index_version 和生命周期兼容策略；默认 deterministic + memory、Memos 核心和现有 chat API 保持不变。
+
+## ADR-026：Phase 5b 只定义可回滚的 Memo chunking 边界
+
+Phase 5b 使用 provider-neutral `MemoChunk` 和纯函数 `chunk_memo`，按换行边界或固定字符上限切分，并保持 chunk 内容拼接后等于原始 Markdown。chunk metadata 使用独立的 `index_version=memo-chunk-v1` 和 `index_mode=chunk`；稳定 ID 由 Memo ID、版本和位置派生，不包含内容 hash，因此同一位置更新可以复用 ID，内容缩短时可以显式删除旧尾部 ID。
+
+该切片不接入 Webhook、EmbeddingService、VectorStore、Qdrant、FastEmbed 或 `POST /api/ai/chat`，也不修改 Memos/AI SQLite。现有完整 Memo `memo-v1` 生产索引继续作为唯一默认路径，后续必须先通过离线 chunk 评估再考虑显式试验索引。

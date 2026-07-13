@@ -19,10 +19,10 @@ git status --short --branch
 git log --oneline -8
 .\scripts\verify-devmemo.ps1
 
-当前默认阶段是 Phase 5b：Memo chunking 边界。Phase 4/4b/4c/4d/4e/4f/4g/5a 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览、告警轮询、显式清理批准、审计和离线检索评估最小切片已经完成，必须保持：
+当前默认阶段是 Phase 5c：chunk 离线检索评估。Phase 4/4b/4c/4d/4e/4f/4g/5a/5b 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览、告警轮询、显式清理批准、审计、离线检索评估和纯函数 chunking 边界已经完成，必须保持：
 - 默认 deterministic + memory，低 CPU、无网络依赖。
 - FastEmbed/Qdrant 只进入 adapters，不进入 domain/service。
-- 当前一个完整 Memo 对应一个向量；RAG `/api/ai/chat` 已完成，但不加入 chunk、rerank 或前端聊天 UI。
+- 当前生产路径一个完整 Memo 对应一个向量；`MemoChunk` 仅用于离线试验，不接入 Webhook、Qdrant 或 FastEmbed；RAG `/api/ai/chat` 已完成，但不加入 rerank 或前端聊天 UI。
 - 原文只作为索引派生上下文，公共 citations 不返回内部 `content` 字段。
 - Webhook HMAC 只有显式配置 `AI_WEBHOOK_SECRET` 才启用，默认保持旧 `code=0` 行为。
 - Webhook outbox 只做 SQLite 幂等记录、有限显式 retry 和基础状态查询，默认不启动 worker 或自动重试。

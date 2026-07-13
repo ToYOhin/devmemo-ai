@@ -171,6 +171,17 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 116 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
 
-## Phase 5b：Memo chunking 边界（下一阶段）
+## Phase 5b：Memo chunking 边界
 
-计划在不破坏完整 Memo 索引兼容性的前提下，先定义 provider-neutral chunk 文档、稳定 chunk ID、index_version 和删除/更新策略；暂不同时加入 rerank、混合检索或聊天 UI。
+已完成：
+
+1. 新增 provider-neutral `MemoChunk` 与纯函数 `chunk_memo`，按换行边界和固定字符上限切分，保留原始 Markdown 字符序列。
+2. 使用 `memo-chunk-v1`、`index_mode=chunk` 和基于 Memo/版本/位置的稳定 chunk ID；完整 Memo 的 `memo-v1` 索引继续独立存在。
+3. 提供 `chunk_ids_for_memo` 和重复 ID 校验，覆盖更新、缩短内容后的 stale ID、空内容、超长内容和 metadata 复制契约。
+4. 只实现纯函数/内存边界，没有改变 Webhook、Qdrant、FastEmbed、Compose、RAG chat 或 Memos 核心。
+
+验证：AI Service 129 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 5c：chunk 离线检索评估（下一阶段）
+
+计划使用 deterministic + memory 构造 chunk 试验索引，与完整 Memo 基线复用 Phase 5a 评估边界做 Recall@K 对照；仍不接入默认 Webhook、Qdrant、FastEmbed、rerank 或前端聊天 UI。

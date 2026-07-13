@@ -2,6 +2,13 @@
 
 ## 2026-07-13
 
+### Phase 5b：Memo chunking 边界
+- 新增 provider-neutral `MemoChunk` 和纯函数 `chunk_memo`，按换行边界/字符上限切分，同时保留 Markdown 原始字符序列。
+- 使用 `memo-chunk-v1` 与 `index_mode=chunk` metadata；chunk ID 由 Memo、版本和位置稳定派生，支持更新复用和显式 stale ID 删除。
+- 增加空内容、超长内容、更新/删除、重复 ID 和 metadata 复制 contract tests；不接入默认 Webhook、Qdrant、FastEmbed 或生产索引。
+- 验证：AI Service 129 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 下一阶段：Phase 5c chunk 离线检索评估。
+
 ### Phase 5a：离线检索质量评估边界
 - 选择离线评估而不是直接切换 chunking，避免破坏当前完整 Memo 的索引、删除和 citation 契约。
 - 新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`。
