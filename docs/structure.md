@@ -110,13 +110,13 @@ AI_INDEX_ON_WEBHOOK=true
   -> chunk_memo
   -> memo-chunk-v1 / index_mode=chunk / stable chunk IDs
   -> ChunkLifecycleCoordinator
-  -> 独立 InMemoryVectorStore
+  -> 独立 InMemoryVectorStore（Phase 5f composition 前仍为默认）
   -> AI SQLite memo_chunk_index_state
   -> create/update upsert + stale delete
   -> delete/empty content registered chunk delete
 ```
 
-chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读独立 store 和 `memo_chunk_index_state` 统计。当前阶段没有把 chunk store 接入 Qdrant；Qdrant chunk collection 是后续显式扩展。失败仍返回 Webhook `code=0` 和 `index_status=failed`。
+chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读独立 store 和 `memo_chunk_index_state` 统计。Phase 5f 已预留 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并要求与完整 Memo collection 不同；当前 chunk store 尚未接入 Qdrant，失败仍返回 Webhook `code=0` 和 `index_status=failed`。
 
 ## Webhook 与可靠性边界
 
@@ -154,7 +154,7 @@ docker compose up -d
   └── ollama      -> ollama-data
 ```
 
-默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。
+默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。Qdrant 配置同时保留完整 Memo collection 和独立 chunk collection 名称。
 
 ## 迁移与升级规则
 

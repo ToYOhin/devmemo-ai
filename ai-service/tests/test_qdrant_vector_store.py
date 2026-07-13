@@ -89,6 +89,16 @@ def test_qdrant_adapter_maps_upsert_search_and_delete_without_network():
     assert store.search((1.0, 0.0)) == []
 
 
+def test_qdrant_adapter_creates_the_configured_collection_with_cosine_dimension():
+    client = FakeQdrantClient()
+
+    QdrantVectorStore(client, FakeModels, 3, "devmemo_memo_chunks")
+
+    collection = client.collections["devmemo_memo_chunks"]
+    assert collection.size == 3
+    assert collection.distance == FakeModels.Distance.COSINE
+
+
 def test_qdrant_adapter_rejects_dimension_mismatch_at_boundary():
     store = QdrantVectorStore(FakeQdrantClient(), FakeModels, 2, "devmemo-test")
 

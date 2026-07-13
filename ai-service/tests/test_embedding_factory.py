@@ -36,6 +36,40 @@ def test_qdrant_mode_is_explicit_and_lazy_dependency_is_clear(monkeypatch):
         )
 
 
+def test_qdrant_chunk_collection_is_distinct_by_default(monkeypatch):
+    monkeypatch.delenv("QDRANT_COLLECTION", raising=False)
+    monkeypatch.delenv("QDRANT_CHUNK_COLLECTION", raising=False)
+
+    settings = AiSettings.from_env()
+
+    assert settings.qdrant_collection == "devmemo_memos"
+    assert settings.qdrant_chunk_collection == "devmemo_memo_chunks"
+    assert settings.qdrant_chunk_collection != settings.qdrant_collection
+
+
+def test_qdrant_chunk_collection_is_configurable_but_cannot_reuse_memo_collection(
+    monkeypatch,
+):
+    monkeypatch.setenv("QDRANT_COLLECTION", "memos-v1")
+    monkeypatch.setenv("QDRANT_CHUNK_COLLECTION", "chunks-v1")
+
+    settings = AiSettings.from_env()
+
+    assert settings.qdrant_collection == "memos-v1"
+    assert settings.qdrant_chunk_collection == "chunks-v1"
+
+    monkeypatch.setenv("QDRANT_CHUNK_COLLECTION", "memos-v1")
+    with pytest.raises(ValueError, match="must differ"):
+        AiSettings.from_env()
+
+
+def test_qdrant_collection_names_cannot_be_empty(monkeypatch):
+    monkeypatch.setenv("QDRANT_CHUNK_COLLECTION", " ")
+
+    with pytest.raises(ValueError, match="QDRANT_CHUNK_COLLECTION"):
+        AiSettings.from_env()
+
+
 def test_webhook_indexing_is_disabled_by_default(monkeypatch):
     monkeypatch.delenv("AI_INDEX_ON_WEBHOOK", raising=False)
 

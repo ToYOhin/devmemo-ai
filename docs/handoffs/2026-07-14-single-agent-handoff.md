@@ -12,9 +12,9 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：`3011431 feat(ai): add chunk index health contract`
-- GitHub remote：`origin/codex/devmemo-ai-mvp` 已与本地同步
-- 工作区：切换模式前已确认干净
+- 当前 HEAD：已包含 `feat(ai): reserve isolated qdrant chunk collection` 本轮 commit
+- GitHub remote：`origin/codex/devmemo-ai-mvp` 尚未包含本地最新 commit；本轮未 push
+- 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
 - Go：`G:\Go`；工作区/缓存：`G:\GoWorkspace`
 
@@ -44,6 +44,9 @@
 
 Phase 5f 尚未完成：
 
+- 已完成第一小步：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，配置拒绝空名称和与完整 Memo collection 重合，fake Qdrant contract 已覆盖维度/Cosine distance。
+- 该小步未接入 chunk composition；当前 `ChunkLifecycleCoordinator` 仍使用独立 memory store。
+
 1. Qdrant 独立 chunk collection 尚未接入 `ChunkLifecycleCoordinator`。
 2. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`。
 3. chunk citation 的公共 HTTP 契约尚未确定。
@@ -53,7 +56,7 @@ Phase 5f 尚未完成：
 ## 验证基线
 
 ```text
-AI Service full pytest       144 passed
+AI Service full pytest       148 passed
 Frontend full tests          131 passed
 pnpm lint                    PASS
 TypeScript/build             PASS

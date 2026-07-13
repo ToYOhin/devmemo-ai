@@ -28,6 +28,7 @@ services:
       AI_VECTOR_STORE: ${AI_VECTOR_STORE:-memory}
       QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-devmemo_memos}
+      QDRANT_CHUNK_COLLECTION: ${QDRANT_CHUNK_COLLECTION:-devmemo_memo_chunks}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       AI_CORS_ORIGINS: ${AI_CORS_ORIGINS:-http://localhost:3001}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

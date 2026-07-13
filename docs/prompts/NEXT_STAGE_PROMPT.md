@@ -19,17 +19,17 @@
 - Phase 5a RetrievalEvaluator；Phase 5b MemoChunk；Phase 5c OfflineChunkIndex；Phase 5d ChunkLifecycleCoordinator。
 - Phase 5e 新增 GET `/api/ai/index/chunk-health`，返回 chunk mode/version、VectorStore point_count、SQLite tracked_memos/tracked_chunks 和 degraded detail。
 - 默认完整 Memo `memo-v1`、默认 deterministic + memory、Webhook `code=0`、公共 `POST /api/ai/chat` citation 契约保持不变。
-- 当前 chunk Webhook 使用独立 InMemoryVectorStore；Qdrant chunk collection 尚未接入。
-- AI Service 当前测试为 144 passed；前端 131 tests、TypeScript/build、pnpm lint、Go 全量和 Docker Compose config 已通过上一阶段验证。
+- 当前 chunk Webhook 使用独立 InMemoryVectorStore；本轮已预留并校验 `QDRANT_CHUNK_COLLECTION=devmemo_memo_chunks`，但 Qdrant chunk collection 尚未接入 composition。
+- AI Service 当前测试为 148 passed；前端 131 tests、TypeScript/build、pnpm lint、Go 全量和 Docker Compose config 已通过上一阶段验证。
 
 当前目标：实现 Phase 5f 的“Qdrant chunk 持久化与显式 chunk 检索”最小可验证切片。
 
 执行顺序：先完成 collection/config contract 和 fake tests，再接入 chunk composition，再完成内部 retrieval contract，最后进行显式 Qdrant smoke；任何一步失败先修复或记录阻塞，不跨步扩大范围。
 
 本次只做：
-1. 先检查 QdrantVectorStore、ChunkLifecycleCoordinator、chunk-health、AI_VECTOR_STORE/AI_INDEX_MODE 配置和现有完整 Memo collection 命名。
-2. 为 chunk mode 设计独立 collection 名称/版本/维度/距离函数；不得复用或污染完整 Memo `devmemo_memos` collection。
-3. 增加 provider-neutral chunk store composition：默认仍使用独立 memory；只有显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 才连接独立 Qdrant collection。
+1. 在现有 collection/config contract 基础上，增加 chunk store composition：默认仍使用独立 memory；只有显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 才连接 `QDRANT_CHUNK_COLLECTION`。
+2. 保持完整 Memo `QDRANT_COLLECTION`/`memo-v1` 和 chunk `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1` 的 collection、metadata、dimension、distance 隔离。
+3. 先补 fake composition tests，再接入 `ChunkLifecycleCoordinator`；不得改变默认 memory、完整 Memo chat 或 Webhook `code=0`。
 4. 让 chunk-health 在显式 Qdrant chunk 模式下读取真实 collection 状态；Qdrant 不可用时返回 degraded/明确错误，不影响默认 memory 和完整 Memo chat。
 5. 增加最小显式 chunk retrieval contract（优先内部 service/测试边界；如增加 HTTP，必须声明 `index_mode=chunk` 和 `index_version=memo-chunk-v1`），不要直接改变公共 `/api/ai/chat` citations。
 6. 覆盖 fake client contract、collection 隔离、create/update/delete、重启持久化 smoke；默认单元测试不得访问网络。

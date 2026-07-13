@@ -216,6 +216,13 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 144 passed；前端、Go、Docker 和完整验证门禁沿用 Phase 5d 已验证结果，最终提交前重新执行。
 
-## Phase 5f：Qdrant chunk 持久化与显式 chunk 检索（下一阶段）
+## Phase 5f：Qdrant chunk 持久化与显式 chunk 检索（进行中）
 
-计划为 chunk 模式增加独立 Qdrant collection 或等价持久化边界，并设计显式 chunk 检索 contract；默认完整 Memo `memo-v1`、memory、Webhook 和 `/api/ai/chat` 不切换。
+当前最小切片已完成：
+
+1. 增加 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并通过 Compose 透传。
+2. 配置层拒绝空 chunk collection 名称，且拒绝复用完整 Memo 的 `QDRANT_COLLECTION`。
+3. fake Qdrant contract 明确校验独立 collection 的维度和 Cosine distance；chunk 版本继续使用 `memo-chunk-v1`，完整 Memo 继续使用 `memo-v1`。
+4. 本切片尚未接入 `ChunkLifecycleCoordinator` 的 Qdrant composition、chunk-health 真实 collection 读取或 chunk-aware retrieval；默认 deterministic + memory、Webhook 和 `/api/ai/chat` 不变。
+
+下一小步：在 `AI_INDEX_MODE=chunk` 且 `AI_VECTOR_STORE=qdrant` 时，将 chunk coordinator 组合到 `QDRANT_CHUNK_COLLECTION`，并保持其他模式使用独立 memory store。

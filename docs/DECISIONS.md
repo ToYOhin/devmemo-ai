@@ -147,3 +147,9 @@ SQLite adapter 负责把损坏/不可读状态转换为 bounded detail；domain/
 DevMemo AI 后续默认只使用 `H:\DevMemoAI` 主工作树和一个 Agent 推进。原因是当前阶段以 provider-neutral 边界、Qdrant collection 隔离、公共 chat citation 兼容和完整验证为主；多个 Agent 同时修改相邻接口会增加重复上下文、token 消耗、Git 冲突和集成验证成本。
 
 单 Agent 仍按 contract-first、实现、测试、显式 smoke、文档、独立 commit 的小步顺序推进。`project4` 下已建立的 Terra/Luna worktree 不删除，但标记为历史/回滚参考，除非用户重新授权，不启动并行开发。
+
+## ADR-031：Phase 5f 为 chunk 预留独立 Qdrant collection
+
+完整 Memo 继续使用 `QDRANT_COLLECTION`/`memo-v1`。Phase 5f 的 chunk 路径预留 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并在配置边界拒绝空名称或与完整 Memo collection 重合；chunk metadata 继续使用 `memo-chunk-v1`/`index_mode=chunk`。Qdrant collection 使用当前 provider dimension 和 Cosine distance，避免 chunk 向量污染完整 Memo 检索。
+
+本决策只落地 collection/config contract 与 fake adapter 验证；chunk coordinator composition、真实 chunk health 和显式 chunk retrieval 分别在后续小切片中接入。默认 deterministic + memory、Webhook `code=0`、完整 Memo `POST /api/ai/chat` 和既有 collection/volume 均保持不变。

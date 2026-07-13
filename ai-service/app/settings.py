@@ -17,7 +17,18 @@ class AiSettings:
     vector_store: str = "memory"
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "devmemo_memos"
+    qdrant_chunk_collection: str = "devmemo_memo_chunks"
     qdrant_api_key: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.qdrant_collection.strip():
+            raise ValueError("QDRANT_COLLECTION must not be empty")
+        if not self.qdrant_chunk_collection.strip():
+            raise ValueError("QDRANT_CHUNK_COLLECTION must not be empty")
+        if self.qdrant_collection.strip() == self.qdrant_chunk_collection.strip():
+            raise ValueError(
+                "QDRANT_CHUNK_COLLECTION must differ from QDRANT_COLLECTION"
+            )
 
     @classmethod
     def from_env(cls) -> AiSettings:
@@ -54,6 +65,9 @@ class AiSettings:
             vector_store=vector_store,
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333").strip(),
             qdrant_collection=os.getenv("QDRANT_COLLECTION", "devmemo_memos").strip(),
+            qdrant_chunk_collection=os.getenv(
+                "QDRANT_CHUNK_COLLECTION", "devmemo_memo_chunks"
+            ).strip(),
             qdrant_api_key=os.getenv("QDRANT_API_KEY") or None,
         )
 
