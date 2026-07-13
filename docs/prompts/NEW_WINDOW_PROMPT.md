@@ -3,15 +3,13 @@
 ~~~text
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
-第一步读取：
-1. docs/PROJECT_STATUS.md
-2. docs/HANDOFF.md
-3. docs/roadmap.md
-4. docs/structure.md
-5. docs/DOC_UPDATE_POLICY.md
-6. docs/DECISIONS.md
-7. docs/api.md
-8. docs/prompts/NEXT_STAGE_PROMPT.md
+第一步只读取核心上下文：
+1. docs/handoffs/2026-07-14-single-agent-handoff.md
+2. docs/PROJECT_STATUS.md
+3. docs/HANDOFF.md 顶部当前阶段
+4. docs/prompts/NEXT_STAGE_PROMPT.md
+
+再根据当前 Phase 5f 任务，用 `rg -n` 定向读取 docs/roadmap.md、docs/structure.md、docs/DECISIONS.md、docs/api.md、docs/oss-adoption.md 的相关段落；不要把全部历史 Phase 文档一次性加载到上下文。
 
 然后执行：
 Set-Location H:\DevMemoAI

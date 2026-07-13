@@ -66,12 +66,13 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 单 Agent 接管步骤
 
-1. 读取 `docs/PROJECT_STATUS.md`、`docs/HANDOFF.md`、`docs/roadmap.md`、`docs/structure.md`、`docs/DOC_UPDATE_POLICY.md`、`docs/DECISIONS.md`、`docs/api.md`、`docs/oss-adoption.md`。
+1. 先读取本文件、`docs/PROJECT_STATUS.md`、`docs/HANDOFF.md` 顶部和 `docs/prompts/NEXT_STAGE_PROMPT.md`，恢复核心上下文。
 2. 执行 `git status --short --branch` 和 `git log --oneline -8`。
-3. 阅读 `docs/prompts/NEXT_STAGE_PROMPT.md`，只选择一个最小垂直切片。
-4. 先做 contract/adapter，再做 service/API，再做真实 smoke；每个阶段先测试。
-5. 完成后更新 `PROJECT_STATUS`、`CHANGELOG_AI`、`HANDOFF`、`NEXT_STAGE_PROMPT`，必要时同步 API/结构/决策/路线文档。
-6. 运行验证门禁，形成独立 commit；只有用户明确要求时再 push。
+3. 用 `rg -n` 从 roadmap/structure/DECISIONS/api/oss 文档中定向读取当前切片所需段落，不加载全部历史阶段。
+4. 只选择一个最小垂直切片。
+5. 先做 contract/adapter，再做 service/API，再做真实 smoke；每个阶段先测试。
+6. 完成后更新 `PROJECT_STATUS`、`CHANGELOG_AI`、`HANDOFF`、`NEXT_STAGE_PROMPT`，必要时同步 API/结构/决策/路线文档。
+7. 运行验证门禁，形成独立 commit；只有用户明确要求时再 push。
 
 ## 下一入口
 

@@ -5,20 +5,14 @@
 
 协作模式：单 Agent。只使用 `H:\DevMemoAI` 主工作树；不要启动 Terra/Luna，不要同时操作 `project4` 下的其他 worktree。你负责分析、实现、测试、文档、commit 和最终报告。
 
-先读取以下真相源：
+先读取核心真相源：
+- docs/handoffs/2026-07-14-single-agent-handoff.md
 - docs/PROJECT_STATUS.md
-- docs/HANDOFF.md
-- docs/roadmap.md
-- docs/structure.md
-- docs/DOC_UPDATE_POLICY.md
-- docs/DECISIONS.md
-- docs/api.md
-- docs/oss-adoption.md
+- docs/HANDOFF.md 顶部当前阶段
 - git status --short --branch
 - git log --oneline -8
 
-另外读取：
-- docs/handoffs/2026-07-14-single-agent-handoff.md
+然后只按本次 Phase 5f 改动范围，使用 `rg -n` 定向读取 docs/roadmap.md、docs/structure.md、docs/DOC_UPDATE_POLICY.md、docs/DECISIONS.md、docs/api.md、docs/oss-adoption.md 的相关段落；不要重复加载全部历史阶段内容。
 
 当前已完成：
 - Phase 4 RAG、Webhook HMAC、SQLite outbox、有限 retry、ops token、告警、显式清理批准和审计。
