@@ -10,6 +10,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 
 - 工作区：H:\DevMemoAI
 - 分支：codex/devmemo-ai-mvp
+- 协作模式：单 Agent；只使用主工作树，`project4` 下的 Terra/Luna worktree 暂不参与开发
 - Memos 基线：v0.29.1
 - Go：G:\Go；Go 工作区和缓存：G:\GoWorkspace
 - AI Service：FastAPI，默认 deterministic provider
@@ -211,4 +212,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 5f Qdrant chunk 持久化与显式 chunk 检索。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 5f Qdrant chunk 持久化与显式 chunk 检索。

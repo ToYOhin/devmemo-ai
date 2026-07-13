@@ -23,6 +23,10 @@ H:\DevMemoAI/
 
 ## Memos 核心边界
 
+## 单 Agent 开发入口
+
+当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照，`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
+
 ```text
 cmd/server/store/internal/proto
   -> Memos Go backend

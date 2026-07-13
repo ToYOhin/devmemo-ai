@@ -2,6 +2,10 @@
 
 ## 2026-07-14
 
+### 单 Agent 接管模式
+- 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。
+- 新增 `docs/handoffs/2026-07-14-single-agent-handoff.md`，固化当前结构、验证基线、未完成项和新窗口接管步骤。
+
 ### Phase 5e：chunk 检索与可观测性收敛
 - 新增 provider-neutral `ChunkIndexStateStats`/`ChunkIndexHealth`，对照 VectorStore 点数与 SQLite 登记状态。
 - 新增只读 GET `/api/ai/index/chunk-health`，显式返回 chunk mode/version、provider、点数、登记 Memo/chunk 数和状态后端；状态异常返回 degraded。

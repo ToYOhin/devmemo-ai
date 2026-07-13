@@ -1,5 +1,13 @@
 # DevMemo AI 当前交接
 
+## 2026-07-14 单 Agent 模式切换
+
+后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
+
+详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 为 `3011431`，GitHub `origin/codex/devmemo-ai-mvp` 已同步，工作区干净。
+
+下一窗口先读取该快照和本文件顶部 Phase 5e 事实，再执行 `docs/prompts/NEW_WINDOW_PROMPT.md`。
+
 ## 2026-07-14 Phase 5e
 
 Phase 5e 已完成 chunk health/status 最小切片：

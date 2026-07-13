@@ -141,3 +141,9 @@ chunk 试验更新必须先 upsert 当前 chunk，再由调用方显式提交旧
 Phase 5e 选择 GET `/api/ai/index/chunk-health`，而不是改变公共 chat 或新增 chunk 查询语义。`ChunkIndexHealth` 合并独立 chunk VectorStore 的点数和 `ChunkIndexStateStore` 的登记计数，并显式返回 `index_mode=chunk`、`index_version=memo-chunk-v1`。状态异常只产生 `degraded`，不触发重建、删除、网络连接或默认模式切换。
 
 SQLite adapter 负责把损坏/不可读状态转换为 bounded detail；domain/service 只使用标准 dataclass/Protocol。Qdrant chunk collection 和 chunk-aware public retrieval 留到 Phase 5f，避免在完整 Memo citation 契约尚未扩展前混合两种索引。
+
+## ADR-030：默认使用单 Agent 推进
+
+DevMemo AI 后续默认只使用 `H:\DevMemoAI` 主工作树和一个 Agent 推进。原因是当前阶段以 provider-neutral 边界、Qdrant collection 隔离、公共 chat citation 兼容和完整验证为主；多个 Agent 同时修改相邻接口会增加重复上下文、token 消耗、Git 冲突和集成验证成本。
+
+单 Agent 仍按 contract-first、实现、测试、显式 smoke、文档、独立 commit 的小步顺序推进。`project4` 下已建立的 Terra/Luna worktree 不删除，但标记为历史/回滚参考，除非用户重新授权，不启动并行开发。

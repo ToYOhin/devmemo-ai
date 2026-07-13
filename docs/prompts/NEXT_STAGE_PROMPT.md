@@ -3,6 +3,8 @@
 ~~~text
 你正在继续 H:\DevMemoAI 的 DevMemo AI 项目。
 
+协作模式：单 Agent。只使用 `H:\DevMemoAI` 主工作树；不要启动 Terra/Luna，不要同时操作 `project4` 下的其他 worktree。你负责分析、实现、测试、文档、commit 和最终报告。
+
 先读取以下真相源：
 - docs/PROJECT_STATUS.md
 - docs/HANDOFF.md
@@ -15,6 +17,9 @@
 - git status --short --branch
 - git log --oneline -8
 
+另外读取：
+- docs/handoffs/2026-07-14-single-agent-handoff.md
+
 当前已完成：
 - Phase 4 RAG、Webhook HMAC、SQLite outbox、有限 retry、ops token、告警、显式清理批准和审计。
 - Phase 5a RetrievalEvaluator；Phase 5b MemoChunk；Phase 5c OfflineChunkIndex；Phase 5d ChunkLifecycleCoordinator。
@@ -24,6 +29,8 @@
 - AI Service 当前测试为 144 passed；前端 131 tests、TypeScript/build、pnpm lint、Go 全量和 Docker Compose config 已通过上一阶段验证。
 
 当前目标：实现 Phase 5f 的“Qdrant chunk 持久化与显式 chunk 检索”最小可验证切片。
+
+执行顺序：先完成 collection/config contract 和 fake tests，再接入 chunk composition，再完成内部 retrieval contract，最后进行显式 Qdrant smoke；任何一步失败先修复或记录阻塞，不跨步扩大范围。
 
 本次只做：
 1. 先检查 QdrantVectorStore、ChunkLifecycleCoordinator、chunk-health、AI_VECTOR_STORE/AI_INDEX_MODE 配置和现有完整 Memo collection 命名。
@@ -38,6 +45,7 @@
 - 不改变默认 `AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`、`AI_VECTOR_STORE=memory`、Webhook `code=0`、AI_OPS_TOKEN、清理批准/审计和完整 Memo chat 契约。
 - 不删除或重命名现有完整 Memo Qdrant collection，不执行 `docker compose down -v`，不删除用户 volume。
 - 不加入 rerank、BM25、混合检索、流式输出、聊天 UI、LangChain/LlamaIndex、Redis/Celery/Prometheus 或新的默认依赖。
+- 不创建新的并行 Agent，不把同一接口拆成多个竞争实现。
 
 实现要求：
 - provider-neutral domain/service 不得导入 FastAPI、FastEmbed、qdrant-client、httpx 或 sqlite3 类型。
