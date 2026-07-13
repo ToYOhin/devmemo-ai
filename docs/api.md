@@ -70,7 +70,7 @@ memory 模式不连接 Qdrant；qdrant 模式会读取 collection 状态。Qdran
 }
 ~~~
 
-当前索引 metadata 会补充 `source_type=memo` 和 `index_version=memo-v1`。Phase 3c 不做 chunking、查询接口或 RAG。
+默认索引 metadata 会补充 `source_type=memo`、`index_mode=memo` 和 `index_version=memo-v1`。`POST /api/ai/embed` 仍是完整 Memo API；chunk Webhook 生命周期使用独立的 `memo-chunk-v1` 路径，不改变该 API 响应。
 
 memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错误或非法请求返回 422。显式 FastEmbed 未安装/模型初始化失败时返回清晰的服务启动错误；默认 deterministic 不受影响。
 
@@ -104,7 +104,7 @@ Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalE
 
 ## Phase 5b internal chunking boundary
 
-Phase 5b adds no public HTTP endpoint and does not change `POST /api/ai/embed`, Webhook or `POST /api/ai/chat`. `MemoChunk`/`chunk_memo` are provider-neutral pure functions: empty/whitespace content produces no chunks; chunk content preserves the original Markdown character sequence; metadata uses `source_type=memo_chunk`, `index_mode=chunk` and `index_version=memo-chunk-v1`. Stable IDs are derived from Memo ID, version and position so a future update/delete coordinator can upsert current positions and explicitly remove stale positions. The current production index remains `source_type=memo`/`memo-v1`.
+Phase 5b adds no public HTTP endpoint and does not change `POST /api/ai/embed`, Webhook or `POST /api/ai/chat`. `MemoChunk`/`chunk_memo` are provider-neutral pure functions: empty/whitespace content produces no chunks; chunk content preserves the original Markdown character sequence; metadata uses `source_type=memo_chunk`, `index_mode=chunk` and `index_version=memo-chunk-v1`. Stable IDs are derived from Memo ID, version and position. The default production index remains `source_type=memo`/`memo-v1`; Phase 5d adds a separate explicit chunk Webhook path.
 
 ## Phase 5c internal chunk retrieval evaluation
 

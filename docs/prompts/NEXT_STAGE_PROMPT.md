@@ -22,6 +22,7 @@
 - 默认完整 Memo `memo-v1`、默认 deterministic + memory、Webhook `code=0`、公共 `POST /api/ai/chat` citation 契约保持不变。
 - Phase 5d chunk Webhook 使用独立 InMemoryVectorStore；Qdrant chunk collection 尚未接入，避免 chunk 污染完整 Memo chat 检索。
 - AI Service 当前测试为 142 passed；前端 131 tests、TypeScript/build、pnpm lint 和 Docker Compose config 已通过。
+- 项目结构文档已按实际目录同步；继续以 `docs/structure.md` 的模块边界为准。
 
 当前目标：实现 Phase 5e 的“chunk 检索与可观测性收敛”最小可验证切片。
 

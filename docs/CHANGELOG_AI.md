@@ -2,6 +2,11 @@
 
 ## 2026-07-14
 
+### 文档与项目结构同步
+- 根据当前仓库实际目录更新 `docs/structure.md`，补充 Memos Go/React、AI Service domain/services/adapters、AI SQLite、Webhook 和 Compose 边界。
+- 同步 `README_AI.md`、`docs/architecture.md`、`docs/development.md`、`docs/api.md`、`docs/oss-adoption.md` 和项目状态中的 Phase 5d/5e、lint 与结构事实。
+- 明确默认完整 Memo 索引与显式 chunk Webhook 索引使用独立存储，避免误解为 chunk 已替换公共 RAG 路径。
+
 ### Phase 5d：可选 chunk 索引生命周期
 - 新增 provider-neutral `ChunkLifecycleCoordinator`，显式 `AI_INDEX_ON_WEBHOOK=true` + `AI_INDEX_MODE=chunk` 后支持 chunk create/update/delete。
 - 更新先 upsert 当前 `memo-chunk-v1` chunk，再删除同一 Memo 的 stale 尾部；空内容和删除事件会清理已登记 chunk。

@@ -28,6 +28,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
 - Outbox 运维：retention preview 只读，alerts 提供失败/耗尽摘要；清理必须显式确认并写入审计，不自动删除或主动推送
+- 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；本次未修改运行时代码
 
 ## Phase 4 已完成
 
@@ -178,7 +179,7 @@ FastEmbed cache-dir smoke           PASS / offline 384-dim load
 Qdrant health smoke                PASS / green collection status
 Index health contract tests         PASS / memory and degraded qdrant
 git diff --check                   PASS
-pnpm lint                          BLOCKED / 377 existing Biome CRLF diagnostics
+pnpm lint                          PASS
 ~~~
 
 ## 网络与环境证据

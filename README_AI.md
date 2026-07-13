@@ -2,14 +2,17 @@
 
 DevMemo AI 是基于 [Memos](https://github.com/usememos/memos) 的 AI 开发者知识库 MVP，用于记录代码、Bug、解决方案和技术知识，并在保存 Memo 后生成结构化总结。
 
-## 当前 MVP
+## 当前能力
 
 - 保留 Memos v0.29.1 的 Go 后端和 React/TypeScript 前端基线。
 - 以旁路 `ai-service` 提供 FastAPI 总结服务，不重写 Memos 核心。
 - 支持 deterministic 本地模式、OpenAI 和 Ollama 配置。
 - 支持可选 FastEmbed 本地 embedding；默认不启用、不下载模型，默认 provider 仍为 deterministic。
-- 通过 Memos 用户 Webhook 接收 Memo 创建/更新事件。
-- 将结果保存到 `ai_notes` SQLite 表。
+- 通过 Memos 用户 Webhook 接收 Memo 创建/更新/删除事件。
+- 将摘要、模板、Webhook outbox 和可选 chunk 生命周期状态保存到 AI Service 自有 SQLite。
+- 支持 Code Snippet/Bug Report 模板展示、代码复制、AI 摘要读取/生成。
+- 支持 deterministic + memory 的离线 RAG 引用问答；FastEmbed/Qdrant 为显式可选能力。
+- 通过 `AI_INDEX_ON_WEBHOOK=true` + `AI_INDEX_MODE=chunk` 显式启用 chunk create/update/delete 生命周期；默认仍为完整 Memo 索引。
 
 当前仓库的上游前端已经是 React；“保留原有架构”按实际上游基线执行，不额外改造成 Vue。
 
@@ -17,12 +20,14 @@ DevMemo AI 是基于 [Memos](https://github.com/usememos/memos) 的 AI 开发者
 
 ```text
 Memos (Go + React)
-       | user webhook: memo.created / memo.updated
+       | webhook: memo.created / updated / deleted
        v
-FastAPI ai-service ---> OpenAI / Ollama
-       |
-       +-------------> SQLite ai_notes
-       +-------------> Qdrant (Phase 3)
+FastAPI ai-service ---> deterministic / OpenAI / Ollama
+       |                \
+       |                 +--> EmbeddingProvider --> memory (default) / Qdrant (optional)
+       +--> AI SQLite: notes / templates / outbox / chunk state
+       ^
+web/src/features/ai: summary + template UI via HTTP
 ```
 
 详细说明见 [docs/architecture.md](docs/architecture.md)。
@@ -30,7 +35,6 @@ FastAPI ai-service ---> OpenAI / Ollama
 ## Docker 部署
 
 ```powershell
-Copy-Item ai-service/.env.example .env
 docker compose config
 docker compose up -d
 ```
@@ -59,11 +63,11 @@ ai-service/.venv/Scripts/python.exe -m pytest -q ai-service/tests
 ai-service/.venv/Scripts/python.exe -m uvicorn main:app --app-dir ai-service --reload --port 8000
 ```
 
-Memos 上游构建需要 Go、Node.js 和 pnpm；本机 Go 已安装到 `G:\Go`，但完整 `go test ./...` 仍需要可用的 Go Module 下载链路，验证结果以项目状态文档为准。
+Memos 上游构建需要 Go、Node.js 和 pnpm；本机 Go 已安装到 `G:\Go`。Windows 低并发验证使用 `go test -p 2 ./...`，完整结果以项目状态文档为准。
 
 ## API
 
-当前接口与请求示例见 [docs/api.md](docs/api.md)。当前 `POST /api/ai/embed` 只索引一个完整 Memo；代码片段 Memo、Bug Report 模板、Embedding/Qdrant RAG、AI 问答和前端 AI 助手区域按路线逐步扩展。
+当前接口与请求示例见 [docs/api.md](docs/api.md)。`POST /api/ai/embed` 默认索引一个完整 Memo；Webhook 可显式切换 chunk 生命周期。摘要、模板、Embedding/Qdrant、RAG 问答和前端 AI feature 已按阶段接入，chunk-aware 公共检索仍是后续阶段。
 
 ## 二次开发
 

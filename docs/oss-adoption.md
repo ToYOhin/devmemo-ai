@@ -4,7 +4,7 @@
 |---|---|---|---|
 | Memos | 原有笔记系统 | 保留上游 `v0.29.1` | 不复制源码，不把 AI 逻辑塞进 Store |
 | Qdrant | 向量存储和过滤检索 | Phase 3 采用 | 只存派生索引，collection 版本化 |
-| qdrant-client | Python Qdrant SDK | Phase 3 采用 | 只允许出现在 `adapters/vectorstore` |
+| qdrant-client | Python Qdrant SDK | Phase 3 采用 | 只允许出现在 `ai-service/app/adapters/qdrant_vector_store.py` |
 | FastEmbed | CPU/ONNX embedding | Phase 3 优先采用 | 锁定模型和维度，单独检查模型许可证 |
 | Ollama | 本地 LLM runtime | 当前保留 | 通过 `LLMProvider`，不让业务依赖 Ollama API |
 | FastAPI | AI Service HTTP 层 | 当前已采用 | 路由只负责协议转换和错误边界 |

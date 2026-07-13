@@ -1,5 +1,11 @@
 # DevMemo AI 当前交接
 
+## 2026-07-14 文档与结构同步
+
+- 已按实际仓库目录刷新 `docs/structure.md`：Memos Go/React 核心、`web/src/features/ai/`、AI Service domain/services/adapters、SQLite、Webhook 和 Compose 均已列出。
+- 已同步 `README_AI.md`、`docs/architecture.md`、`docs/development.md`、`docs/api.md` 和 `docs/oss-adoption.md`，修正 Phase 3c 旧描述、不存在的 `.env.example` 命令和过期 lint 阻塞记录。
+- 本次仅更新文档，没有修改运行时代码；沿用 Phase 5d 的 AI Service 142 passed、前端 131 passed、Go 全量和 build/lint 验证结果。
+
 ## 2026-07-14 Phase 5d
 
 Phase 5d 已完成显式 chunk 索引生命周期：

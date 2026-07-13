@@ -17,17 +17,19 @@ The reproducible local Go installation is `G:\Go` with `GOPATH=G:\GoWorkspace`. 
 
 Use `AI_PROVIDER=deterministic` for a key-free local smoke test. Use `openai` with `OPENAI_API_KEY`, or `ollama` with `OLLAMA_BASE_URL` and `OLLAMA_MODEL`.
 
-## Commit slices
+## Current development slices
 
-Keep changes independently revertable. The current MVP slices are:
+Keep changes independently revertable. The current slices are:
 
-1. FastAPI service and LLM adapter boundary.
-2. Summary generation and `ai_notes` persistence.
-3. Memos webhook trigger and Docker/documentation foundation.
+1. FastAPI service, LLM adapter and AI-owned SQLite boundary.
+2. Memo templates and summary UI through `web/src/features/ai/`.
+3. Provider-neutral embeddings, optional FastEmbed/Qdrant and index health.
+4. RAG retrieval, HMAC Webhook, outbox retry/ops/retention audit.
+5. Offline chunk evaluation and explicit chunk Webhook lifecycle.
 
 ## Scope boundaries
 
-Do not add code snippet forms, Bug Report templates, Qdrant indexing, RAG chat, or broad Memos refactors to the summary slice. Each is a separate phase.
+Keep Memos core changes out of AI slices. Chunk Webhook mode is opt-in and isolated from the complete-Memo chat index; do not silently change `AI_INDEX_MODE=memo`, the Webhook `code=0` contract, or the public chat citation shape.
 
 ## Task completion docs
 

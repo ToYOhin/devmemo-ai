@@ -1,223 +1,161 @@
 # DevMemo AI 项目结构与边界
 
-## Phase 3c 结构
+更新时间：2026-07-14
 
-~~~text
+## 顶层目录
+
+```text
+H:\DevMemoAI/
+├── cmd/                         # Memos Go 启动入口
+├── server/                      # Memos HTTP/Connect/API 层
+├── store/                       # Memos 数据存储与迁移边界
+├── internal/                    # Memos 内部服务、Markdown、Webhook 等模块
+├── proto/                       # Memos API/Store Proto 与生成代码
+├── web/                         # Memos React + TypeScript 前端
+│   └── src/features/ai/         # DevMemo AI 前端 feature：API、hooks、模板、摘要
+├── ai-service/                  # 独立 FastAPI AI 旁路服务
+├── integrations/                # 上游/部署集成脚本与配置
+├── scripts/                     # Windows 验证、安装、Compose 辅助脚本
+├── docs/                        # 架构、API、路线、决策、交接和下一阶段 Prompt
+├── docker-compose.yml           # Memos、AI Service、Qdrant、Ollama 编排
+└── graphify-out/                # 本地忽略的结构图产物，不属于运行时源码
+```
+
+## Memos 核心边界
+
+```text
+cmd/server/store/internal/proto
+  -> Memos Go backend
+  -> Webhook: memo.created / memo.updated / memo.deleted
+  -> web React frontend
+```
+
+Memos 仍是 Memo 原始内容、标签、搜索和用户权限的事实来源。本项目不把 AI 字段写入 Memos 数据库，也不修改 `server/`、`store/`、`proto/` 或通用前端数据层来承载 AI 派生状态。
+
+## AI Service 目录
+
+```text
 ai-service/
-├── main.py                         # FastAPI routes and compatibility launcher
-├── settings.py                     # environment-only composition settings
-├── embedding.py                    # legacy list-based compatibility entry
-├── app/domain/embeddings.py        # provider-neutral types and Protocol
-├── app/services/embedding_service.py
-│                                   # provider -> record -> store orchestration
-├── app/services/embedding_factory.py
-│                                   # memory/qdrant composition root
-├── app/adapters/embedding.py       # deterministic provider
-├── app/adapters/fastembed_embedding.py
-│                                   # optional FastEmbed adapter
-├── app/adapters/vector_store.py    # in-memory adapter
-├── app/adapters/qdrant_vector_store.py
-│                                   # optional qdrant-client adapter
-├── app/services/memo_indexing.py
-│                                   # one-Memo/one-vector index boundary
-├── app/domain/retrieval.py         # provider-neutral citation/result contracts
-├── app/services/retrieval_service.py
-│                                   # query embedding -> search -> context/citations
-├── app/services/webhook_security.py # optional HMAC request verification
-├── database.py                       # AI SQLite notes/templates/outbox persistence
-├── scripts/smoke_qdrant.py         # opt-in real Qdrant lifecycle smoke
-└── model-cache/                    # local generated cache, gitignored
-~~~
+├── main.py                         # FastAPI 路由、Webhook 兼容边界、组合入口
+├── settings.py                     # 环境变量配置校验
+├── database.py                     # AI 自有 SQLite：ai_notes、templates、outbox、chunk state
+├── embedding.py                    # 旧 list-based embedding 兼容入口
+├── rag.py                          # 旧 RAG 兼容入口
+├── llm.py                          # deterministic/OpenAI/Ollama LLM adapter 入口
+├── app/
+│   ├── domain/
+│   │   ├── embeddings.py            # EmbeddingProvider/VectorStore/VectorRecord 契约
+│   │   ├── memo_chunking.py         # MemoChunk、稳定 ID、memo-chunk-v1
+│   │   ├── models.py                # CodeSnippet、BugReport、ParsedMemo
+│   │   ├── retrieval.py             # Citation、RetrievalResult 等 provider-neutral 类型
+│   │   └── retrieval_evaluation.py  # 离线评估输入/结果类型
+│   ├── services/
+│   │   ├── content_parser.py        # Markdown 模板解析
+│   │   ├── embedding_service.py     # provider -> vector record -> store 编排
+│   │   ├── embedding_factory.py     # memory/Qdrant 与 deterministic/FastEmbed 组合根
+│   │   ├── memo_indexing.py          # 完整 Memo memo-v1 索引边界
+│   │   ├── retrieval_service.py     # query embedding -> search -> context/citations
+│   │   ├── retrieval_evaluator.py   # Recall@K/首个相关结果离线评估
+│   │   ├── offline_chunk_index.py   # 独立 chunk 试验索引
+│   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
+│   │   ├── webhook_security.py      # Webhook HMAC-SHA256
+│   │   └── ops_security.py          # ops token 与错误脱敏
+│   └── adapters/
+│       ├── embedding.py             # deterministic embedding
+│       ├── fastembed_embedding.py   # 可选 FastEmbed，第三方类型只在此处
+│       ├── vector_store.py          # InMemoryVectorStore
+│       ├── qdrant_vector_store.py   # 可选 Qdrant adapter
+│       └── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
+├── scripts/smoke_qdrant.py          # 显式真实 Qdrant smoke
+└── tests/                           # AI Service unit/contract/API 测试
+```
 
-## Qdrant adapter flow
+## Provider 与存储边界
 
-~~~text
-AI_VECTOR_STORE=qdrant
-  -> AiSettings.from_env
+```text
+AiSettings.from_env
   -> build_embedding_service
-  -> QdrantVectorStore.from_url
-  -> lazy qdrant-client import
-  -> collection ensure
-  -> upsert/query_points/delete
-~~~
+  -> EmbeddingProvider
+       ├── deterministic (default, 8 dimensions)
+       └── FastEmbed (optional, 384 dimensions by default)
+  -> VectorStore
+       ├── InMemoryVectorStore (default, low CPU/offline)
+       └── QdrantVectorStore (explicit AI_VECTOR_STORE=qdrant)
+```
 
-## Compose persistence
+`app/domain/` 和 provider-neutral service 不依赖 FastAPI、FastEmbed、qdrant-client、httpx 或 sqlite3 类型。第三方 SDK 只在 adapter，SQLite 只在根数据库层和 `chunk_state.py` adapter。
 
-~~~text
-qdrant-data:/qdrant/storage       -> Qdrant collection/point persistence
-ai-model-cache:/app/model-cache   -> optional FastEmbed model cache
-~~~
+## 默认完整 Memo 索引
 
-## Index health flow
-
-~~~text
-GET /api/ai/index/health
-  -> current VectorStore.health()
-  -> memory: local ready, no network
-  -> qdrant: collection status/point_count
-  -> adapter error: available=false, status=unavailable
-~~~
-
-## FastEmbed and indexing flow
-
-~~~text
-AI_EMBEDDING_PROVIDER=fastembed
-  -> AiSettings.from_env
-  -> build_embedding_service
-  -> FastEmbedEmbeddingProvider.from_model_name
+```text
+POST /api/ai/embed 或 AI_INDEX_MODE=memo
   -> MemoIndexDocument.from_memo
-  -> EmbeddingService
-  -> memory or Qdrant VectorStore
-~~~
+  -> index_version=memo-v1 / index_mode=memo
+  -> EmbeddingService.embed_memo
+  -> complete Memo VectorStore
+  -> RetrievalService / POST /api/ai/chat
+```
 
-Phase 3c deliberately indexes the complete Memo as one document. Phase 4 adds
-query embedding and retrieval for this whole-Memo path; chunking and reranking
-remain deferred.
+默认一个完整 Memo 对应一个稳定 `memo-*` embedding ID。`POST /api/ai/chat` 默认检索这一索引，公共 citations 去除内部 `content` 字段。
 
-## Phase 4 RAG flow
+## 可选 chunk Webhook 索引
 
-~~~text
-POST /api/ai/chat
-  -> RetrievalService
-  -> current EmbeddingProvider.embed(question)
-  -> VectorStore.search(query, limit)
-  -> Citation + context assembly
-  -> deterministic/OpenAI/Ollama provider
-  -> answer + citations + provider + retrieved_count
-~~~
-
-The index stores derived `content` metadata for server-side context assembly.
-The API removes that internal field from public citation metadata.
-
-## Webhook security flow
-
-~~~text
-AI_WEBHOOK_SECRET empty
-  -> legacy-compatible request processing
-
-AI_WEBHOOK_SECRET configured
-  -> raw request body
-  -> HMAC-SHA256
-  -> X-DevMemo-Signature compare_digest
-  -> 401 on missing/mismatch, existing code=0 flow on success
-~~~
-
-## Webhook outbox flow
-
-~~~text
-verified request
-  -> eventId or body SHA-256
-  -> webhook_events UNIQUE(event_id) insert
-  -> duplicate: skip business processing
-  -> new: legacy summary/template/index flow
-  -> processed or failed + attempts/last_error
-  -> GET /api/ai/ops/outbox read-only status
-  -> POST /api/ai/ops/outbox/{event_id}/retry only failed events
-  -> max_attempts guard (default 3 total attempts)
-  -> by_status + recent_errors bounded observation
-~~~
-
-## Outbox retention and alert flow
-
-~~~text
-GET /api/ai/ops/outbox/retention-preview
-  -> AI_OPS_TOKEN check
-  -> updated_at cutoff
-  -> processed/failed only
-  -> public event view, no delete
-
-GET /api/ai/ops/alerts
-  -> AI_OPS_TOKEN check
-  -> failed/exhausted counts
-  -> warning/critical recent summaries
-  -> external polling only, no push worker
-~~~
-
-## Ops API security flow
-
-~~~text
-AI_OPS_TOKEN empty
-  -> local-compatible GET/retry access
-
-AI_OPS_TOKEN configured
-  -> X-DevMemo-Ops-Token compare_digest
-  -> 401 on missing/mismatch
-  -> public event view removes raw payload
-  -> last_error/recent_errors normalized and truncated to 240 chars
-~~~
-
-## Webhook indexing flow
-
-~~~text
-AI_INDEX_ON_WEBHOOK=false -> summary/template flow only
+```text
 AI_INDEX_ON_WEBHOOK=true
-  -> AI_INDEX_MODE=memo (default) -> memo-v1 stable embedding_id upsert/delete
-  -> AI_INDEX_MODE=chunk (explicit) -> memo-chunk-v1 chunk lifecycle
-  -> separate InMemoryVectorStore (chat complete-Memo store is untouched)
-  -> memo.created/memo.updated -> current chunks upsert, stale tail delete
-  -> memo.deleted -> registered chunk IDs delete
-  -> index failure -> index_status=failed, Webhook code=0
-~~~
+  + AI_INDEX_MODE=chunk
+  -> chunk_memo
+  -> memo-chunk-v1 / index_mode=chunk / stable chunk IDs
+  -> ChunkLifecycleCoordinator
+  -> 独立 InMemoryVectorStore
+  -> AI SQLite memo_chunk_index_state
+  -> create/update upsert + stale delete
+  -> delete/empty content registered chunk delete
+```
 
-FastAPI/Pydantic 类型只存在 main.py 边界；domain 只使用 dataclass、Protocol、Mapping 和标准类型。qdrant-client 只存在 qdrant_vector_store.py，fastembed 只存在 fastembed_embedding.py。
+chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。当前阶段没有把 chunk store 接入 Qdrant；Qdrant chunk collection 是后续显式扩展。失败仍返回 Webhook `code=0` 和 `index_status=failed`。
 
-## 迁移规则
+## Webhook 与可靠性边界
 
-1. 默认 memory 路径不得依赖网络、Qdrant 或模型下载。
-2. 真实第三方依赖只通过 adapter 和 optional requirements 接入。
-3. 先 fake contract，再做真实环境 smoke。
-4. 不修改 Memos server/store/proto/web 核心。
+```text
+raw request
+  -> optional AI_WEBHOOK_SECRET HMAC check
+  -> eventId/body SHA-256 idempotent webhook_events outbox
+  -> summary/template persistence
+  -> optional memo/chunk index lifecycle
+  -> processed/failed + bounded attempts
+  -> explicit retry / alerts / retention preview / approved cleanup audit
+```
 
-## Outbox cleanup approval and audit flow
+默认不启动 worker、Redis、Celery 或自动重试。运维 API 可由 `AI_OPS_TOKEN` 保护；公开响应不返回原始 Webhook payload。
 
-~~~text
-GET /api/ai/ops/outbox/retention-preview
-  -> cutoff + preview_limit + candidate_ids
-  -> operator reviews the dry-run result
-  -> POST /api/ai/ops/outbox/retention-cleanup
-  -> default dry_run=true: no mutation
-  -> confirm=true + dry_run=false
-  -> SQLite transaction rechecks exact preview set and terminal status
-  -> delete webhook_events only
-  -> webhook_cleanup_audits records approval_id, actor_digest, cutoff and deleted_count
-  -> repeated approval_id returns idempotent replay
-~~~
+## 前端 AI feature 边界
 
-## Offline retrieval evaluation flow
+```text
+web/src/features/ai/
+├── api.ts             # AI Service HTTP client
+├── hooks.ts           # React Query hooks
+├── AiMemoTemplate.tsx # Code Snippet/Bug Report 展示与复制
+└── AiMemoSummary.tsx  # 摘要读取、生成与反馈
+```
 
-~~~text
-RetrievalEvaluationCase
-  -> RetrievalEvaluator
-  -> existing RetrievalService.retrieve(question, limit)
-  -> provider-neutral citations
-  -> Recall@K + relevant_memo_ids + first_relevant_rank
-  -> offline unit/contract test only
-~~~
+前端只访问 AI Service HTTP API，不访问 SQLite。未配置 `VITE_AI_SERVICE_URL`、AI Service 404 或网络失败时，Memo Markdown、标签、搜索和编辑流程继续正常运行。
 
-## Memo chunking boundary flow
+## Compose 与持久化
 
-~~~text
-raw Memo Markdown
-  -> chunk_memo(memo_id, max_chars, metadata)
-  -> tuple[MemoChunk]
-  -> memo-chunk-v1 + index_mode=chunk metadata
-  -> stable chunk ID: Memo digest + version + position
-  -> ChunkLifecycleCoordinator (only when AI_INDEX_MODE=chunk)
-  -> AI SQLite memo_chunk_index_state stores version + chunk IDs
-~~~
+```text
+docker compose up -d
+  ├── memos       -> memos-data
+  ├── ai-service  -> ai-data + ai-model-cache
+  ├── qdrant      -> qdrant-data
+  └── ollama      -> ollama-data
+```
 
-The existing `MemoIndexDocument` path remains `memo-v1` and continues to be the only production Webhook/RAG indexing path. `MemoChunk` is provider-neutral and does not import FastAPI, FastEmbed, Qdrant or SQLite types.
+默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。
 
-## Offline chunk retrieval evaluation flow
+## 迁移与升级规则
 
-~~~text
-MemoChunk tuple
-  -> OfflineChunkIndex.upsert
-  -> deterministic EmbeddingProvider + InMemoryVectorStore
-  -> RetrievalService.retrieve
-  -> chunk citation metadata + server-side chunk context
-  -> RetrievalEvaluator
-  -> complete Memo baseline Recall@K comparison
-~~~
-
-`OfflineChunkIndex` remains useful for evaluation. `ChunkLifecycleCoordinator` is the explicit Webhook opt-in composition; it keeps `memo-v1` and `memo-chunk-v1` IDs separate, and does not change the public `POST /api/ai/chat` citation contract.
+1. Memos 核心继续跟随官方 upstream；AI 功能优先使用旁路 HTTP/Webhook 和 AI 自有 SQLite。
+2. 新增 provider 通过 adapter 和可选 requirements 接入，不把 SDK 类型带入 domain。
+3. 新索引模式必须通过 `index_version`/`index_mode` 隔离，可回滚且不覆盖既有 embedding ID。
+4. 默认路径保持 deterministic + memory；真实 FastEmbed/Qdrant 只在显式配置或 smoke 中启用。
+5. 修改目录、模块边界、API 或数据模型后同步 `docs/structure.md`、`docs/api.md`、`docs/architecture.md` 和 `docs/DECISIONS.md`。
