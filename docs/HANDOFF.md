@@ -1,5 +1,14 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4e
+
+Phase 4e 已完成运维 API 安全与数据暴露边界：
+
+- 可选 `AI_OPS_TOKEN` 通过 `X-DevMemo-Ops-Token` 保护 outbox GET 和 retry POST；未配置时保持本地兼容，错误令牌返回 401。
+- 公开 outbox item 不返回原始 Webhook payload；SQLite 内部 payload 保留，retry 行为不变。
+- `last_error` 和 `recent_errors` 摘要统一为单行、最多 240 字符；没有新增认证服务、Prometheus、worker 或队列。
+- AI Service 全量 102 passed；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4f。
+
 ## 2026-07-13 Phase 4d
 
 Phase 4d 已完成显式有限重试与最小观测：
@@ -107,4 +116,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4e 运维 API 安全与告警边界。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4f Outbox 保留与告警导出边界。

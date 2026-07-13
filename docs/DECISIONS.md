@@ -93,3 +93,9 @@ Phase 4c 在 AI Service 自有 SQLite 新增 `webhook_events`，以唯一 `event
 Phase 4d 在现有 `webhook_events` 上通过兼容 `ALTER TABLE` 补充 `max_attempts`，默认总尝试次数为 3；首次 Webhook 处理和最多两次显式重试共用该上限。`POST /api/ai/ops/outbox/{event_id}/retry` 只允许 `failed` 事件，并在数据库事务中先将事件原子置为 `pending`，避免同一事件被两个显式请求同时领取。成功转为 `processed` 并清除 `last_error`，失败继续保持 `failed` 并递增 `attempts`。
 
 观测只扩展现有 outbox GET，返回按状态计数和最多 5 条最近错误摘要。不启动 worker、定时任务、Redis、Celery、Prometheus 或其他运行时依赖；默认 Compose deterministic + memory 和 Memos Webhook `code=0` 契约保持不变。
+
+## ADR-022：Ops API 使用可选令牌并最小化公开错误数据
+
+Phase 4e 使用标准库 `hmac.compare_digest` 校验可选环境变量 `AI_OPS_TOKEN`，请求头为 `X-DevMemo-Ops-Token`。未配置令牌时保持本地开发兼容；配置后 GET outbox 和 retry POST 的缺失/错误令牌返回 401。Webhook HMAC 使用独立的 `AI_WEBHOOK_SECRET`，两者不混用。
+
+公开 outbox item 不再返回原始 Webhook payload；payload 仍保存在 AI Service SQLite，retry 只在服务内部读取。`last_error` 和最近错误摘要在 HTTP 响应中归一化为单行并截断到 240 字符，保留 event_id、状态、attempts 和 max_attempts 供排障。该切片不引入认证服务、Redis、Prometheus 或常驻 worker。

@@ -130,4 +130,15 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 ## Phase 4e：运维 API 安全与告警边界
 
-下一阶段只评估 ops API 的最小认证/来源限制、错误摘要脱敏和可选告警导出；不引入前端运维 UI、后台 worker、外部队列或 Prometheus 运行时。
+已完成最小切片：
+
+1. 新增可选 `AI_OPS_TOKEN`，配置后保护 outbox GET 和 retry POST；未配置时保持本地开发兼容。
+2. 公开 outbox item 移除原始 Webhook payload；retry 仍从 AI Service SQLite 内部 payload 读取。
+3. `last_error` 和 `recent_errors` 统一为单行、最多 240 字符摘要；认证失败返回 401。
+4. 不引入认证服务、Prometheus、Redis、后台 worker、前端运维 UI 或新运行时依赖。
+
+验证：AI Service 102 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 4f：Outbox 保留与告警导出边界
+
+下一阶段只评估显式 opt-in 的保留预览/清理和只读告警摘要导出；默认不删除数据、不启动 worker，不改变 Qdrant/AI volume。

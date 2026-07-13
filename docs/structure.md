@@ -117,6 +117,19 @@ verified request
   -> by_status + recent_errors bounded observation
 ~~~
 
+## Ops API security flow
+
+~~~text
+AI_OPS_TOKEN empty
+  -> local-compatible GET/retry access
+
+AI_OPS_TOKEN configured
+  -> X-DevMemo-Ops-Token compare_digest
+  -> 401 on missing/mismatch
+  -> public event view removes raw payload
+  -> last_error/recent_errors normalized and truncated to 240 chars
+~~~
+
 ## Webhook indexing flow
 
 ~~~text

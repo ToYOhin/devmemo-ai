@@ -28,6 +28,7 @@ from llm import create_provider
 from app.services.content_parser import parse_memo_content
 from app.services.embedding_factory import build_embedding_service
 from app.services.memo_indexing import MemoIndexDocument, index_memo
+from app.services.ops_security import summarize_error, verify_ops_token
 from app.services.retrieval_service import RetrievalService
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
@@ -313,22 +314,40 @@ async def read_memo_template(memo_id: str) -> dict[str, object]:
 async def read_webhook_outbox(
     status: str | None = None,
     limit: int = Query(default=50, ge=1, le=100),
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
 ) -> dict[str, object]:
     """Read recent Webhook outbox state without starting a worker."""
 
+    _require_ops_access(ops_token)
     if status is not None and status not in {"pending", "processed", "failed"}:
         raise HTTPException(status_code=422, detail="unsupported webhook event status")
     try:
         items = list_webhook_events(status=status, limit=limit)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return {"items": items, "count": len(items), **get_webhook_event_stats()}
+    stats = get_webhook_event_stats()
+    return {
+        "items": [_public_webhook_event(event) for event in items],
+        "count": len(items),
+        "by_status": stats["by_status"],
+        "recent_errors": [
+            {
+                **error,
+                "last_error": summarize_error(error["last_error"]),
+            }
+            for error in stats["recent_errors"]
+        ],
+    }
 
 
 @app.post("/api/ai/ops/outbox/{event_id}/retry")
-async def retry_webhook_outbox(event_id: str) -> dict[str, object]:
+async def retry_webhook_outbox(
+    event_id: str,
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
+) -> dict[str, object]:
     """Explicitly retry one failed Webhook event within its persisted limit."""
 
+    _require_ops_access(ops_token)
     try:
         event = begin_webhook_retry(event_id)
     except ValueError as error:
@@ -467,6 +486,26 @@ def _read_or_enqueue_webhook_event(
     return {
         "is_duplicate": False,
         "event": save_webhook_event(event_id, request.activity_type, payload),
+    }
+
+
+def _require_ops_access(provided_token: str | None) -> None:
+    if not verify_ops_token(provided_token, os.getenv("AI_OPS_TOKEN", "")):
+        raise HTTPException(status_code=401, detail="invalid ops token")
+
+
+def _public_webhook_event(event: dict[str, object]) -> dict[str, object]:
+    """Expose operational metadata without returning the raw Webhook payload."""
+
+    return {
+        "event_id": event["event_id"],
+        "event_type": event["event_type"],
+        "status": event["status"],
+        "attempts": event["attempts"],
+        "max_attempts": event["max_attempts"],
+        "last_error": summarize_error(event["last_error"]),
+        "created_at": event["created_at"],
+        "updated_at": event["updated_at"],
     }
 
 

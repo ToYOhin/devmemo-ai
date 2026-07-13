@@ -24,6 +24,7 @@ VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http:
 - FastEmbed 初始化会触发模型准备/下载；因此不属于默认启动路径。
 - AI_INDEX_ON_WEBHOOK=false：默认关闭 Webhook 向量索引；设为 `true` 后 create/update/delete 才编排向量生命周期。
 - AI_WEBHOOK_SECRET：可选 Webhook HMAC secret；为空时保持兼容放行，配置后请求必须携带 `X-DevMemo-Signature: sha256=<hex>`。
+- AI_OPS_TOKEN：可选 ops API 访问令牌；为空时保持本地兼容，配置后 `/api/ai/ops/outbox` 的 GET 和 retry POST 必须携带 `X-DevMemo-Ops-Token`。
 
 ## GET /health
 
@@ -103,11 +104,11 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 - `status`：可选 `pending|processed|failed`
 - `limit`：可选 1–100，默认 50
 
-返回 `items`、`count`、`by_status` 和最多 5 条 `recent_errors`。每个 item 包含 `event_id`、`event_type`、结构化 `payload`、`status`、`attempts`、`max_attempts`、`last_error`、`created_at` 和 `updated_at`。重复 `eventId` 不重复处理；无显式 eventId 时服务使用原始 body hash 作为稳定 ID。Webhook 业务失败仍返回 `code=0`，并可通过该 API 查看 `failed` 状态。
+未配置 `AI_OPS_TOKEN` 时可直接读取；配置后必须携带 `X-DevMemo-Ops-Token`，缺失或错误返回 401。返回 `items`、`count`、`by_status` 和最多 5 条 `recent_errors`。公开 item 只包含 `event_id`、`event_type`、`status`、`attempts`、`max_attempts`、`last_error`、`created_at` 和 `updated_at`，不返回原始 Webhook `payload`。`last_error` 和 `recent_errors.last_error` 为单行、最多 240 字符的摘要。重复 `eventId` 不重复处理；无显式 eventId 时服务使用原始 body hash 作为稳定 ID。Webhook 业务失败仍返回 `code=0`，并可通过该 API 查看 `failed` 状态。
 
 ## POST /api/ai/ops/outbox/{event_id}/retry
 
-显式重试一个 `failed` Webhook 事件。不会启动后台 worker；默认每个事件最多处理 3 次（首次处理加最多 2 次重试），上限保存在 AI Service 自有 SQLite 的 `max_attempts` 字段中。
+显式重试一个 `failed` Webhook 事件。配置 `AI_OPS_TOKEN` 后必须携带 `X-DevMemo-Ops-Token`；不会启动后台 worker；默认每个事件最多处理 3 次（首次处理加最多 2 次重试），上限保存在 AI Service 自有 SQLite 的 `max_attempts` 字段中。
 
 - 仅 `failed` 事件可重试；`processed`、`pending` 或不存在的事件分别返回 409/404。
 - 成功返回 `code=0`、`outbox_status=processed`；失败仍返回 `code=0` 并递增 `attempts`。
@@ -138,4 +139,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；显式重试和基础 outbox 观测已在 Phase 4d 完成。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测和 ops API 安全边界已在 Phase 4d/4e 完成。

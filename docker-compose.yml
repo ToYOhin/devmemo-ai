@@ -23,6 +23,7 @@ services:
       AI_FASTEMBED_CACHE_DIR: ${AI_FASTEMBED_CACHE_DIR:-/app/model-cache}
       AI_INDEX_ON_WEBHOOK: ${AI_INDEX_ON_WEBHOOK:-false}
       AI_WEBHOOK_SECRET: ${AI_WEBHOOK_SECRET:-}
+      AI_OPS_TOKEN: ${AI_OPS_TOKEN:-}
       AI_VECTOR_STORE: ${AI_VECTOR_STORE:-memory}
       QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-devmemo_memos}
