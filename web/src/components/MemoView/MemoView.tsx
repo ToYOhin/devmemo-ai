@@ -131,12 +131,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
       {isInMemoDetailPage && (
         <>
           <AiMemoTemplate memoId={memoId} />
-          <AiMemoSummary
-            memoId={memoId}
-            title={memoData.property?.title ?? ""}
-            content={memoData.content}
-            tags={memoData.tags ?? []}
-          />
+          <AiMemoSummary memoId={memoId} title={memoData.property?.title ?? ""} content={memoData.content} tags={memoData.tags ?? []} />
         </>
       )}
 
