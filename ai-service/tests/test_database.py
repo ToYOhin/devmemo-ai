@@ -1,6 +1,36 @@
 import sqlite3
 
-from database import get_memo_template, save_memo_template
+from database import get_ai_note, get_memo_template, save_ai_note, save_memo_template
+
+
+def test_ai_note_create_and_read(monkeypatch, tmp_path):
+    database = tmp_path / "notes.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+
+    saved = save_ai_note(
+        "memo-1",
+        "Docker 端口映射问题分析",
+        ["Docker", "FastAPI"],
+        "DevOps",
+        suggested_tags=["docker", "network"],
+        provider="deterministic",
+    )
+
+    note = get_ai_note("memo-1")
+    assert note is not None
+    assert note["id"] == saved["id"]
+    assert note["summary"] == "Docker 端口映射问题分析"
+    assert note["keywords"] == ["Docker", "FastAPI"]
+    assert note["category"] == "DevOps"
+    assert note["suggested_tags"] == ["docker", "network"]
+    assert note["provider"] == "deterministic"
+    assert note["created_at"] == saved["created_at"]
+
+
+def test_missing_ai_note_returns_none(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "missing.db"))
+
+    assert get_ai_note("missing") is None
 
 
 def test_template_upsert_is_idempotent(monkeypatch, tmp_path):

@@ -11,6 +11,14 @@ import (
 	"github.com/usememos/memos/store"
 )
 
+func newMigrationTestingStore(ctx context.Context, t *testing.T) *store.Store {
+	ts := NewTestingStore(ctx, t)
+	t.Cleanup(func() {
+		_ = ts.Close()
+	})
+	return ts
+}
+
 // TestFreshInstall verifies that LATEST.sql applies correctly on a fresh database.
 // This is essentially what NewTestingStore already does, but we make it explicit.
 func TestFreshInstall(t *testing.T) {
@@ -19,7 +27,7 @@ func TestFreshInstall(t *testing.T) {
 
 	// NewTestingStore creates a fresh database and runs Migrate()
 	// which applies LATEST.sql for uninitialized databases
-	ts := NewTestingStore(ctx, t)
+	ts := newMigrationTestingStore(ctx, t)
 
 	// Verify migration completed successfully
 	currentSchemaVersion, err := ts.GetCurrentSchemaVersion()
@@ -40,7 +48,7 @@ func TestMigrationReRun(t *testing.T) {
 
 	ctx := context.Background()
 	// Use the shared testing store which already runs migrations on init
-	ts := NewTestingStore(ctx, t)
+	ts := newMigrationTestingStore(ctx, t)
 
 	// Get current version
 	initialVersion, err := ts.GetCurrentSchemaVersion()
@@ -62,7 +70,7 @@ func TestMigrationWithData(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ts := NewTestingStore(ctx, t)
+	ts := newMigrationTestingStore(ctx, t)
 
 	// Create a user and memo before re-running migration
 	user, err := createTestingHostUser(ctx, ts)
@@ -92,7 +100,7 @@ func TestMigrationMultipleReRuns(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ts := NewTestingStore(ctx, t)
+	ts := newMigrationTestingStore(ctx, t)
 
 	// Get initial version
 	initialVersion, err := ts.GetCurrentSchemaVersion()
@@ -159,6 +167,9 @@ func TestMigrationFromStableVersion(t *testing.T) {
 	t.Logf("Connecting to database at %s...", dsn)
 
 	ts := NewTestingStoreWithDSN(ctx, t, "sqlite", dsn)
+	t.Cleanup(func() {
+		_ = ts.Close()
+	})
 
 	// Get the schema version before migration
 	oldSetting, err := ts.GetInstanceBasicSetting(ctx)

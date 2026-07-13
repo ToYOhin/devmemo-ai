@@ -1,7 +1,13 @@
 import sqlite3
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+import main
+from app.adapters.embedding import DeterministicEmbeddingProvider
+from app.adapters.vector_store import InMemoryVectorStore
+from app.domain.embeddings import VectorStoreHealth
+from app.services.embedding_service import EmbeddingService
 from main import SummaryRequest, app, parse_llm_json
 
 
@@ -27,6 +33,43 @@ def test_health_reports_service_status():
         "service": "devmemo-ai",
         "provider": "deterministic",
     }
+
+
+def test_index_health_reports_memory_without_qdrant():
+    response = client.get("/api/ai/index/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "provider": "memory",
+        "available": True,
+        "dimension": 8,
+        "status": "ready",
+        "collection": None,
+        "point_count": 0,
+        "detail": None,
+    }
+
+
+def test_index_health_exposes_degraded_qdrant_status(monkeypatch):
+    class DegradedStore:
+        def health(self):
+            return VectorStoreHealth(
+                provider="qdrant",
+                available=False,
+                dimension=8,
+                status="unavailable",
+                collection="devmemo-test",
+                detail="Qdrant health check failed: offline",
+            )
+
+    monkeypatch.setattr(main, "embedding_service", SimpleNamespace(store=DegradedStore()))
+
+    response = client.get("/api/ai/index/health")
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "qdrant"
+    assert response.json()["available"] is False
+    assert response.json()["status"] == "unavailable"
 
 
 def test_summary_accepts_a_memo(monkeypatch, tmp_path):
@@ -56,6 +99,40 @@ def test_summary_accepts_a_memo(monkeypatch, tmp_path):
     assert row == ("7", "Docker 容器端口映射问题分析", "DevOps")
 
 
+def test_ai_note_read_returns_persisted_summary(monkeypatch, tmp_path):
+    database = tmp_path / "read.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    client.post(
+        "/api/ai/summarize",
+        json={
+            "memo_id": "memo-read-1",
+            "title": "Docker port issue",
+            "content": "FastAPI deployment failed because the Docker port mapping was wrong.",
+            "tags": ["Docker"],
+        },
+    )
+
+    response = client.get("/api/ai/notes/memo-read-1")
+
+    assert response.status_code == 200
+    assert response.json()["memo_id"] == "memo-read-1"
+    assert response.json()["summary"] == "Docker 容器端口映射问题分析"
+    assert response.json()["keywords"]
+    assert response.json()["category"] == "DevOps"
+    assert response.json()["suggested_tags"]
+    assert response.json()["provider"] == "deterministic"
+    assert response.json()["created_at"]
+
+
+def test_ai_note_read_returns_not_found(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "not-found-note.db"))
+
+    response = client.get("/api/ai/notes/missing")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "AI note not found"
+
+
 def test_memos_webhook_triggers_summary(monkeypatch, tmp_path):
     database = tmp_path / "webhook.db"
     monkeypatch.setenv("AI_NOTES_DB", str(database))
@@ -71,6 +148,7 @@ def test_memos_webhook_triggers_summary(monkeypatch, tmp_path):
     assert response.json()["code"] == 0
     assert response.json()["message"] == "accepted"
     assert response.json()["memo_type"] == "plain"
+    assert response.json()["index_status"] == "skipped"
     with sqlite3.connect(database) as connection:
         table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'memo_templates'"
@@ -128,6 +206,111 @@ def test_memos_webhook_upserts_template_for_same_memo(monkeypatch, tmp_path):
 
     assert first.json()["template_id"] == second.json()["template_id"]
     assert client.get("/api/ai/templates/memo-upsert").json()["payload"]["code"] == "print(2)"
+
+
+def test_memos_webhook_indexes_and_upserts_when_enabled(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "indexed.db"))
+    monkeypatch.setenv("AI_INDEX_ON_WEBHOOK", "true")
+    store = InMemoryVectorStore(dimension=8)
+    monkeypatch.setattr(
+        main,
+        "embedding_service",
+        EmbeddingService(DeterministicEmbeddingProvider(), store),
+    )
+
+    first = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-indexed", "content": "Docker port mapping"},
+        },
+    )
+    second = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.updated",
+            "memo": {"uid": "memo-indexed", "content": "FastAPI port mapping"},
+        },
+    )
+
+    assert first.json()["index_status"] == "indexed"
+    assert second.json()["index_status"] == "indexed"
+    assert first.json()["embedding_id"] == second.json()["embedding_id"]
+    assert len(store.search(DeterministicEmbeddingProvider().embed("FastAPI port mapping").values)) == 1
+
+
+def test_memos_webhook_deletes_index_without_blocking(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "deleted.db"))
+    monkeypatch.setenv("AI_INDEX_ON_WEBHOOK", "true")
+    store = InMemoryVectorStore(dimension=8)
+    monkeypatch.setattr(
+        main,
+        "embedding_service",
+        EmbeddingService(DeterministicEmbeddingProvider(), store),
+    )
+    client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-delete-webhook", "content": "content"},
+        },
+    )
+
+    response = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.deleted",
+            "memo": {"uid": "memo-delete-webhook"},
+        },
+    )
+
+    assert response.json()["code"] == 0
+    assert response.json()["index_status"] == "deleted"
+    assert store.search(DeterministicEmbeddingProvider().embed("content").values) == []
+
+
+def test_memos_webhook_index_failure_is_acknowledged(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "failed-index.db"))
+    monkeypatch.setenv("AI_INDEX_ON_WEBHOOK", "true")
+
+    class BrokenEmbeddingService:
+        def embed_memo(self, memo_id, content, metadata):
+            raise RuntimeError("index unavailable")
+
+    monkeypatch.setattr(main, "embedding_service", BrokenEmbeddingService())
+
+    response = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-index-failed", "content": "content"},
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert response.json()["index_status"] == "failed"
+
+
+def test_template_api_allows_the_configured_local_frontend_origin():
+    response = client.get("/health", headers={"Origin": "http://localhost:3001"})
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
+
+
+def test_summary_api_allows_post_from_the_configured_local_frontend_origin(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "cors.db"))
+    response = client.post(
+        "/api/ai/summarize",
+        headers={"Origin": "http://localhost:3001"},
+        json={"memo_id": "cors-1", "content": "Docker port mapping"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
 
 
 def test_template_read_returns_not_found(monkeypatch, tmp_path):

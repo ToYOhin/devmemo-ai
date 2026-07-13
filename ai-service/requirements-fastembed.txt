@@ -1,0 +1,3 @@
+# Optional Phase 3c provider dependency. Keep out of requirements.txt so the
+# default deterministic mode stays offline and low CPU.
+fastembed==0.8.0

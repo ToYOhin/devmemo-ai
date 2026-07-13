@@ -1,0 +1,2 @@
+# Optional Phase 3b adapter dependency. Keep out of requirements.txt so memory mode stays offline.
+qdrant-client==1.18.0

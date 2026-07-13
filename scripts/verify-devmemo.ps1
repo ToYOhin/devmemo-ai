@@ -12,6 +12,8 @@ if (-not (Test-Path $python)) { throw "AI service virtualenv not found at $pytho
 $env:GOTOOLCHAIN = "local"
 $env:GOPATH = "G:\GoWorkspace"
 $env:GOCACHE = "G:\GoWorkspace\cache"
+$env:GOMAXPROCS = "2"
+$env:DEVMEMO_GO_TEST_P = "2"
 $env:Path = "G:\Go\bin;$env:Path"
 
 & $go version
@@ -26,8 +28,8 @@ docker compose config --quiet
 if ($LASTEXITCODE -ne 0) { throw "docker compose config failed" }
 
 if ($FullBackend) {
-    & $go test ./...
-    if ($LASTEXITCODE -ne 0) { throw "go test ./... failed" }
+    & $go test -p 2 ./...
+    if ($LASTEXITCODE -ne 0) { throw "go test -p 2 ./... failed" }
 }
 
 Write-Output "DEVMEMO_VERIFY_OK"

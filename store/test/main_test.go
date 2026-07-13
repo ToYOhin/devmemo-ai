@@ -30,7 +30,7 @@ func runAllDrivers() {
 	for _, driver := range drivers {
 		fmt.Printf("\n==================== %s ====================\n\n", driver)
 
-		cmd := exec.Command("go", "test", "-v", "-count=1", "./store/test/...")
+		cmd := exec.Command("go", "test", "-v", "-count=1", "-p", testBuildParallelism(), "./store/test/...")
 		cmd.Dir = projectRoot
 		cmd.Env = append(os.Environ(), "DRIVER="+driver)
 		cmd.Stdout = os.Stdout
@@ -47,4 +47,11 @@ func runAllDrivers() {
 		panic("some drivers failed")
 	}
 	fmt.Println("PASS: all drivers")
+}
+
+func testBuildParallelism() string {
+	if value := os.Getenv("DEVMEMO_GO_TEST_P"); value != "" {
+		return value
+	}
+	return "2"
 }

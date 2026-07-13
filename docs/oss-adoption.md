@@ -9,7 +9,7 @@
 | Ollama | 本地 LLM runtime | 当前保留 | 通过 `LLMProvider`，不让业务依赖 Ollama API |
 | FastAPI | AI Service HTTP 层 | 当前已采用 | 路由只负责协议转换和错误边界 |
 
-Qdrant、qdrant-client 和 FastEmbed 官方仓库为 Apache-2.0；FastEmbed 强调轻量、基于 ONNX Runtime、无需 GPU，适合本地 MVP。Ollama 官方仓库使用 MIT 许可证。采用前仍需按具体版本复核依赖和模型许可证。
+Qdrant、qdrant-client 和 FastEmbed 官方仓库为 Apache-2.0；FastEmbed 强调轻量、基于 ONNX Runtime、无需 GPU，适合本地 MVP。Ollama 官方仓库使用 MIT 许可证。当前已锁定并安装 qdrant-client 1.18.0、fastembed 0.8.0，且已完成 FastEmbed+Qdrant 真实 smoke；模型许可证仍需与代码许可证分开核验。
 
 ## 仅参考，暂不引入
 

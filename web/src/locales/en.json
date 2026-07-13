@@ -7,6 +7,30 @@
     "github-repository": "GitHub Repo",
     "official-website": "Official Website"
   },
+  "ai-template": {
+    "title": "AI Template",
+    "code-snippet": "Code Snippet",
+    "bug-report": "Bug Report",
+    "environment": "Environment",
+    "error": "Error",
+    "reproduction-steps": "Reproduction steps",
+    "root-cause": "Root cause",
+    "solution": "Solution",
+    "copy": "Copy code",
+    "copied": "Copied",
+    "copy-failed": "Copy failed"
+  },
+  "ai-summary": {
+    "title": "AI Summary",
+    "summary": "Summary",
+    "keywords": "Keywords",
+    "category": "Category",
+    "generate": "Generate summary",
+    "regenerate": "Regenerate summary",
+    "generating": "Generating...",
+    "generated": "Summary generated",
+    "generate-failed": "Failed to generate summary"
+  },
   "auth": {
     "create-your-account": "Create your account",
     "host-tip": "You are registering as the Site Host.",

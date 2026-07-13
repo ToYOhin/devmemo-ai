@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
-from database import get_memo_template, save_ai_note, save_memo_template
+from database import get_ai_note, get_memo_template, save_ai_note, save_memo_template
 from llm import create_provider
 from app.services.content_parser import parse_memo_content
+from app.services.embedding_factory import build_embedding_service
+from app.services.memo_indexing import MemoIndexDocument, index_memo
+from app.services.retrieval_service import RetrievalService
+from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
+from app.settings import parse_env_bool
 
 
 class SummaryRequest(BaseModel):
@@ -19,6 +26,38 @@ class SummaryRequest(BaseModel):
     title: str = ""
     content: str = Field(min_length=1)
     tags: list[str] = Field(default_factory=list)
+
+
+class EmbedRequest(BaseModel):
+    memo_id: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class EmbedResponse(BaseModel):
+    embedding_id: str
+    memo_id: str
+    dimension: int
+    provider: str
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=1)
+    limit: int = Field(default=5, ge=1, le=10)
+
+
+class CitationResponse(BaseModel):
+    memo_id: str
+    embedding_id: str
+    score: float
+    metadata: dict[str, object]
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    citations: list[CitationResponse]
+    provider: str
+    retrieved_count: int
 
 
 class SummaryResponse(BaseModel):
@@ -32,6 +71,16 @@ class SummaryResponse(BaseModel):
     created_at: str
 
 
+class AiNoteResponse(BaseModel):
+    memo_id: str
+    summary: str
+    keywords: list[str]
+    category: str
+    suggested_tags: list[str]
+    provider: str
+    created_at: str
+
+
 class MemoWebhookRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -41,6 +90,20 @@ class MemoWebhookRequest(BaseModel):
 
 app = FastAPI(title="DevMemo AI Service", version="0.1.0")
 provider = create_provider()
+embedding_service = build_embedding_service()
+
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv("AI_CORS_ORIGINS", "http://localhost:3001")
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_methods=["GET", "POST"],
+    allow_headers=["Accept", "Content-Type"],
+)
 
 KNOWN_KEYWORDS = {
     "FastAPI": "fastapi",
@@ -100,6 +163,13 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "service": "devmemo-ai", "provider": provider.name}
 
 
+@app.get("/api/ai/index/health")
+async def index_health() -> dict[str, object]:
+    """Return read-only vector-store status without changing default composition."""
+
+    return asdict(embedding_service.store.health())
+
+
 @app.post("/api/ai/summarize", response_model=SummaryResponse)
 async def summarize(request: SummaryRequest) -> SummaryResponse:
     """Summarization contract; deterministic mode is safe for local MVP demos."""
@@ -113,7 +183,14 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
         summary, keywords, category, suggested_tags = deterministic_summary(request)
     else:
         summary, keywords, category, suggested_tags = parse_llm_json(result.text, request)
-    note = save_ai_note(request.memo_id, summary, keywords, category)
+    note = save_ai_note(
+        request.memo_id,
+        summary,
+        keywords,
+        category,
+        suggested_tags=suggested_tags,
+        provider=result.provider if result.text else "deterministic-fallback",
+    )
     return SummaryResponse(
         memo_id=request.memo_id,
         summary=summary,
@@ -124,6 +201,88 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
         ai_note_id=note["id"],
         created_at=note["created_at"],
     )
+
+
+@app.post("/api/ai/embed", response_model=EmbedResponse)
+async def embed_memo(request: EmbedRequest) -> EmbedResponse:
+    """Create or replace one Memo vector using the configured provider/store."""
+
+    try:
+        document = MemoIndexDocument.from_memo(
+            memo_id=request.memo_id,
+            content=request.content,
+            metadata=request.metadata,
+        )
+        result = index_memo(embedding_service, document)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return EmbedResponse(
+        embedding_id=result.embedding_id,
+        memo_id=result.memo_id,
+        dimension=result.dimension,
+        provider=result.provider,
+    )
+
+
+@app.post("/api/ai/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest) -> ChatResponse:
+    """Retrieve whole Memos and answer with explicit source citations."""
+
+    try:
+        retrieved = RetrievalService(embedding_service).retrieve(request.question, request.limit)
+    except RetrievalInputError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RetrievalUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+    citations = [
+        CitationResponse(
+            memo_id=citation.memo_id,
+            embedding_id=citation.embedding_id,
+            score=citation.score,
+            metadata=dict(citation.metadata),
+        )
+        for citation in retrieved.citations
+    ]
+    if not citations:
+        return ChatResponse(
+            answer="知识库中没有找到相关 Memo。",
+            citations=[],
+            provider=provider.name,
+            retrieved_count=0,
+        )
+
+    prompt = (
+        "Answer the question using only the knowledge-base context below. "
+        "Cite sources with [1], [2] using the supplied context order, and state uncertainty "
+        "when the context is insufficient.\n"
+        f"Question: {request.question.strip()}\n"
+        f"Context:\n{retrieved.context}"
+    )
+    try:
+        result = await provider.generate(prompt)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail="LLM provider failed") from error
+
+    answer = _deterministic_rag_answer(retrieved.context) if provider.name == "deterministic" else result.text.strip()
+    if not answer:
+        raise HTTPException(status_code=502, detail="LLM provider returned an empty answer")
+    return ChatResponse(
+        answer=answer,
+        citations=citations,
+        provider=result.provider,
+        retrieved_count=len(citations),
+    )
+
+
+@app.get("/api/ai/notes/{memo_id}", response_model=AiNoteResponse)
+async def read_ai_note(memo_id: str) -> AiNoteResponse:
+    """Read a persisted AI summary without touching Memos storage."""
+
+    note = get_ai_note(memo_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="AI note not found")
+    return AiNoteResponse(**note)
 
 
 @app.get("/api/ai/templates/{memo_id}")
@@ -141,6 +300,19 @@ async def memos_webhook(request: MemoWebhookRequest) -> dict[str, object]:
     """Receive Memos create/update events without changing Memos core code."""
 
     if request.activity_type.endswith("deleted"):
+        if _webhook_index_enabled():
+            memo_id = _memo_id_from_memo(request.memo)
+            if memo_id is None:
+                return {"code": 0, "message": "ignored deleted memo", "index_status": "skipped"}
+            try:
+                deleted = embedding_service.delete_memo(memo_id)
+            except Exception:
+                return {"code": 0, "message": "ignored deleted memo", "index_status": "failed"}
+            return {
+                "code": 0,
+                "message": "ignored deleted memo",
+                "index_status": "deleted" if deleted else "skipped",
+            }
         return {"code": 0, "message": "ignored deleted memo"}
 
     memo = request.memo
@@ -148,7 +320,7 @@ async def memos_webhook(request: MemoWebhookRequest) -> dict[str, object]:
     if not content.strip():
         return {"code": 0, "message": "ignored empty memo", "memo_type": "plain"}
 
-    memo_id = memo.get("uid") or memo.get("name") or memo.get("id")
+    memo_id = _memo_id_from_memo(memo)
     parsed = parse_memo_content(content)
     result = await summarize(
         SummaryRequest(
@@ -171,4 +343,50 @@ async def memos_webhook(request: MemoWebhookRequest) -> dict[str, object]:
             response["template_id"] = persisted["id"]
     if parsed.errors:
         response["parse_errors"] = list(parsed.errors)
+    if _webhook_index_enabled():
+        response.update(_index_webhook_memo(memo_id, content, memo, parsed.kind))
+    else:
+        response["index_status"] = "skipped"
     return response
+
+
+def _webhook_index_enabled() -> bool:
+    return parse_env_bool("AI_INDEX_ON_WEBHOOK", default=False)
+
+
+def _deterministic_rag_answer(context: str) -> str:
+    """Return a useful offline answer while preserving the citation markers."""
+
+    return f"根据知识库检索结果：\n{context}"
+
+
+def _memo_id_from_memo(memo: dict[str, object]) -> object:
+    return memo.get("uid") or memo.get("name") or memo.get("id")
+
+
+def _index_webhook_memo(
+    memo_id: object,
+    content: str,
+    memo: dict[str, object],
+    memo_type: str | None,
+) -> dict[str, object]:
+    if memo_id is None:
+        return {"index_status": "skipped"}
+    try:
+        document = MemoIndexDocument.from_memo(
+            memo_id=str(memo_id),
+            content=content,
+            metadata={
+                "title": str(memo.get("name") or ""),
+                "tags": [str(tag) for tag in memo.get("tags", []) if tag],
+                "memo_type": memo_type or "plain",
+            },
+        )
+        result = index_memo(embedding_service, document)
+    except Exception:
+        return {"index_status": "failed"}
+    return {
+        "index_status": "indexed",
+        "embedding_id": result.embedding_id,
+        "embedding_provider": result.provider,
+    }

@@ -1,56 +1,120 @@
-# API
+# DevMemo AI API
 
-Base URL: `http://localhost:8000`
+Base URL：http://localhost:8000
 
-## `GET /health`
+## Frontend configuration
 
-Returns service status and the active provider.
+VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http://localhost:3001，Phase 2d 起允许 GET/POST。
 
-## `POST /api/ai/summarize`
+## Vector store configuration
 
-Request:
+- AI_VECTOR_STORE=memory：默认低 CPU、无网络依赖的 InMemoryVectorStore。
+- AI_VECTOR_STORE=qdrant：显式启用 QdrantVectorStore，需要安装 requirements-qdrant.txt。
+- QDRANT_URL：默认 http://localhost:6333；Compose 默认使用 http://qdrant:6333。
+- QDRANT_COLLECTION：默认 devmemo_memos。
+- QDRANT_API_KEY：可选，写入环境变量，不写入仓库。
 
-```json
+## Embedding provider configuration
+
+- AI_EMBEDDING_PROVIDER=deterministic：默认 8 维、低 CPU、无模型下载。
+- AI_EMBEDDING_PROVIDER=fastembed：显式启用可选 FastEmbed provider，需要先安装 `ai-service/requirements-fastembed.txt`。
+- AI_FASTEMBED_MODEL：默认 `BAAI/bge-small-en-v1.5`。
+- AI_FASTEMBED_DIMENSION：默认 `384`；更换模型时必须与模型输出维度一致。
+- AI_FASTEMBED_CACHE_DIR：可选模型缓存目录；Compose 默认 `/app/model-cache`，由 `ai-model-cache` volume 持久化。
+- FastEmbed 初始化会触发模型准备/下载；因此不属于默认启动路径。
+- AI_INDEX_ON_WEBHOOK=false：默认关闭 Webhook 向量索引；设为 `true` 后 create/update/delete 才编排向量生命周期。
+
+## GET /health
+
+返回 service、status、provider。
+
+## GET /api/ai/index/health
+
+只读返回当前向量存储状态：
+
+~~~json
 {
+  "provider": "memory",
+  "available": true,
+  "dimension": 8,
+  "status": "ready",
+  "collection": null,
+  "point_count": 0,
+  "detail": null
+}
+~~~
+
+memory 模式不连接 Qdrant；qdrant 模式会读取 collection 状态。Qdrant 查询失败返回 `available=false`、`status=unavailable` 和 detail，不改变 Webhook 的 `code=0` 降级契约。显式 qdrant 模式在启动阶段无法连接时仍返回清晰的 `QdrantAdapterError`。
+
+## POST /api/ai/summarize
+
+接收 memo_id、title、content、tags，生成并 upsert ai_notes，返回 summary、keywords、category、suggested_tags、provider、ai_note_id、created_at。
+
+## GET /api/ai/notes/{memo_id}
+
+读取 AI Service 自有 SQLite 中的摘要；成功返回摘要元数据，找不到返回 404。
+
+## POST /api/ai/embed
+
+接收 memo_id、content、metadata，使用当前配置的 embedding/vector store 组合索引一个完整 Memo，并返回：
+
+~~~json
+{
+  "embedding_id": "memo-...",
   "memo_id": "memo-42",
-  "title": "Docker port issue",
-  "content": "FastAPI deployment failed because the Docker port mapping was wrong.",
-  "tags": ["FastAPI", "Docker"]
+  "dimension": 8,
+  "provider": "deterministic"
 }
-```
+~~~
 
-Response includes `summary`, `keywords`, `category`, `suggested_tags`, `provider`, `ai_note_id`, and `created_at`.
+当前索引 metadata 会补充 `source_type=memo` 和 `index_version=memo-v1`。Phase 3c 不做 chunking、查询接口或 RAG。
 
-## `GET /api/ai/templates/{memo_id}`
+memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错误或非法请求返回 422。显式 FastEmbed 未安装/模型初始化失败时返回清晰的服务启动错误；默认 deterministic 不受影响。
 
-Returns the AI Service-owned structured template for a Code Snippet or Bug Report. The response includes `memo_id`, `kind`, `payload`, `raw_content`, `created_at`, and `updated_at`. Missing templates return `404`.
+## POST /api/ai/chat
 
-`payload` is derived data; `raw_content` is retained so the parser can be upgraded or the record rebuilt later.
+接收 `question` 和可选 `limit`（默认 5，范围 1–10），对当前已索引的完整 Memo 执行 query embedding 和向量检索，再生成带引用的回答。
 
-## `POST /api/integrations/memos/webhook`
+成功响应：
 
-Accepts the Memos user webhook payload for `memos.memo.created` and `memos.memo.updated`. Deleted and empty events are acknowledged and ignored. The response uses Memos' expected `{ "code": 0, "message": "..." }` contract.
-
-For an opted-in structured Memo, the response also contains `memo_type` and `template`:
-
-```json
+~~~json
 {
-  "code": 0,
-  "message": "accepted",
-  "memo_type": "code",
-  "template": {
-    "title": "Port check",
-    "language": "Go",
-    "code": "fmt.Println(8080)",
-    "description": "",
-    "tags": []
-  }
+  "answer": "根据知识库检索结果：...",
+  "citations": [
+    {
+      "memo_id": "memo-42",
+      "embedding_id": "memo-...",
+      "score": 0.912345,
+      "metadata": {"title": "Docker ports", "tags": ["docker"]}
+    }
+  ],
+  "provider": "deterministic",
+  "retrieved_count": 1
 }
-```
+~~~
 
-Supported template markers are `type: code`, `type=code`, `type: bug`, and `type=bug`. A Code Snippet accepts Python, Go, JavaScript, TypeScript, C++, and SQL. Invalid or unmarked content falls back to `memo_type: plain` and does not block Memo saving.
+`citations` 不返回索引内部的 `content` 字段；完整 Memo 原文只用于服务端上下文组装。空知识库返回 200 和空 citations；非法 question/limit 返回 422；向量检索不可用返回 503；LLM provider 失败或空回答返回 502。
+
+## GET /api/ai/templates/{memo_id}
+
+读取 Code Snippet 或 Bug Report 派生模板，找不到返回 404；raw_content 保留原始 Markdown。
+
+## POST /api/integrations/memos/webhook
+
+接收 Memos memo.created、memo.updated 和 memo.deleted webhook。删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。
+
+## Operational smoke
+
+真实 Qdrant smoke 命令：
+
+~~~powershell
+Set-Location H:\DevMemoAI\ai-service
+.\.venv\Scripts\python.exe -m scripts.smoke_qdrant
+~~~
+
+脚本默认使用 FastEmbed 384 维模型，创建临时 collection 后验证 upsert/search/delete 并清理；`--provider deterministic` 可跳过模型加载，`--cache-dir` 或 `AI_FASTEMBED_CACHE_DIR` 可指定缓存目录。
 
 ## Planned APIs
 
-- `POST /api/ai/embed` — Phase 3 model-backed embedding and Qdrant indexing.
-- `POST /api/ai/chat` — Phase 3 retrieval-augmented knowledge-base Q&A.
+- FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；chunk、rerank、outbox 和 Webhook 可靠性留给 Phase 4b。

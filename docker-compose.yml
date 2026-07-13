@@ -1,6 +1,9 @@
 services:
   memos:
-    image: neosmemo/memos:v0.29.1
+    # v0.29.1 is the repository source baseline; the version tag is not published
+    # on Docker Hub, so pin the currently published stable image by digest.
+    image: neosmemo/memos:stable@sha256:3e1253477066eb2aefa91145f7f9038bb931ed88c8a3ee05310a933594cdba7d
+    cpus: "1.0"
     ports:
       - "5230:5230"
     volumes:
@@ -9,10 +12,21 @@ services:
   ai-service:
     build:
       context: ./ai-service
+    cpus: "0.5"
     ports:
       - "8000:8000"
     environment:
       AI_PROVIDER: ${AI_PROVIDER:-deterministic}
+      AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-deterministic}
+      AI_FASTEMBED_MODEL: ${AI_FASTEMBED_MODEL:-BAAI/bge-small-en-v1.5}
+      AI_FASTEMBED_DIMENSION: ${AI_FASTEMBED_DIMENSION:-384}
+      AI_FASTEMBED_CACHE_DIR: ${AI_FASTEMBED_CACHE_DIR:-/app/model-cache}
+      AI_INDEX_ON_WEBHOOK: ${AI_INDEX_ON_WEBHOOK:-false}
+      AI_VECTOR_STORE: ${AI_VECTOR_STORE:-memory}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-devmemo_memos}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      AI_CORS_ORIGINS: ${AI_CORS_ORIGINS:-http://localhost:3001}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -21,12 +35,11 @@ services:
       AI_NOTES_DB: /app/data/ai_notes.db
     volumes:
       - ai-data:/app/data
-    depends_on:
-      - qdrant
-      - ollama
-
+      - ai-model-cache:/app/model-cache
   qdrant:
-    image: qdrant/qdrant:latest
+    # Pinned to the Qdrant 1.18.2 image verified in Phase 3g.
+    image: qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c
+    cpus: "0.5"
     ports:
       - "6333:6333"
     volumes:
@@ -34,6 +47,7 @@ services:
 
   ollama:
     image: ollama/ollama:latest
+    cpus: "1.0"
     ports:
       - "11434:11434"
     volumes:
@@ -42,5 +56,6 @@ services:
 volumes:
   memos-data:
   ai-data:
+  ai-model-cache:
   qdrant-data:
   ollama-data:
