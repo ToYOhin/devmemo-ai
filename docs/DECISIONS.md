@@ -99,3 +99,9 @@ Phase 4d 在现有 `webhook_events` 上通过兼容 `ALTER TABLE` 补充 `max_at
 Phase 4e 使用标准库 `hmac.compare_digest` 校验可选环境变量 `AI_OPS_TOKEN`，请求头为 `X-DevMemo-Ops-Token`。未配置令牌时保持本地开发兼容；配置后 GET outbox 和 retry POST 的缺失/错误令牌返回 401。Webhook HMAC 使用独立的 `AI_WEBHOOK_SECRET`，两者不混用。
 
 公开 outbox item 不再返回原始 Webhook payload；payload 仍保存在 AI Service SQLite，retry 只在服务内部读取。`last_error` 和最近错误摘要在 HTTP 响应中归一化为单行并截断到 240 字符，保留 event_id、状态、attempts 和 max_attempts 供排障。该切片不引入认证服务、Redis、Prometheus 或常驻 worker。
+
+## ADR-023：Phase 4f 只读保留预览与告警轮询
+
+Phase 4f 不执行默认数据删除，只提供受 `AI_OPS_TOKEN` 保护的 `GET /api/ai/ops/outbox/retention-preview`。候选以 `updated_at` 作为不活跃截止时间，仅包含 `processed` 和 `failed` 终态，排除 `pending`；默认 30 天、最多 100 条，接口不会修改 SQLite。未来若增加清理，必须另设显式批准/审计契约。
+
+新增 `GET /api/ai/ops/alerts` 作为外部监控的只读轮询接口，返回失败数、达到 max_attempts 的耗尽数和最多 5 条 warning/critical 摘要，不主动推送、不引入 Prometheus、Redis、Celery 或后台 worker。公开响应继续不返回 payload、secret 或未截断错误。

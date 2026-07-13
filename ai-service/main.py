@@ -19,6 +19,7 @@ from database import (
     get_webhook_event,
     get_webhook_event_stats,
     list_webhook_events,
+    list_webhook_retention_candidates,
     save_ai_note,
     save_memo_template,
     save_webhook_event,
@@ -330,6 +331,7 @@ async def read_webhook_outbox(
         "items": [_public_webhook_event(event) for event in items],
         "count": len(items),
         "by_status": stats["by_status"],
+        "exhausted_count": stats["exhausted_count"],
         "recent_errors": [
             {
                 **error,
@@ -337,6 +339,54 @@ async def read_webhook_outbox(
             }
             for error in stats["recent_errors"]
         ],
+    }
+
+
+@app.get("/api/ai/ops/outbox/retention-preview")
+async def preview_webhook_retention(
+    older_than_days: int = Query(default=30, ge=1, le=3650),
+    limit: int = Query(default=100, ge=1, le=100),
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
+) -> dict[str, object]:
+    """Preview inactive terminal events without deleting or mutating them."""
+
+    _require_ops_access(ops_token)
+    try:
+        candidates = list_webhook_retention_candidates(older_than_days, limit)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {
+        "older_than_days": older_than_days,
+        "count": len(candidates),
+        "candidates": [_public_webhook_event(event) for event in candidates],
+    }
+
+
+@app.get("/api/ai/ops/alerts")
+async def read_webhook_alerts(
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
+) -> dict[str, object]:
+    """Export a bounded failure summary for external read-only alert polling."""
+
+    _require_ops_access(ops_token)
+    stats = get_webhook_event_stats()
+    alerts = [
+        {
+            **error,
+            "severity": "critical"
+            if error["attempts"] >= error["max_attempts"]
+            else "warning",
+            "last_error": summarize_error(error["last_error"]),
+        }
+        for error in stats["recent_errors"]
+    ]
+    failed_count = stats["by_status"]["failed"]
+    return {
+        "has_alert": failed_count > 0,
+        "failed_count": failed_count,
+        "exhausted_count": stats["exhausted_count"],
+        "alert_count": len(alerts),
+        "alerts": alerts,
     }
 
 

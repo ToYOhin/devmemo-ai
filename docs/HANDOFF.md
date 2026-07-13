@@ -1,5 +1,14 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4f
+
+Phase 4f 已完成 Outbox 保留预览与告警轮询边界：
+
+- 新增受 `AI_OPS_TOKEN` 保护的 retention preview，按 `updated_at` 预览 30 天以上未更新的 `processed/failed` 事件，不删除、不影响 `pending`。
+- 新增受保护的 alerts JSON 摘要，返回失败数、耗尽重试数和最多 5 条 warning/critical 摘要，不推送外部服务。
+- 公开接口不返回 payload、secret 或未截断错误；没有启动 worker、队列、Prometheus，也没有修改 volume。
+- AI Service 全量 105 passed；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4g。
+
 ## 2026-07-13 Phase 4e
 
 Phase 4e 已完成运维 API 安全与数据暴露边界：
@@ -116,4 +125,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4f Outbox 保留与告警导出边界。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4g 显式清理批准与审计边界。

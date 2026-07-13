@@ -9,6 +9,7 @@ from database import (
     get_webhook_event,
     get_webhook_event_stats,
     list_webhook_events,
+    list_webhook_retention_candidates,
     save_ai_note,
     save_memo_template,
     save_webhook_event,
@@ -161,5 +162,29 @@ def test_webhook_retry_is_limited_and_stats_are_bounded(monkeypatch, tmp_path):
 
     stats = get_webhook_event_stats()
     assert stats["by_status"] == {"pending": 0, "processed": 0, "failed": 1}
+    assert stats["exhausted_count"] == 1
     assert stats["recent_errors"][0]["last_error"] == "third failure"
     assert stats["recent_errors"][0]["attempts"] == 3
+
+
+def test_webhook_retention_preview_is_read_only_and_excludes_pending(monkeypatch, tmp_path):
+    database = tmp_path / "retention.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    save_webhook_event("old-processed", "memo.created", {})
+    update_webhook_event("old-processed", "processed")
+    save_webhook_event("old-pending", "memo.created", {})
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-01T00:00:00+00:00' WHERE event_id = ?",
+            ("old-processed",),
+        )
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-01T00:00:00+00:00' WHERE event_id = ?",
+            ("old-pending",),
+        )
+
+    candidates = list_webhook_retention_candidates(30)
+
+    assert [item["event_id"] for item in candidates] == ["old-processed"]
+    assert get_webhook_event("old-processed")["status"] == "processed"
+    assert get_webhook_event("old-pending")["status"] == "pending"

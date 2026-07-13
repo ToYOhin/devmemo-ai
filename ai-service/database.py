@@ -6,7 +6,7 @@ import json
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -334,13 +334,43 @@ def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict
     return [_webhook_event_row(row) for row in rows]
 
 
+def list_webhook_retention_candidates(
+    older_than_days: int,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """List inactive terminal events without deleting or mutating any row."""
+
+    if older_than_days < 1 or older_than_days > 3650:
+        raise ValueError("retention days must be between 1 and 3650")
+    if limit < 1 or limit > 100:
+        raise ValueError("retention limit must be between 1 and 100")
+    path = database_path()
+    if not path.exists():
+        return []
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=older_than_days)).isoformat()
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT event_id, event_type, payload, status, attempts, max_attempts,
+                   last_error, created_at, updated_at
+            FROM webhook_events
+            WHERE status IN ('processed', 'failed') AND updated_at < ?
+            ORDER BY updated_at ASC
+            LIMIT ?
+            """,
+            (cutoff, limit),
+        ).fetchall()
+    return [_webhook_event_row(row) for row in rows]
+
+
 def get_webhook_event_stats() -> dict[str, Any]:
     """Return bounded status counts and recent failure summaries."""
 
     empty_counts = {"pending": 0, "processed": 0, "failed": 0}
     path = database_path()
     if not path.exists():
-        return {"by_status": empty_counts, "recent_errors": []}
+        return {"by_status": empty_counts, "exhausted_count": 0, "recent_errors": []}
     with sqlite3.connect(path) as connection:
         _ensure_webhook_events_schema(connection)
         counts = connection.execute(
@@ -355,10 +385,18 @@ def get_webhook_event_stats() -> dict[str, Any]:
             LIMIT 5
             """
         ).fetchall()
+        exhausted_count = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM webhook_events
+            WHERE status = 'failed' AND attempts >= max_attempts
+            """
+        ).fetchone()[0]
     for status, count in counts:
         empty_counts[status] = count
     return {
         "by_status": empty_counts,
+        "exhausted_count": exhausted_count,
         "recent_errors": [
             {
                 "event_id": row[0],

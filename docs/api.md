@@ -104,7 +104,7 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 - `status`：可选 `pending|processed|failed`
 - `limit`：可选 1–100，默认 50
 
-未配置 `AI_OPS_TOKEN` 时可直接读取；配置后必须携带 `X-DevMemo-Ops-Token`，缺失或错误返回 401。返回 `items`、`count`、`by_status` 和最多 5 条 `recent_errors`。公开 item 只包含 `event_id`、`event_type`、`status`、`attempts`、`max_attempts`、`last_error`、`created_at` 和 `updated_at`，不返回原始 Webhook `payload`。`last_error` 和 `recent_errors.last_error` 为单行、最多 240 字符的摘要。重复 `eventId` 不重复处理；无显式 eventId 时服务使用原始 body hash 作为稳定 ID。Webhook 业务失败仍返回 `code=0`，并可通过该 API 查看 `failed` 状态。
+未配置 `AI_OPS_TOKEN` 时可直接读取；配置后必须携带 `X-DevMemo-Ops-Token`，缺失或错误返回 401。返回 `items`、`count`、`by_status`、`exhausted_count` 和最多 5 条 `recent_errors`。公开 item 只包含 `event_id`、`event_type`、`status`、`attempts`、`max_attempts`、`last_error`、`created_at` 和 `updated_at`，不返回原始 Webhook `payload`。`last_error` 和 `recent_errors.last_error` 为单行、最多 240 字符的摘要。重复 `eventId` 不重复处理；无显式 eventId 时服务使用原始 body hash 作为稳定 ID。Webhook 业务失败仍返回 `code=0`，并可通过该 API 查看 `failed` 状态。
 
 ## POST /api/ai/ops/outbox/{event_id}/retry
 
@@ -114,6 +114,14 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 - 成功返回 `code=0`、`outbox_status=processed`；失败仍返回 `code=0` 并递增 `attempts`。
 - 达到 `max_attempts` 后返回 409，错误信息为 `webhook retry limit reached`。
 - 这是运维边界 API，不改变 Memos Webhook 原有 `code=0` 契约，也不引入队列或常驻进程。
+
+## GET /api/ai/ops/outbox/retention-preview
+
+只读预览长期未更新的终态 outbox 事件，不执行删除。默认 `older_than_days=30`，范围 1–3650；`limit` 默认 100，范围 1–100。只包含 `processed`/`failed`，不会把 `pending` 事件列为清理候选。配置 `AI_OPS_TOKEN` 后同样需要 `X-DevMemo-Ops-Token`。
+
+## GET /api/ai/ops/alerts
+
+供外部监控轮询的只读 JSON 摘要，受 `AI_OPS_TOKEN` 保护。返回 `has_alert`、`failed_count`、`exhausted_count`、`alert_count` 和最多 5 条 `alerts`；每条 alert 只包含事件 ID、attempts、max_attempts、更新时间、脱敏错误摘要和 `warning|critical` 严重级别，不返回 payload 或 secret。Phase 4f 不主动推送外部告警。
 
 ## GET /api/ai/templates/{memo_id}
 
@@ -139,4 +147,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测和 ops API 安全边界已在 Phase 4d/4e 完成。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全和保留/告警只读边界已在 Phase 4d/4e/4f 完成。

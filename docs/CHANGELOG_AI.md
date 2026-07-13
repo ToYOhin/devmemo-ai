@@ -2,12 +2,20 @@
 
 ## 2026-07-13
 
+### Phase 4f：Outbox 保留与告警导出边界
+
+- 新增受 `AI_OPS_TOKEN` 保护的 `GET /api/ai/ops/outbox/retention-preview`，只读预览 30 天以上未更新的 processed/failed 事件，不自动删除、不影响 pending。
+- 新增受保护的 `GET /api/ai/ops/alerts`，导出失败数、耗尽重试数和最多 5 条 warning/critical 错误摘要。
+- 告警接口不推送外部服务，不返回 payload、secret 或未截断错误；没有引入 worker、Redis、Prometheus 或新依赖。
+- 验证：AI Service 105 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 未完成：显式清理批准、审计记录和 retention 删除执行留到 Phase 4g。
+
 ### Phase 4e：运维 API 安全与告警边界
 
 - 新增可选 `AI_OPS_TOKEN` 与 `X-DevMemo-Ops-Token`，配置后保护 outbox GET 和显式 retry POST；未配置时保持本地兼容。
 - 公开 outbox 响应移除原始 Webhook payload，错误摘要归一化为单行并限制在 240 字符以内；SQLite 内部数据不变，retry 仍可用。
 - 新增认证、默认兼容、错误摘要截断和 retry 端点保护测试。
-- 未引入认证服务、Redis、Prometheus、后台 worker 或前端运维 UI；外部告警导出留到 Phase 4f。
+- 未引入认证服务、Redis、Prometheus、后台 worker 或前端运维 UI；主动告警推送留到 Phase 4g。
 
 ### Phase 4d：显式有限重试与最小观测
 
@@ -16,7 +24,7 @@
 - GET outbox 增加 `by_status` 和最多 5 条 `recent_errors`，不启动后台 worker 或新增运行时依赖。
 - 默认 deterministic + memory、Memos Webhook `code=0` 和 HMAC 显式开关保持不变。
 - 验证：AI Service 100 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
-- Phase 4d 不包含 ops API 认证、错误摘要脱敏和外部告警导出；前两项已在 Phase 4e 完成，外部告警导出留到 Phase 4f。
+- Phase 4d 不包含 ops API 认证、错误摘要脱敏和告警轮询；前两项已在 Phase 4e 完成，告警轮询已在 Phase 4f 完成。
 
 ### Phase 4c：Webhook Outbox 与失败状态读取
 

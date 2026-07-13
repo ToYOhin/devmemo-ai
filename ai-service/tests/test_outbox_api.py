@@ -1,3 +1,5 @@
+import sqlite3
+
 from fastapi.testclient import TestClient
 
 import main
@@ -142,6 +144,9 @@ def test_retry_returns_conflict_after_max_attempts(monkeypatch, tmp_path):
     exhausted = client.post("/api/ai/ops/outbox/event-retry-limit-1/retry")
     assert exhausted.status_code == 409
     assert exhausted.json()["detail"] == "webhook retry limit reached"
+    alerts = client.get("/api/ai/ops/alerts").json()
+    assert alerts["exhausted_count"] == 1
+    assert alerts["alerts"][0]["severity"] == "critical"
 
 
 def test_ops_token_is_optional_then_protects_read_and_retry(monkeypatch, tmp_path):
@@ -162,6 +167,16 @@ def test_ops_token_is_optional_then_protects_read_and_retry(monkeypatch, tmp_pat
         "/api/ai/ops/outbox/missing/retry",
         headers={"X-DevMemo-Ops-Token": "ops-secret"},
     ).status_code == 404
+    assert client.get("/api/ai/ops/alerts").status_code == 401
+    assert client.get(
+        "/api/ai/ops/alerts",
+        headers={"X-DevMemo-Ops-Token": "ops-secret"},
+    ).status_code == 200
+    assert client.get("/api/ai/ops/outbox/retention-preview").status_code == 401
+    assert client.get(
+        "/api/ai/ops/outbox/retention-preview",
+        headers={"X-DevMemo-Ops-Token": "ops-secret"},
+    ).status_code == 200
 
 
 def test_ops_error_summary_is_single_line_and_bounded(monkeypatch, tmp_path):
@@ -191,3 +206,54 @@ def test_ops_error_summary_is_single_line_and_bounded(monkeypatch, tmp_path):
     assert "\n" not in item_error
     assert item_error.endswith("…")
     assert recent_error == item_error
+
+
+def test_retention_preview_is_read_only(monkeypatch, tmp_path):
+    database = tmp_path / "retention-preview.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    monkeypatch.delenv("AI_OPS_TOKEN", raising=False)
+    response = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "eventId": "event-retention-preview-1",
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-retention", "content": "retention"},
+        },
+    )
+    assert response.status_code == 200
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-01T00:00:00+00:00' WHERE event_id = ?",
+            ("event-retention-preview-1",),
+        )
+
+    preview = client.get("/api/ai/ops/outbox/retention-preview?older_than_days=30")
+
+    assert preview.status_code == 200
+    assert preview.json()["count"] == 1
+    assert preview.json()["candidates"][0]["event_id"] == "event-retention-preview-1"
+    assert "payload" not in preview.json()["candidates"][0]
+    current = client.get("/api/ai/ops/outbox").json()
+    assert current["count"] == 1
+    assert current["items"][0]["status"] == "processed"
+
+
+def test_alert_export_is_empty_for_missing_database(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "empty-alerts.db"))
+    monkeypatch.delenv("AI_OPS_TOKEN", raising=False)
+
+    alerts = client.get("/api/ai/ops/alerts")
+    preview = client.get("/api/ai/ops/outbox/retention-preview")
+
+    assert alerts.json() == {
+        "has_alert": False,
+        "failed_count": 0,
+        "exhausted_count": 0,
+        "alert_count": 0,
+        "alerts": [],
+    }
+    assert preview.json() == {
+        "older_than_days": 30,
+        "count": 0,
+        "candidates": [],
+    }

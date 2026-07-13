@@ -117,6 +117,22 @@ verified request
   -> by_status + recent_errors bounded observation
 ~~~
 
+## Outbox retention and alert flow
+
+~~~text
+GET /api/ai/ops/outbox/retention-preview
+  -> AI_OPS_TOKEN check
+  -> updated_at cutoff
+  -> processed/failed only
+  -> public event view, no delete
+
+GET /api/ai/ops/alerts
+  -> AI_OPS_TOKEN check
+  -> failed/exhausted counts
+  -> warning/critical recent summaries
+  -> external polling only, no push worker
+~~~
+
 ## Ops API security flow
 
 ~~~text

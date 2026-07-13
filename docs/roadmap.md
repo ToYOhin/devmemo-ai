@@ -141,4 +141,14 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 ## Phase 4f：Outbox 保留与告警导出边界
 
-下一阶段只评估显式 opt-in 的保留预览/清理和只读告警摘要导出；默认不删除数据、不启动 worker，不改变 Qdrant/AI volume。
+已完成最小切片：
+
+1. 新增受 `AI_OPS_TOKEN` 保护的 retention preview，按 `updated_at` 预览超过 30 天的 `processed/failed` 终态；不删除、不影响 `pending`。
+2. 新增受保护的 `GET /api/ai/ops/alerts`，返回失败数、耗尽重试数和最多 5 条 warning/critical 摘要。
+3. alerts 只供外部轮询，不主动推送；不引入 worker、队列、Prometheus 或新运行时依赖。
+
+验证：AI Service 105 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 4g：显式清理批准与审计边界
+
+下一阶段只评估两步式 cleanup preview/confirm、cutoff 与状态二次校验和最小审计记录；默认不删除数据、不修改 Qdrant/AI volume。
