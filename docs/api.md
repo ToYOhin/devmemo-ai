@@ -97,6 +97,10 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 `citations` 不返回索引内部的 `content` 字段；完整 Memo 原文只用于服务端上下文组装。空知识库返回 200 和空 citations；非法 question/limit 返回 422；向量检索不可用返回 503；LLM provider 失败或空回答返回 502。
 
+## Phase 5a internal evaluation boundary
+
+Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalEvaluator` run offline against the existing `RetrievalService`, reporting Recall@K and first relevant rank without changing the `POST /api/ai/chat` response. Chunking remains a separate Phase 5b design step.
+
 ## GET /api/ai/ops/outbox
 
 读取 AI Service 自有 SQLite 中最近的 Webhook outbox 状态，不会启动重试 worker。
@@ -161,4 +165,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成。下一阶段进入 Phase 5 检索质量增强。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a 已完成内部离线评估，下一阶段为 Phase 5b chunking 边界。

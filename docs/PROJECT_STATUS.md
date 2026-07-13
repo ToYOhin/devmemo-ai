@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g 已完成。下一阶段为 Phase 5：检索质量增强。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a 已完成。下一阶段为 Phase 5b：Memo chunking 边界。
 
 ## 当前事实
 
@@ -19,6 +19,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 可选 embedding：FastEmbedEmbeddingProvider，默认不启用、不加载模型；本机已安装依赖用于 smoke
 - 索引健康接口：GET `/api/ai/index/health`，默认 memory 路径不连接 Qdrant
 - RAG 接口：POST `/api/ai/chat`，当前检索完整 Memo 并返回引用；默认 deterministic + memory 可离线运行
+- 检索质量：内部 `RetrievalEvaluator` 提供离线 Recall@K/首个相关结果评估，不改变 chat API
 - Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
@@ -73,6 +74,13 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 清理在 SQLite 事务中重新校验完整 preview 集合、cutoff 和 `processed/failed` 终态；pending、集合外 ID 或数据变化整批拒绝。
 - 新增 `webhook_cleanup_audits` 和 GET `/api/ai/ops/outbox/cleanup-audits`；记录 approval_id、actor 摘要、cutoff、候选数、删除数和执行时间，不保存 ops secret。
 - 相同 approval_id 的重复执行幂等返回；清理只处理 AI Service 自有 webhook_events，不触碰 Memos、ai_notes、memo_templates、原始 Markdown 或 Qdrant volume。
+
+## Phase 5a 已完成
+
+- 选择离线检索评估作为最小切片，暂不改变当前“一整个 Memo 一个向量”的索引契约。
+- 新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`。
+- 支持 Recall@K、命中 Memo ID、首个相关结果排名和批量评估；不连接网络、不依赖 FastEmbed/Qdrant SDK。
+- deterministic + memory 实际检索契约和评估器均有 unit/contract tests；未新增公共 API。
 
 ## Phase 3c 已完成
 
@@ -130,7 +138,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             108 passed
+AI Service full pytest             116 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
 frontend full tests                131 passed
@@ -162,9 +170,10 @@ pnpm lint                          BLOCKED / 377 existing Biome CRLF diagnostics
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
+- Phase 5a 只增加离线评估边界；chunking、混合检索和 rerank 尚未替换现有完整 Memo 索引。
 - 当前 outbox 提供显式有限重试、基础状态计数、ops token、保留预览、告警轮询和显式清理审计；没有自动 worker、主动告警推送或定时清理。
 - 全量 pnpm lint 当前报告 377 个仓库既有 Biome CRLF 格式诊断；本轮未执行格式化修复，避免混入无关前端变更。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 5 检索质量增强。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 5b Memo chunking 边界。

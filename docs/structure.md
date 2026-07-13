@@ -179,3 +179,14 @@ GET /api/ai/ops/outbox/retention-preview
   -> webhook_cleanup_audits records approval_id, actor_digest, cutoff and deleted_count
   -> repeated approval_id returns idempotent replay
 ~~~
+
+## Offline retrieval evaluation flow
+
+~~~text
+RetrievalEvaluationCase
+  -> RetrievalEvaluator
+  -> existing RetrievalService.retrieve(question, limit)
+  -> provider-neutral citations
+  -> Recall@K + relevant_memo_ids + first_relevant_rank
+  -> offline unit/contract test only
+~~~

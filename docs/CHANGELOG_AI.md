@@ -2,6 +2,13 @@
 
 ## 2026-07-13
 
+### Phase 5a：离线检索质量评估边界
+- 选择离线评估而不是直接切换 chunking，避免破坏当前完整 Memo 的索引、删除和 citation 契约。
+- 新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`。
+- 支持 Recall@K、相关 Memo 命中列表、首个相关结果排名和批量案例；不访问网络、不加载模型、不连接 Qdrant。
+- 验证：AI Service 116 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 下一阶段：Phase 5b Memo chunking 边界，仍需保持完整 Memo 索引兼容。
+
 ### Phase 4g：显式清理批准与审计边界
 - retention preview 现在返回 `cutoff`、`preview_limit` 和 `candidate_ids`，清理请求必须绑定同一预览集合。
 - 新增 `POST /api/ai/ops/outbox/retention-cleanup`：默认 dry-run，只有显式 `confirm=true` 且 `dry_run=false` 才能删除终态 outbox 记录。

@@ -1,5 +1,15 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 5a
+
+Phase 5a 已完成离线检索质量评估边界：
+
+- 选择离线评估而不是直接切换 chunking，保护当前完整 Memo 索引和 citation 契约。
+- 新增 `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`，支持 Recall@K、命中列表、首个相关结果排名和批量评估。
+- 评估器只依赖 provider-neutral `RetrievalService`，默认 deterministic + memory 可离线运行，不访问 FastEmbed/Qdrant。
+- 没有新增公共 API，没有修改 Memos 核心、Webhook、outbox、AI SQLite 或向量存储。
+- AI Service 全量 116 passed；下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5b Memo chunking 边界。
+
 ## 2026-07-13 Phase 4g
 
 Phase 4g 已完成显式清理批准与审计边界：

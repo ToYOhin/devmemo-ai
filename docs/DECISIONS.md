@@ -111,3 +111,9 @@ Phase 4f 不执行默认数据删除，只提供受 `AI_OPS_TOKEN` 保护的 `GE
 Phase 4g 使用两步式清理：retention preview 返回 `cutoff`、`preview_limit` 和 `candidate_ids`；清理请求默认 `dry_run=true`，只有同时设置 `dry_run=false` 和 `confirm=true` 才允许执行。执行在 SQLite `BEGIN IMMEDIATE` 事务内重新计算同一 preview 集合，并校验 `processed/failed` 终态、cutoff 和 candidate 集合；pending、集合外 ID 或数据变化会整批拒绝。
 
 清理只删除 AI Service 自有 `webhook_events` 派生记录，不触碰 Memos 数据库、`ai_notes`、`memo_templates`、原始 Markdown、Qdrant 或 AI volume。`webhook_cleanup_audits` 保存 approval_id、actor SHA-256 摘要、cutoff、preview_limit、候选数量、删除数量和执行时间；相同 approval_id 的重复请求幂等返回，且不保存 ops secret。当前不引入 worker、定时任务、外部队列、Prometheus 或前端运维 UI。
+
+## ADR-025：Phase 5a 先做离线检索评估，不直接切换 Chunking
+
+当前索引以完整 Memo 为一个向量，embedding_id、Webhook upsert/delete 和 citations 都依赖这一边界。Phase 5a 先新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`，测量 Recall@K、相关 Memo 命中和首个相关结果排名；评估器复用 `RetrievalService`，不依赖 FastAPI、FastEmbed、Qdrant 或外部网络。
+
+在离线评估集证明当前检索基线前，不替换现有完整 Memo 索引。后续 Phase 5b 才定义 chunk 文档、稳定 chunk ID、index_version 和生命周期兼容策略；默认 deterministic + memory、Memos 核心和现有 chat API 保持不变。

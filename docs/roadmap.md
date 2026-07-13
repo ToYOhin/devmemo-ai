@@ -161,6 +161,16 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 108 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
 
-## Phase 5：检索质量增强（下一阶段）
+## Phase 5a：离线检索质量评估
 
-计划引入 Memo chunking、混合检索、rerank、代码语言/符号感知和 RAG 评估集；仍保持默认 deterministic + memory，并继续避免修改 Memos 核心。
+已完成：
+
+1. 选择离线评估作为第一步，避免直接改变完整 Memo 的索引、Webhook 生命周期和 citation 契约。
+2. 新增 provider-neutral `RetrievalEvaluationCase`、`RetrievalEvaluationResult` 和 `RetrievalEvaluator`。
+3. 支持 Recall@K、相关 Memo 命中列表、首个相关结果排名和批量案例；不访问网络、不加载模型、不连接 Qdrant。
+
+验证：AI Service 116 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 5b：Memo chunking 边界（下一阶段）
+
+计划在不破坏完整 Memo 索引兼容性的前提下，先定义 provider-neutral chunk 文档、稳定 chunk ID、index_version 和删除/更新策略；暂不同时加入 rerank、混合检索或聊天 UI。
