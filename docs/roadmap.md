@@ -151,4 +151,16 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 ## Phase 4g：显式清理批准与审计边界
 
-下一阶段只评估两步式 cleanup preview/confirm、cutoff 与状态二次校验和最小审计记录；默认不删除数据、不修改 Qdrant/AI volume。
+已完成：
+
+1. retention preview 返回 `cutoff`、`preview_limit` 和 `candidate_ids`，清理请求必须绑定同一预览集合。
+2. 新增 `POST /api/ai/ops/outbox/retention-cleanup`；默认 dry-run，只有 `confirm=true` 且 `dry_run=false` 才能执行。
+3. SQLite 事务重新校验完整候选集合、cutoff 和 `processed/failed` 终态；pending、越界 ID 或数据变化整批拒绝。
+4. 新增 `webhook_cleanup_audits` 和 `GET /api/ai/ops/outbox/cleanup-audits`；保存 approval_id、actor 摘要、cutoff、候选数、删除数和执行时间。
+5. 相同 approval_id 重复请求幂等；清理只作用于 AI Service 自有 webhook_events，不触碰 Memos、ai_notes、memo_templates、原始 Markdown 或 Qdrant volume。
+
+验证：AI Service 108 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 5：检索质量增强（下一阶段）
+
+计划引入 Memo chunking、混合检索、rerank、代码语言/符号感知和 RAG 评估集；仍保持默认 deterministic + memory，并继续避免修改 Memos 核心。

@@ -2,13 +2,22 @@
 
 ## 2026-07-13
 
+### Phase 4g：显式清理批准与审计边界
+- retention preview 现在返回 `cutoff`、`preview_limit` 和 `candidate_ids`，清理请求必须绑定同一预览集合。
+- 新增 `POST /api/ai/ops/outbox/retention-cleanup`：默认 dry-run，只有显式 `confirm=true` 且 `dry_run=false` 才能删除终态 outbox 记录。
+- SQLite 事务再次校验 preview 集合、cutoff 和 `processed/failed` 状态；pending、越界 ID 或数据变化整批拒绝。
+- 新增 `webhook_cleanup_audits` 和 cleanup-audits GET；记录 approval、actor 摘要、cutoff、候选数、删除数和时间，相同 approval_id 幂等。
+- 不删除 Memos、ai_notes、memo_templates、原始 Markdown、Qdrant/AI volume；不引入 worker、队列、定时任务或 Prometheus。
+- 验证：AI Service 108 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 下一阶段：Phase 5 检索质量增强（chunk、混合检索、rerank 和评估）。
+
 ### Phase 4f：Outbox 保留与告警导出边界
 
 - 新增受 `AI_OPS_TOKEN` 保护的 `GET /api/ai/ops/outbox/retention-preview`，只读预览 30 天以上未更新的 processed/failed 事件，不自动删除、不影响 pending。
 - 新增受保护的 `GET /api/ai/ops/alerts`，导出失败数、耗尽重试数和最多 5 条 warning/critical 错误摘要。
 - 告警接口不推送外部服务，不返回 payload、secret 或未截断错误；没有引入 worker、Redis、Prometheus 或新依赖。
 - 验证：AI Service 105 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
-- 未完成：显式清理批准、审计记录和 retention 删除执行留到 Phase 4g。
+- Phase 4f 的显式清理批准、审计记录和 retention 删除执行已在 Phase 4g 完成。
 
 ### Phase 4e：运维 API 安全与告警边界
 

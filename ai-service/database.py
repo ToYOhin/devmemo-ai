@@ -337,11 +337,14 @@ def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict
 def list_webhook_retention_candidates(
     older_than_days: int,
     limit: int = 100,
+    cutoff: str | None = None,
 ) -> list[dict[str, Any]]:
     """List inactive terminal events without deleting or mutating any row."""
 
-    if older_than_days < 1 or older_than_days > 3650:
-        raise ValueError("retention days must be between 1 and 3650")
+    if cutoff is None:
+        cutoff = webhook_retention_cutoff(older_than_days)
+    else:
+        cutoff = _normalize_retention_cutoff(cutoff)
     if limit < 1 or limit > 100:
         raise ValueError("retention limit must be between 1 and 100")
     path = database_path()
@@ -356,12 +359,141 @@ def list_webhook_retention_candidates(
                    last_error, created_at, updated_at
             FROM webhook_events
             WHERE status IN ('processed', 'failed') AND updated_at < ?
-            ORDER BY updated_at ASC
+            ORDER BY updated_at ASC, event_id ASC
             LIMIT ?
             """,
             (cutoff, limit),
         ).fetchall()
     return [_webhook_event_row(row) for row in rows]
+
+
+def webhook_retention_cutoff(older_than_days: int) -> str:
+    if older_than_days < 1 or older_than_days > 3650:
+        raise ValueError("retention days must be between 1 and 3650")
+    return (datetime.now(timezone.utc) - timedelta(days=older_than_days)).isoformat()
+
+
+def delete_webhook_retention_candidates(
+    approval_id: str,
+    candidate_ids: list[str],
+    cutoff: str,
+    actor_digest: str,
+    preview_limit: int = 100,
+) -> dict[str, Any]:
+    """Delete only an approved, unchanged terminal candidate set and audit it."""
+
+    normalized_cutoff = _normalize_retention_cutoff(cutoff)
+    normalized_ids = sorted(candidate_ids)
+    if not normalized_ids or len(normalized_ids) > 100:
+        raise ValueError("retention candidate count must be between 1 and 100")
+    if preview_limit < 1 or preview_limit > 100:
+        raise ValueError("retention preview limit must be between 1 and 100")
+    if len(set(normalized_ids)) != len(normalized_ids):
+        raise ValueError("retention candidate ids must be unique")
+    path = database_path()
+    if not path.exists():
+        raise ValueError("retention candidates changed; refresh preview")
+
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        connection.execute("BEGIN IMMEDIATE")
+        existing_row = connection.execute(
+            """
+            SELECT approval_id, actor_digest, cutoff, candidate_ids,
+                   preview_limit, candidate_count, deleted_count, created_at
+            FROM webhook_cleanup_audits
+            WHERE approval_id = ?
+            """,
+            (approval_id,),
+        ).fetchone()
+        if existing_row:
+            existing = _cleanup_audit_row(existing_row)
+            if (
+                existing["actor_digest"] != actor_digest
+                or existing["cutoff"] != normalized_cutoff
+                or existing["candidate_ids"] != normalized_ids
+                or existing["preview_limit"] != preview_limit
+            ):
+                raise ValueError("approval id already used with a different cleanup request")
+            return {**existing, "replayed": True}
+
+        rows = connection.execute(
+            """
+            SELECT event_id
+            FROM webhook_events
+            WHERE status IN ('processed', 'failed')
+              AND updated_at < ?
+            ORDER BY updated_at ASC, event_id ASC
+            LIMIT ?
+            """,
+            (normalized_cutoff, preview_limit),
+        ).fetchall()
+        if {row[0] for row in rows} != set(normalized_ids):
+            raise ValueError("retention candidates changed; refresh preview")
+
+        placeholders = ", ".join("?" for _ in normalized_ids)
+        deleted = connection.execute(
+            f"""
+            DELETE FROM webhook_events
+            WHERE event_id IN ({placeholders})
+              AND status IN ('processed', 'failed')
+              AND updated_at < ?
+            """,
+            (*normalized_ids, normalized_cutoff),
+        ).rowcount
+        if deleted != len(normalized_ids):
+            raise ValueError("retention candidates changed; refresh preview")
+        created_at = datetime.now(timezone.utc).isoformat()
+        connection.execute(
+            """
+            INSERT INTO webhook_cleanup_audits
+                (approval_id, actor_digest, cutoff, candidate_ids,
+                 preview_limit, candidate_count, deleted_count, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                approval_id,
+                actor_digest,
+                normalized_cutoff,
+                json.dumps(normalized_ids),
+                preview_limit,
+                len(normalized_ids),
+                deleted,
+                created_at,
+            ),
+        )
+    return {
+        "approval_id": approval_id,
+        "actor_digest": actor_digest,
+        "cutoff": normalized_cutoff,
+        "candidate_ids": normalized_ids,
+        "preview_limit": preview_limit,
+        "candidate_count": len(normalized_ids),
+        "deleted_count": deleted,
+        "created_at": created_at,
+        "replayed": False,
+    }
+
+
+def list_webhook_cleanup_audits(limit: int = 50) -> list[dict[str, Any]]:
+    if limit < 1 or limit > 100:
+        raise ValueError("cleanup audit limit must be between 1 and 100")
+    path = database_path()
+    if not path.exists():
+        return []
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT approval_id, actor_digest, cutoff, candidate_ids,
+                   preview_limit, candidate_count, deleted_count, created_at
+            FROM webhook_cleanup_audits
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [_cleanup_audit_row(row) for row in rows]
 
 
 def get_webhook_event_stats() -> dict[str, Any]:
@@ -435,6 +567,30 @@ def _ensure_webhook_events_schema(connection: sqlite3.Connection) -> None:
         connection.execute(
             "ALTER TABLE webhook_events ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3"
         )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS webhook_cleanup_audits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            approval_id TEXT NOT NULL UNIQUE,
+            actor_digest TEXT NOT NULL,
+            cutoff TEXT NOT NULL,
+            candidate_ids TEXT NOT NULL,
+            preview_limit INTEGER NOT NULL DEFAULT 100,
+            candidate_count INTEGER NOT NULL,
+            deleted_count INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    audit_columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(webhook_cleanup_audits)").fetchall()
+    }
+    if "preview_limit" not in audit_columns:
+        connection.execute(
+            "ALTER TABLE webhook_cleanup_audits "
+            "ADD COLUMN preview_limit INTEGER NOT NULL DEFAULT 100"
+        )
 
 
 def _select_webhook_event(
@@ -465,6 +621,29 @@ def _webhook_event_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
         "last_error": row[6],
         "created_at": row[7],
         "updated_at": row[8],
+    }
+
+
+def _normalize_retention_cutoff(cutoff: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(cutoff)
+    except ValueError as error:
+        raise ValueError("retention cutoff must be an ISO-8601 timestamp") from error
+    if parsed.tzinfo is None:
+        raise ValueError("retention cutoff must include a timezone")
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
+def _cleanup_audit_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    return {
+        "approval_id": row[0],
+        "actor_digest": row[1],
+        "cutoff": row[2],
+        "candidate_ids": json.loads(row[3]),
+        "preview_limit": row[4],
+        "candidate_count": row[5],
+        "deleted_count": row[6],
+        "created_at": row[7],
     }
 
 

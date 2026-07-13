@@ -18,12 +18,15 @@ from database import (
     get_memo_template,
     get_webhook_event,
     get_webhook_event_stats,
+    delete_webhook_retention_candidates,
+    list_webhook_cleanup_audits,
     list_webhook_events,
     list_webhook_retention_candidates,
     save_ai_note,
     save_memo_template,
     save_webhook_event,
     update_webhook_event,
+    webhook_retention_cutoff,
 )
 from llm import create_provider
 from app.services.content_parser import parse_memo_content
@@ -59,6 +62,15 @@ class EmbedResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1)
     limit: int = Field(default=5, ge=1, le=10)
+
+
+class RetentionCleanupRequest(BaseModel):
+    approval_id: str = Field(pattern=r"^[A-Za-z0-9._:-]{1,120}$")
+    cutoff: str = Field(min_length=1, max_length=64)
+    candidate_ids: list[str] = Field(min_length=1, max_length=100)
+    preview_limit: int = Field(ge=1, le=100)
+    confirm: bool = False
+    dry_run: bool = True
 
 
 class CitationResponse(BaseModel):
@@ -352,12 +364,16 @@ async def preview_webhook_retention(
 
     _require_ops_access(ops_token)
     try:
-        candidates = list_webhook_retention_candidates(older_than_days, limit)
+        cutoff = webhook_retention_cutoff(older_than_days)
+        candidates = list_webhook_retention_candidates(older_than_days, limit, cutoff)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {
         "older_than_days": older_than_days,
+        "cutoff": cutoff,
+        "preview_limit": limit,
         "count": len(candidates),
+        "candidate_ids": [str(candidate["event_id"]) for candidate in candidates],
         "candidates": [_public_webhook_event(event) for event in candidates],
     }
 
@@ -387,6 +403,66 @@ async def read_webhook_alerts(
         "exhausted_count": stats["exhausted_count"],
         "alert_count": len(alerts),
         "alerts": alerts,
+    }
+
+
+@app.post("/api/ai/ops/outbox/retention-cleanup")
+async def cleanup_webhook_retention(
+    request: RetentionCleanupRequest,
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
+    ops_actor: str | None = Header(default=None, alias="X-DevMemo-Ops-Actor"),
+) -> dict[str, object]:
+    """Delete an unchanged preview set only after explicit confirmation."""
+
+    _require_ops_access(ops_token)
+    if request.dry_run:
+        return {
+            "code": 0,
+            "message": "dry-run only; explicit confirmation required",
+            "executed": False,
+            "dry_run": True,
+            "requires_confirmation": True,
+            "approval_id": request.approval_id,
+            "candidate_count": len(request.candidate_ids),
+            "deleted_count": 0,
+        }
+    if not request.confirm:
+        raise HTTPException(status_code=409, detail="explicit cleanup confirmation required")
+    try:
+        audit = delete_webhook_retention_candidates(
+            request.approval_id,
+            request.candidate_ids,
+            request.cutoff,
+            _ops_actor_digest(ops_actor),
+            request.preview_limit,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "code": 0,
+        "message": "webhook retention cleanup completed",
+        "executed": True,
+        "dry_run": False,
+        "replayed": audit["replayed"],
+        **_public_cleanup_audit(audit),
+    }
+
+
+@app.get("/api/ai/ops/outbox/cleanup-audits")
+async def read_webhook_cleanup_audits(
+    limit: int = Query(default=50, ge=1, le=100),
+    ops_token: str | None = Header(default=None, alias="X-DevMemo-Ops-Token"),
+) -> dict[str, object]:
+    """Read cleanup execution records without exposing secrets or payloads."""
+
+    _require_ops_access(ops_token)
+    try:
+        audits = list_webhook_cleanup_audits(limit)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {
+        "items": [_public_cleanup_audit(audit) for audit in audits],
+        "count": len(audits),
     }
 
 
@@ -544,6 +620,11 @@ def _require_ops_access(provided_token: str | None) -> None:
         raise HTTPException(status_code=401, detail="invalid ops token")
 
 
+def _ops_actor_digest(provided_actor: str | None) -> str:
+    actor = (provided_actor or "anonymous").strip() or "anonymous"
+    return hashlib.sha256(actor[:200].encode("utf-8")).hexdigest()
+
+
 def _public_webhook_event(event: dict[str, object]) -> dict[str, object]:
     """Expose operational metadata without returning the raw Webhook payload."""
 
@@ -556,6 +637,19 @@ def _public_webhook_event(event: dict[str, object]) -> dict[str, object]:
         "last_error": summarize_error(event["last_error"]),
         "created_at": event["created_at"],
         "updated_at": event["updated_at"],
+    }
+
+
+def _public_cleanup_audit(audit: dict[str, object]) -> dict[str, object]:
+    return {
+        "approval_id": audit["approval_id"],
+        "actor_digest": audit["actor_digest"],
+        "cutoff": audit["cutoff"],
+        "candidate_ids": audit["candidate_ids"],
+        "preview_limit": audit["preview_limit"],
+        "candidate_count": audit["candidate_count"],
+        "deleted_count": audit["deleted_count"],
+        "created_at": audit["created_at"],
     }
 
 

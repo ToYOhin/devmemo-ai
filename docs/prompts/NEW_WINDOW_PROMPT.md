@@ -19,7 +19,7 @@ git status --short --branch
 git log --oneline -8
 .\scripts\verify-devmemo.ps1
 
-当前默认阶段是 Phase 4g：显式清理批准与审计边界。Phase 4/4b/4c/4d/4e/4f 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览和告警轮询最小切片已经完成，必须保持：
+当前默认阶段是 Phase 5：检索质量增强。Phase 4/4b/4c/4d/4e/4f/4g 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览、告警轮询、显式清理批准和审计最小切片已经完成，必须保持：
 - 默认 deterministic + memory，低 CPU、无网络依赖。
 - FastEmbed/Qdrant 只进入 adapters，不进入 domain/service。
 - 当前一个完整 Memo 对应一个向量；RAG `/api/ai/chat` 已完成，但不加入 chunk、rerank 或前端聊天 UI。

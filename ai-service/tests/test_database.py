@@ -4,10 +4,12 @@ import pytest
 
 from database import (
     begin_webhook_retry,
+    delete_webhook_retention_candidates,
     get_ai_note,
     get_memo_template,
     get_webhook_event,
     get_webhook_event_stats,
+    list_webhook_cleanup_audits,
     list_webhook_events,
     list_webhook_retention_candidates,
     save_ai_note,
@@ -188,3 +190,64 @@ def test_webhook_retention_preview_is_read_only_and_excludes_pending(monkeypatch
     assert [item["event_id"] for item in candidates] == ["old-processed"]
     assert get_webhook_event("old-processed")["status"] == "processed"
     assert get_webhook_event("old-pending")["status"] == "pending"
+
+
+def test_webhook_retention_cleanup_deletes_terminal_rows_and_is_idempotent(monkeypatch, tmp_path):
+    database = tmp_path / "cleanup.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    save_webhook_event("old-processed", "memo.created", {})
+    update_webhook_event("old-processed", "processed")
+    save_webhook_event("old-failed", "memo.updated", {})
+    update_webhook_event("old-failed", "failed", "old failure")
+    save_webhook_event("still-pending", "memo.created", {})
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-01T00:00:00+00:00'"
+        )
+
+    first = delete_webhook_retention_candidates(
+        "approval-1",
+        ["old-failed", "old-processed"],
+        "2025-01-01T00:00:00+00:00",
+        "actor-digest",
+    )
+    replay = delete_webhook_retention_candidates(
+        "approval-1",
+        ["old-processed", "old-failed"],
+        "2025-01-01T00:00:00Z",
+        "actor-digest",
+    )
+
+    assert first["deleted_count"] == 2
+    assert first["replayed"] is False
+    assert replay["deleted_count"] == 2
+    assert replay["replayed"] is True
+    assert get_webhook_event("old-processed") is None
+    assert get_webhook_event("old-failed") is None
+    assert get_webhook_event("still-pending")["status"] == "pending"
+    audits = list_webhook_cleanup_audits()
+    assert len(audits) == 1
+    assert audits[0]["approval_id"] == "approval-1"
+    assert audits[0]["candidate_count"] == 2
+    assert audits[0]["deleted_count"] == 2
+    assert audits[0]["actor_digest"] == "actor-digest"
+
+
+def test_webhook_retention_cleanup_rejects_changed_or_duplicate_candidates(monkeypatch, tmp_path):
+    database = tmp_path / "cleanup-conflict.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    save_webhook_event("pending", "memo.created", {})
+    with pytest.raises(ValueError, match="candidates changed"):
+        delete_webhook_retention_candidates(
+            "approval-pending",
+            ["pending"],
+            "2025-01-01T00:00:00Z",
+            "actor-digest",
+        )
+    with pytest.raises(ValueError, match="must be unique"):
+        delete_webhook_retention_candidates(
+            "approval-duplicate",
+            ["pending", "pending"],
+            "2025-01-01T00:00:00Z",
+            "actor-digest",
+        )

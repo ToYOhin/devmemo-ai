@@ -117,7 +117,21 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 ## GET /api/ai/ops/outbox/retention-preview
 
-只读预览长期未更新的终态 outbox 事件，不执行删除。默认 `older_than_days=30`，范围 1–3650；`limit` 默认 100，范围 1–100。只包含 `processed`/`failed`，不会把 `pending` 事件列为清理候选。配置 `AI_OPS_TOKEN` 后同样需要 `X-DevMemo-Ops-Token`。
+只读预览长期未更新的终态 outbox 事件，不执行删除。默认 `older_than_days=30`，范围 1–3650；`limit` 默认 100，范围 1–100。返回本次预览固定的 `cutoff`、`preview_limit` 和 `candidate_ids`；只包含 `processed`/`failed`，不会把 `pending` 事件列为清理候选。配置 `AI_OPS_TOKEN` 后同样需要 `X-DevMemo-Ops-Token`。
+
+## POST /api/ai/ops/outbox/retention-cleanup
+
+执行 retention 清理前必须先调用 preview。请求至少包含 preview 返回的 `cutoff`、`preview_limit`、`candidate_ids` 和唯一 `approval_id`。
+
+- 默认 `dry_run=true`，只返回 `executed=false`，不会删除数据。
+- 只有同时设置 `dry_run=false` 和 `confirm=true` 才会执行。
+- 服务会在 SQLite 事务中再次校验 cutoff、状态和完整 preview candidate 集合；pending、集合外 ID、集合发生变化时整批返回 409。
+- `X-DevMemo-Ops-Actor` 可选，只保存 SHA-256 摘要，不保存 ops secret。
+- 相同 `approval_id` 重复提交相同请求是幂等 replay，不会重复删除；同一 approval_id 改变参数返回 409。
+
+## GET /api/ai/ops/outbox/cleanup-audits
+
+读取清理执行审计，受 `AI_OPS_TOKEN` 保护。返回 `approval_id`、`actor_digest`、`cutoff`、`preview_limit`、候选数量、删除数量和执行时间；不返回 payload、Memo 原文或 ops secret。
 
 ## GET /api/ai/ops/alerts
 
@@ -147,4 +161,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全和保留/告警只读边界已在 Phase 4d/4e/4f 完成。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成。下一阶段进入 Phase 5 检索质量增强。

@@ -1,5 +1,16 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4g
+
+Phase 4g 已完成显式清理批准与审计边界：
+
+- retention preview 返回 `cutoff`、`preview_limit` 和 `candidate_ids`，执行请求绑定同一预览集合。
+- 新增 `POST /api/ai/ops/outbox/retention-cleanup`；默认 dry-run，必须 `confirm=true` 且 `dry_run=false` 才删除。
+- SQLite 事务重新校验 cutoff、完整候选集合和终态；pending、越界 ID 或数据变化整批拒绝。
+- 新增 cleanup audit 表和 `GET /api/ai/ops/outbox/cleanup-audits`；相同 approval_id 重复执行幂等，不保存 ops secret。
+- 清理只作用于 AI Service 自有 webhook_events；AI Service 全量 108 passed。
+- 下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5 检索质量增强。
+
 ## 2026-07-13 Phase 4f
 
 Phase 4f 已完成 Outbox 保留预览与告警轮询边界：
@@ -125,4 +136,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4g 显式清理批准与审计边界。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5 检索质量增强。

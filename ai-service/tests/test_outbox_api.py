@@ -177,6 +177,16 @@ def test_ops_token_is_optional_then_protects_read_and_retry(monkeypatch, tmp_pat
         "/api/ai/ops/outbox/retention-preview",
         headers={"X-DevMemo-Ops-Token": "ops-secret"},
     ).status_code == 200
+    assert client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        json={
+            "approval_id": "auth-check",
+            "cutoff": "2025-01-01T00:00:00Z",
+            "candidate_ids": ["event-1"],
+            "preview_limit": 1,
+        },
+    ).status_code == 401
+    assert client.get("/api/ai/ops/outbox/cleanup-audits").status_code == 401
 
 
 def test_ops_error_summary_is_single_line_and_bounded(monkeypatch, tmp_path):
@@ -231,7 +241,9 @@ def test_retention_preview_is_read_only(monkeypatch, tmp_path):
 
     assert preview.status_code == 200
     assert preview.json()["count"] == 1
-    assert preview.json()["candidates"][0]["event_id"] == "event-retention-preview-1"
+    preview_body = preview.json()
+    assert preview_body["candidate_ids"] == ["event-retention-preview-1"]
+    assert preview_body["candidates"][0]["event_id"] == "event-retention-preview-1"
     assert "payload" not in preview.json()["candidates"][0]
     current = client.get("/api/ai/ops/outbox").json()
     assert current["count"] == 1
@@ -244,6 +256,7 @@ def test_alert_export_is_empty_for_missing_database(monkeypatch, tmp_path):
 
     alerts = client.get("/api/ai/ops/alerts")
     preview = client.get("/api/ai/ops/outbox/retention-preview")
+    audits = client.get("/api/ai/ops/outbox/cleanup-audits")
 
     assert alerts.json() == {
         "has_alert": False,
@@ -254,6 +267,127 @@ def test_alert_export_is_empty_for_missing_database(monkeypatch, tmp_path):
     }
     assert preview.json() == {
         "older_than_days": 30,
+        "cutoff": preview.json()["cutoff"],
+        "preview_limit": 100,
         "count": 0,
+        "candidate_ids": [],
         "candidates": [],
     }
+    assert audits.json() == {"items": [], "count": 0}
+
+
+def test_cleanup_requires_confirmation_protects_pending_and_is_idempotent(monkeypatch, tmp_path):
+    database = tmp_path / "retention-cleanup.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    monkeypatch.delenv("AI_OPS_TOKEN", raising=False)
+    created = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "eventId": "event-cleanup-1",
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-cleanup", "content": "cleanup"},
+        },
+    )
+    assert created.status_code == 200
+    second = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "eventId": "event-cleanup-2",
+            "activityType": "memos.memo.created",
+            "memo": {"uid": "memo-cleanup-2", "content": "cleanup"},
+        },
+    )
+    assert second.status_code == 200
+
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-01T00:00:00+00:00' "
+            "WHERE event_id = 'event-cleanup-1'"
+        )
+        connection.execute(
+            "UPDATE webhook_events SET updated_at = '2020-01-02T00:00:00+00:00' "
+            "WHERE event_id = 'event-cleanup-2'"
+        )
+        connection.execute(
+            "INSERT INTO webhook_events "
+            "(event_id, event_type, payload, status, attempts, max_attempts, created_at, updated_at) "
+            "VALUES ('event-pending-cleanup', 'memo.created', '{}', 'pending', 0, 3, "
+            "'2020-01-01T00:00:00+00:00', '2020-01-01T00:00:00+00:00')"
+        )
+
+    preview = client.get(
+        "/api/ai/ops/outbox/retention-preview?older_than_days=30&limit=1"
+    ).json()
+    request = {
+        "approval_id": "approval-cleanup-1",
+        "cutoff": preview["cutoff"],
+        "candidate_ids": preview["candidate_ids"],
+        "preview_limit": preview["preview_limit"],
+    }
+    dry_run = client.post("/api/ai/ops/outbox/retention-cleanup", json=request)
+    assert dry_run.status_code == 200
+    assert dry_run.json()["executed"] is False
+    assert dry_run.json()["deleted_count"] == 0
+    assert client.get("/api/ai/ops/outbox").json()["count"] == 3
+
+    unconfirmed = client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        json={**request, "dry_run": False},
+    )
+    assert unconfirmed.status_code == 409
+
+    out_of_preview = client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        json={
+            **request,
+            "approval_id": "approval-out-of-preview",
+            "candidate_ids": ["event-cleanup-2"],
+            "confirm": True,
+            "dry_run": False,
+        },
+    )
+    assert out_of_preview.status_code == 409
+
+    pending = client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        json={
+            **request,
+            "approval_id": "approval-pending-cleanup",
+            "candidate_ids": ["event-pending-cleanup"],
+            "confirm": True,
+            "dry_run": False,
+        },
+    )
+    assert pending.status_code == 409
+
+    executed = client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        headers={"X-DevMemo-Ops-Actor": "local-admin"},
+        json={**request, "confirm": True, "dry_run": False},
+    )
+    assert executed.status_code == 200
+    assert executed.json()["deleted_count"] == 1
+    assert executed.json()["replayed"] is False
+    assert len(executed.json()["actor_digest"]) == 64
+    assert "local-admin" not in executed.text
+
+    replay = client.post(
+        "/api/ai/ops/outbox/retention-cleanup",
+        headers={"X-DevMemo-Ops-Actor": "local-admin"},
+        json={**request, "confirm": True, "dry_run": False},
+    )
+    assert replay.status_code == 200
+    assert replay.json()["replayed"] is True
+    assert replay.json()["deleted_count"] == 1
+    remaining_items = client.get("/api/ai/ops/outbox").json()["items"]
+    assert {item["event_id"] for item in remaining_items} == {
+        "event-cleanup-2",
+        "event-pending-cleanup",
+    }
+
+    audits = client.get("/api/ai/ops/outbox/cleanup-audits")
+    assert audits.status_code == 200
+    assert audits.json()["count"] == 1
+    assert audits.json()["items"][0]["approval_id"] == "approval-cleanup-1"
+    assert audits.json()["items"][0]["deleted_count"] == 1
+    assert audits.json()["items"][0]["actor_digest"] == executed.json()["actor_digest"]

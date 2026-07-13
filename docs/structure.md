@@ -164,3 +164,18 @@ FastAPI/Pydantic 类型只存在 main.py 边界；domain 只使用 dataclass、P
 2. 真实第三方依赖只通过 adapter 和 optional requirements 接入。
 3. 先 fake contract，再做真实环境 smoke。
 4. 不修改 Memos server/store/proto/web 核心。
+
+## Outbox cleanup approval and audit flow
+
+~~~text
+GET /api/ai/ops/outbox/retention-preview
+  -> cutoff + preview_limit + candidate_ids
+  -> operator reviews the dry-run result
+  -> POST /api/ai/ops/outbox/retention-cleanup
+  -> default dry_run=true: no mutation
+  -> confirm=true + dry_run=false
+  -> SQLite transaction rechecks exact preview set and terminal status
+  -> delete webhook_events only
+  -> webhook_cleanup_audits records approval_id, actor_digest, cutoff and deleted_count
+  -> repeated approval_id returns idempotent replay
+~~~
