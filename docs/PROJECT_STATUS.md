@@ -1,10 +1,10 @@
 # DevMemo AI 项目状态
 
-更新时间：2026-07-13
+更新时间：2026-07-14
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c 已完成。下一阶段为 Phase 5d：可选 chunk 索引生命周期。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d 已完成。下一阶段为 Phase 5e：chunk 检索与可观测性收敛。
 
 ## 当前事实
 
@@ -20,8 +20,10 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 索引健康接口：GET `/api/ai/index/health`，默认 memory 路径不连接 Qdrant
 - RAG 接口：POST `/api/ai/chat`，当前检索完整 Memo 并返回引用；默认 deterministic + memory 可离线运行
 - 检索质量：内部 `RetrievalEvaluator` 提供离线 Recall@K/首个相关结果评估，不改变 chat API
-- Chunking 边界：provider-neutral `MemoChunk` 使用 `memo-chunk-v1`/`chunk` metadata；只提供纯函数和内存契约，未接入生产索引
+- Chunking 边界：provider-neutral `MemoChunk` 使用 `memo-chunk-v1`/`chunk` metadata；通过显式 `AI_INDEX_MODE=chunk` 接入 Webhook 生命周期，默认不启用
 - Chunk 离线评估：`OfflineChunkIndex` 复用 deterministic + memory 与 `RetrievalEvaluator`，可对照完整 Memo 基线，不改变公共 chat API
+- Chunk 生命周期：`AI_INDEX_MODE=chunk` 显式启用 `ChunkLifecycleCoordinator`；默认 `memo-v1` 不变，AI SQLite 只持久化 chunk ID 状态
+- Chunk store 隔离：当前 chunk Webhook 使用独立 InMemoryVectorStore，不污染完整 Memo chat 检索；Qdrant chunk collection 留到后续阶段
 - Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
@@ -98,6 +100,14 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 支持完整 Memo 与 chunk 试验索引使用同一 `RetrievalEvaluator` 做 Recall@K/首个命中排名对照；仅访问 deterministic + memory，不下载模型或连接 Qdrant。
 - 覆盖 upsert、更新后的显式 stale chunk delete、重复/空 chunk 和 citation/context contract；未接入默认 Webhook 或生产索引。
 
+## Phase 5d 已完成
+
+- 新增 provider-neutral `ChunkLifecycleCoordinator`，支持 chunk create/update/delete；更新先 upsert 当前 chunk，再删除同一 `memo-chunk-v1` 版本的旧尾部 chunk。
+- 新增 AI Service 自有 SQLite `memo_chunk_index_state`，只记录 `memo_id`、`index_version`、`chunk_ids` 和更新时间，用于进程重启后的生命周期清理；不保存或替代原始 Markdown。
+- 新增 `AI_INDEX_MODE=memo|chunk`，默认 `memo`；只有同时开启 `AI_INDEX_ON_WEBHOOK=true` 和 `AI_INDEX_MODE=chunk` 时 Webhook 才使用 chunk 路径。
+- chunk Webhook 覆盖 create/update/delete、空内容清理、eventId 幂等和失败降级；完整 Memo `memo-v1`、`POST /api/ai/chat`、Webhook `code=0` 和默认 Compose 契约保持不变。
+- chunk lifecycle 当前只验证 deterministic/provider-neutral + 独立 memory store；未把 chunk 向量接入 Qdrant，也未改变公共 chat 的完整 Memo 检索源。
+
 ## Phase 3c 已完成
 
 - 新增 `FastEmbedEmbeddingProvider`，只在 adapter 内导入 `fastembed.TextEmbedding`。
@@ -154,7 +164,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             133 passed
+AI Service full pytest             142 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
 frontend full tests                131 passed
@@ -186,10 +196,10 @@ pnpm lint                          BLOCKED / 377 existing Biome CRLF diagnostics
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- Phase 5c 只增加离线 chunk 试验索引；chunk 尚未接入 Webhook、Qdrant、FastEmbed 或替换现有完整 Memo 索引。
+- Phase 5d 的 chunk 生命周期已接入显式 Webhook opt-in；默认仍不触发索引，chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
 - 当前 outbox 提供显式有限重试、基础状态计数、ops token、保留预览、告警轮询和显式清理审计；没有自动 worker、主动告警推送或定时清理。
-- 全量 pnpm lint 当前报告 377 个仓库既有 Biome CRLF 格式诊断；本轮未执行格式化修复，避免混入无关前端变更。
+- 全量 pnpm lint 已在上一阶段通过；本阶段未修改前端源码。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 5d 可选 chunk 索引生命周期。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 5e chunk 检索与可观测性收敛。

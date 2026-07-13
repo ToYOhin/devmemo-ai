@@ -193,6 +193,18 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 133 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
 
-## Phase 5d：可选 chunk 索引生命周期（下一阶段）
+## Phase 5d：可选 chunk 索引生命周期
 
-计划在显式 opt-in、可回滚前提下定义 chunk create/update/delete 编排；默认仍使用完整 Memo `memo-v1`，不自动修改 Webhook、Compose 或公共 chat citation 契约。
+已完成：
+
+1. 新增 provider-neutral `ChunkLifecycleCoordinator`，在 `AI_INDEX_MODE=chunk` 时编排 create/update/delete；默认 `AI_INDEX_MODE=memo` 继续走完整 Memo `memo-v1`。
+2. 更新先 upsert 当前 `memo-chunk-v1` chunk，再删除同一 Memo/版本的 stale 尾部；空内容会清理已登记 chunk，删除事件清理全部已登记 chunk。
+3. AI Service 自有 SQLite 新增 `memo_chunk_index_state`，只保存版本和 chunk ID 列表；缺失状态不做全库扫描，避免误删其他版本或 Memo。
+4. Webhook chunk 路径保留 `eventId` 幂等、失败 `code=0` 降级和完整 Memo chat citation 契约；默认 Compose 仍 deterministic + memory。
+5. chunk lifecycle 使用独立 InMemoryVectorStore 与完整 Memo 检索隔离；Qdrant chunk collection 作为后续显式扩展。
+
+验证：AI Service 142 passed；Go 全量、前端 131 tests、TypeScript/build、pnpm lint 和 Compose config 通过。
+
+## Phase 5e：chunk 检索与可观测性收敛（下一阶段）
+
+计划在不改变默认完整 Memo chat 契约的前提下，为显式 chunk 模式补充可观测索引状态和离线/显式检索对照；继续保持 deterministic + memory 默认和可回滚版本隔离。

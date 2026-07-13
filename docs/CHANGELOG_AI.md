@@ -1,6 +1,15 @@
 # DevMemo AI 变更记录
 
-## 2026-07-13
+## 2026-07-14
+
+### Phase 5d：可选 chunk 索引生命周期
+- 新增 provider-neutral `ChunkLifecycleCoordinator`，显式 `AI_INDEX_ON_WEBHOOK=true` + `AI_INDEX_MODE=chunk` 后支持 chunk create/update/delete。
+- 更新先 upsert 当前 `memo-chunk-v1` chunk，再删除同一 Memo 的 stale 尾部；空内容和删除事件会清理已登记 chunk。
+- AI Service SQLite 新增 `memo_chunk_index_state`，只保存索引版本和 chunk ID 列表，支持重启后的安全清理，不保存原始 Markdown。
+- chunk lifecycle 使用独立 InMemoryVectorStore，不污染完整 Memo chat 检索源；Qdrant chunk collection 留到后续阶段。
+- 默认 `AI_INDEX_MODE=memo`、完整 Memo `memo-v1`、Webhook `code=0`、公共 chat citation 和 Compose deterministic + memory 均保持不变。
+- 验证：AI Service 142 passed；Go 全量、前端 131 tests、TypeScript/build、pnpm lint 和 Compose config 通过。
+- 下一阶段：Phase 5e chunk 检索与可观测性收敛。
 
 ### Phase 5c：chunk 离线检索评估
 - 新增 provider-neutral `OfflineChunkIndex`，使用 deterministic + memory 构造独立 chunk 试验索引，不改变完整 Memo 生产索引。

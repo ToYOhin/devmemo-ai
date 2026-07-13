@@ -151,8 +151,11 @@ AI_OPS_TOKEN configured
 ~~~text
 AI_INDEX_ON_WEBHOOK=false -> summary/template flow only
 AI_INDEX_ON_WEBHOOK=true
-  -> memo.created/memo.updated -> stable embedding_id upsert
-  -> memo.deleted -> stable embedding_id delete
+  -> AI_INDEX_MODE=memo (default) -> memo-v1 stable embedding_id upsert/delete
+  -> AI_INDEX_MODE=chunk (explicit) -> memo-chunk-v1 chunk lifecycle
+  -> separate InMemoryVectorStore (chat complete-Memo store is untouched)
+  -> memo.created/memo.updated -> current chunks upsert, stale tail delete
+  -> memo.deleted -> registered chunk IDs delete
   -> index failure -> index_status=failed, Webhook code=0
 ~~~
 
@@ -199,7 +202,8 @@ raw Memo Markdown
   -> tuple[MemoChunk]
   -> memo-chunk-v1 + index_mode=chunk metadata
   -> stable chunk ID: Memo digest + version + position
-  -> future upsert/delete coordinator (not connected in Phase 5b)
+  -> ChunkLifecycleCoordinator (only when AI_INDEX_MODE=chunk)
+  -> AI SQLite memo_chunk_index_state stores version + chunk IDs
 ~~~
 
 The existing `MemoIndexDocument` path remains `memo-v1` and continues to be the only production Webhook/RAG indexing path. `MemoChunk` is provider-neutral and does not import FastAPI, FastEmbed, Qdrant or SQLite types.
@@ -216,4 +220,4 @@ MemoChunk tuple
   -> complete Memo baseline Recall@K comparison
 ~~~
 
-`OfflineChunkIndex` is an evaluation-only composition. It does not change `AI_INDEX_ON_WEBHOOK`, Qdrant collections, FastEmbed configuration or the public `POST /api/ai/chat` citation contract.
+`OfflineChunkIndex` remains useful for evaluation. `ChunkLifecycleCoordinator` is the explicit Webhook opt-in composition; it keeps `memo-v1` and `memo-chunk-v1` IDs separate, and does not change the public `POST /api/ai/chat` citation contract.

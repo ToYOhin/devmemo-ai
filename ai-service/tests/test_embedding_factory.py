@@ -49,6 +49,21 @@ def test_webhook_indexing_boolean_is_strict(monkeypatch):
         parse_env_bool("AI_INDEX_ON_WEBHOOK")
 
 
+def test_chunk_index_mode_is_opt_in(monkeypatch):
+    monkeypatch.delenv("AI_INDEX_MODE", raising=False)
+    assert AiSettings.from_env().index_mode == "memo"
+
+    monkeypatch.setenv("AI_INDEX_MODE", "chunk")
+    assert AiSettings.from_env().index_mode == "chunk"
+
+
+def test_invalid_chunk_index_mode_is_rejected(monkeypatch):
+    monkeypatch.setenv("AI_INDEX_MODE", "hybrid")
+
+    with pytest.raises(ValueError, match="memo or chunk"):
+        AiSettings.from_env()
+
+
 def test_fastembed_cache_dir_is_optional_and_configurable(monkeypatch):
     monkeypatch.setenv("AI_FASTEMBED_CACHE_DIR", "H:/DevMemoAI/ai-service/model-cache")
 

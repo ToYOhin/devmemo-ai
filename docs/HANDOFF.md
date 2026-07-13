@@ -1,5 +1,16 @@
 # DevMemo AI 当前交接
 
+## 2026-07-14 Phase 5d
+
+Phase 5d 已完成显式 chunk 索引生命周期：
+
+- 新增 `ChunkLifecycleCoordinator`，`AI_INDEX_ON_WEBHOOK=true` 且 `AI_INDEX_MODE=chunk` 时处理 create/update/delete；默认仍使用完整 Memo `memo-v1`。
+- 更新先 upsert 当前 `memo-chunk-v1` chunk，再删除旧尾部；空内容和删除事件清理已登记 chunk，eventId 重复事件继续由 outbox 幂等忽略。
+- AI Service 自有 SQLite 新增 `memo_chunk_index_state`，记录版本和 chunk ID 列表，缺失状态不扫描向量库，不误删其他版本。
+- chunk coordinator 使用独立 InMemoryVectorStore，避免 chunk 向量污染完整 Memo chat 检索；Qdrant chunk collection 尚未接入。
+- chunk 失败保持 Webhook `code=0` 并返回 `index_status=failed`；公共 `POST /api/ai/chat` 完整 Memo citation 不变。
+- AI Service 全量 142 passed；下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5e chunk 检索与可观测性收敛。
+
 ## 2026-07-13 Phase 5c
 
 Phase 5c 已完成 chunk 离线检索评估：
@@ -166,4 +177,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5d 可选 chunk 索引生命周期。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5e chunk 检索与可观测性收敛。

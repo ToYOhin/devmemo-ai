@@ -13,6 +13,7 @@ class AiSettings:
     fastembed_dimension: int = 384
     fastembed_cache_dir: str | None = None
     index_on_webhook: bool = False
+    index_mode: str = "memo"
     vector_store: str = "memory"
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "devmemo_memos"
@@ -36,6 +37,9 @@ class AiSettings:
         fastembed_cache_dir = os.getenv("AI_FASTEMBED_CACHE_DIR", "").strip() or None
 
         index_on_webhook = parse_env_bool("AI_INDEX_ON_WEBHOOK", default=False)
+        index_mode = os.getenv("AI_INDEX_MODE", "memo").strip().lower()
+        if index_mode not in {"memo", "chunk"}:
+            raise ValueError("AI_INDEX_MODE must be memo or chunk")
 
         vector_store = os.getenv("AI_VECTOR_STORE", "memory").strip().lower()
         if vector_store not in {"memory", "qdrant"}:
@@ -46,6 +50,7 @@ class AiSettings:
             fastembed_dimension=fastembed_dimension,
             fastembed_cache_dir=fastembed_cache_dir,
             index_on_webhook=index_on_webhook,
+            index_mode=index_mode,
             vector_store=vector_store,
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333").strip(),
             qdrant_collection=os.getenv("QDRANT_COLLECTION", "devmemo_memos").strip(),

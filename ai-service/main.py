@@ -29,7 +29,10 @@ from database import (
     webhook_retention_cutoff,
 )
 from llm import create_provider
+from app.adapters.chunk_state import SqliteChunkIndexStateStore
+from app.adapters.vector_store import InMemoryVectorStore
 from app.services.content_parser import parse_memo_content
+from app.services.chunk_lifecycle import ChunkLifecycleCoordinator
 from app.services.embedding_factory import build_embedding_service
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.ops_security import summarize_error, verify_ops_token
@@ -119,6 +122,12 @@ class MemoWebhookRequest(BaseModel):
 app = FastAPI(title="DevMemo AI Service", version="0.1.0")
 provider = create_provider()
 embedding_service = build_embedding_service()
+chunk_lifecycle_coordinator = ChunkLifecycleCoordinator(
+    provider=embedding_service.provider,
+    # Keep optional chunk vectors out of the complete-Memo chat index.
+    store=InMemoryVectorStore(embedding_service.provider.dimension),
+    state_store=SqliteChunkIndexStateStore(),
+)
 
 
 def _cors_origins() -> list[str]:
@@ -556,6 +565,15 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
             if memo_id is None:
                 return {"code": 0, "message": "ignored deleted memo", "index_status": "skipped"}
             try:
+                if _webhook_index_mode() == "chunk":
+                    result = chunk_lifecycle_coordinator.delete_memo(str(memo_id))
+                    return {
+                        "code": 0,
+                        "message": "ignored deleted memo",
+                        "index_status": "deleted" if result.deleted_count else "skipped",
+                        "index_mode": result.index_mode,
+                        "deleted_chunk_count": result.deleted_count,
+                    }
                 deleted = embedding_service.delete_memo(memo_id)
             except Exception:
                 return {"code": 0, "message": "ignored deleted memo", "index_status": "failed"}
@@ -569,6 +587,29 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
     memo = request.memo
     content = str(memo.get("content") or "")
     if not content.strip():
+        if _webhook_index_enabled() and _webhook_index_mode() == "chunk":
+            memo_id = _memo_id_from_memo(memo)
+            if memo_id is not None:
+                try:
+                    result = chunk_lifecycle_coordinator.upsert_memo(
+                        str(memo_id), "", metadata={"memo_type": "plain"}
+                    )
+                    if result.deleted_count:
+                        return {
+                            "code": 0,
+                            "message": "ignored empty memo",
+                            "memo_type": "plain",
+                            "index_status": "deleted",
+                            "index_mode": result.index_mode,
+                            "deleted_chunk_count": result.deleted_count,
+                        }
+                except Exception:
+                    return {
+                        "code": 0,
+                        "message": "ignored empty memo",
+                        "memo_type": "plain",
+                        "index_status": "failed",
+                    }
         return {"code": 0, "message": "ignored empty memo", "memo_type": "plain"}
 
     memo_id = _memo_id_from_memo(memo)
@@ -664,6 +705,13 @@ def _webhook_index_enabled() -> bool:
     return parse_env_bool("AI_INDEX_ON_WEBHOOK", default=False)
 
 
+def _webhook_index_mode() -> str:
+    mode = os.getenv("AI_INDEX_MODE", "memo").strip().lower()
+    if mode not in {"memo", "chunk"}:
+        raise ValueError("AI_INDEX_MODE must be memo or chunk")
+    return mode
+
+
 def _deterministic_rag_answer(context: str) -> str:
     """Return a useful offline answer while preserving the citation markers."""
 
@@ -683,6 +731,24 @@ def _index_webhook_memo(
     if memo_id is None:
         return {"index_status": "skipped"}
     try:
+        if _webhook_index_mode() == "chunk":
+            result = chunk_lifecycle_coordinator.upsert_memo(
+                str(memo_id),
+                content,
+                metadata={
+                    "title": str(memo.get("name") or ""),
+                    "tags": [str(tag) for tag in memo.get("tags", []) if tag],
+                    "memo_type": memo_type or "plain",
+                },
+            )
+            return {
+                "index_status": "indexed",
+                "index_mode": result.index_mode,
+                "index_version": result.index_version,
+                "chunk_count": result.chunk_count,
+                "deleted_chunk_count": result.deleted_count,
+                "embedding_provider": result.provider,
+            }
         document = MemoIndexDocument.from_memo(
             memo_id=str(memo_id),
             content=content,

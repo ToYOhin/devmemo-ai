@@ -196,6 +196,81 @@ def get_memo_template(memo_id: str | int) -> dict[str, Any] | None:
     return _template_row(row) if row else None
 
 
+def save_chunk_index_state(
+    memo_id: str | int,
+    index_version: str,
+    chunk_ids: tuple[str, ...],
+) -> None:
+    """Persist chunk IDs for safe update/delete lifecycle operations."""
+
+    path = database_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(path) as connection:
+        _ensure_chunk_index_state_schema(connection)
+        connection.execute(
+            """
+            INSERT INTO memo_chunk_index_state
+                (memo_id, index_version, chunk_ids, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(memo_id) DO UPDATE SET
+                index_version = excluded.index_version,
+                chunk_ids = excluded.chunk_ids,
+                updated_at = excluded.updated_at
+            """,
+            (str(memo_id), index_version, json.dumps(list(chunk_ids)), now),
+        )
+
+
+def get_chunk_index_state(memo_id: str | int) -> dict[str, Any] | None:
+    path = database_path()
+    if not path.exists():
+        return None
+    with sqlite3.connect(path) as connection:
+        _ensure_chunk_index_state_schema(connection)
+        row = connection.execute(
+            """
+            SELECT memo_id, index_version, chunk_ids, updated_at
+            FROM memo_chunk_index_state
+            WHERE memo_id = ?
+            """,
+            (str(memo_id),),
+        ).fetchone()
+    if row is None:
+        return None
+    return {
+        "memo_id": row[0],
+        "index_version": row[1],
+        "chunk_ids": json.loads(row[2]),
+        "updated_at": row[3],
+    }
+
+
+def delete_chunk_index_state(memo_id: str | int) -> bool:
+    path = database_path()
+    if not path.exists():
+        return False
+    with sqlite3.connect(path) as connection:
+        _ensure_chunk_index_state_schema(connection)
+        cursor = connection.execute(
+            "DELETE FROM memo_chunk_index_state WHERE memo_id = ?", (str(memo_id),)
+        )
+    return cursor.rowcount > 0
+
+
+def _ensure_chunk_index_state_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS memo_chunk_index_state (
+            memo_id TEXT PRIMARY KEY,
+            index_version TEXT NOT NULL,
+            chunk_ids TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def save_webhook_event(
     event_id: str,
     event_type: str,

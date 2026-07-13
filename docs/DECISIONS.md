@@ -129,3 +129,9 @@ Phase 5b 使用 provider-neutral `MemoChunk` 和纯函数 `chunk_memo`，按换�
 Phase 5c 新增 `OfflineChunkIndex`，仅在 deterministic + memory 测试路径中将 `MemoChunk.chunk_id` 作为 embedding ID 写入 VectorStore，再复用 `RetrievalService` 和 Phase 5a `RetrievalEvaluator`。这样可以验证 chunk citation metadata、上下文和 Recall@K 对照，同时不改变 `EmbeddingService` 的 Memo 级稳定 ID 或 `delete_memo` 契约。
 
 chunk 试验更新必须先 upsert 当前 chunk，再由调用方显式提交旧尾部 chunk 的 delete；重复 ID、空内容和 metadata 不一致在 helper 边界拒绝或归一化。该 helper 不接入 Webhook、Qdrant、FastEmbed、Compose 或公共 HTTP API，后续 Phase 5d 才评估显式 opt-in 生命周期。
+
+## ADR-028：Phase 5d 允许显式 chunk Webhook 生命周期，但默认不切换
+
+在用户要求放宽 Phase 5d 约束后，将 chunk 生命周期接入 AI Service Webhook，但通过 `AI_INDEX_MODE=chunk` 和既有 `AI_INDEX_ON_WEBHOOK=true` 双重 opt-in；默认仍是完整 Memo `memo-v1`，不修改 Memos 核心或公共 `POST /api/ai/chat` citation 响应。`ChunkLifecycleCoordinator` 先 upsert 当前 chunk，再删除同一 `memo-chunk-v1` 版本登记的 stale ID，避免更新失败时先删除可用索引。
+
+生命周期需要跨进程知道旧 chunk ID，因此 AI Service 自有 SQLite 新增 `memo_chunk_index_state`。该表只保存 Memo ID、index version、chunk ID JSON 和时间戳，不保存原始 Markdown；状态缺失时不扫描 VectorStore，也不猜测删除其他版本。chunk coordinator 在本阶段使用独立 InMemoryVectorStore，避免 chunk 向量进入完整 Memo 的 chat 检索源；Qdrant chunk collection 留到后续显式边界。默认 Compose 仍 deterministic + memory，Qdrant/FastEmbed 只有已有显式配置才参与。Webhook 失败仍保持 `code=0`，通过 `index_status=failed` 暴露降级。

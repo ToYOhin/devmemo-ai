@@ -23,6 +23,7 @@ VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http:
 - AI_FASTEMBED_CACHE_DIR：可选模型缓存目录；Compose 默认 `/app/model-cache`，由 `ai-model-cache` volume 持久化。
 - FastEmbed 初始化会触发模型准备/下载；因此不属于默认启动路径。
 - AI_INDEX_ON_WEBHOOK=false：默认关闭 Webhook 向量索引；设为 `true` 后 create/update/delete 才编排向量生命周期。
+- AI_INDEX_MODE=memo：默认使用完整 Memo `memo-v1`；只有显式设置为 `chunk` 且同时开启 `AI_INDEX_ON_WEBHOOK=true` 时，Webhook 才使用 `memo-chunk-v1` 生命周期。
 - AI_WEBHOOK_SECRET：可选 Webhook HMAC secret；为空时保持兼容放行，配置后请求必须携带 `X-DevMemo-Signature: sha256=<hex>`。
 - AI_OPS_TOKEN：可选 ops API 访问令牌；为空时保持本地兼容，配置后 `/api/ai/ops/outbox` 的 GET 和 retry POST 必须携带 `X-DevMemo-Ops-Token`。
 
@@ -99,7 +100,7 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 ## Phase 5a internal evaluation boundary
 
-Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalEvaluator` run offline against the existing `RetrievalService`, reporting Recall@K and first relevant rank without changing the `POST /api/ai/chat` response. Phase 5b adds the separate pure-function chunking boundary; Phase 5c will evaluate chunk retrieval offline.
+Phase 5a adds no public HTTP endpoint. `RetrievalEvaluationCase` and `RetrievalEvaluator` run offline against the existing `RetrievalService`, reporting Recall@K and first relevant rank without changing the `POST /api/ai/chat` response. Phase 5b adds the separate pure-function chunking boundary; Phase 5c evaluates chunk retrieval offline.
 
 ## Phase 5b internal chunking boundary
 
@@ -108,6 +109,12 @@ Phase 5b adds no public HTTP endpoint and does not change `POST /api/ai/embed`, 
 ## Phase 5c internal chunk retrieval evaluation
 
 Phase 5c adds no public HTTP endpoint. `OfflineChunkIndex` uses the existing deterministic provider, InMemoryVectorStore and RetrievalService to build a separate in-memory trial index; `RetrievalEvaluator` can compare it with the complete Memo baseline using Recall@K and first relevant rank. Trial citations expose `memo_id`, `chunk_id`, `chunk_index` and `index_version` through internal metadata, while chunk content is used only for server-side context assembly. Webhook indexing and `POST /api/ai/chat` remain complete-Memo contracts.
+
+## Phase 5d optional chunk lifecycle
+
+When `AI_INDEX_ON_WEBHOOK=true` and `AI_INDEX_MODE=chunk`, create/update events return `index_mode=chunk`, `index_version=memo-chunk-v1`, `chunk_count` and `deleted_chunk_count`. The coordinator upserts current chunks before deleting stale IDs registered for the same Memo and version. Delete events remove all registered chunk IDs. Empty content removes registered chunks without storing an empty vector.
+
+The AI-owned SQLite table `memo_chunk_index_state` stores only the Memo ID, version, chunk IDs and timestamp needed for lifecycle bookkeeping. Missing state is treated as “no known chunks” and never triggers a broad vector-store scan. In this phase chunk vectors use a separate in-memory store, so they cannot contaminate the complete-Memo chat index; a Qdrant chunk collection is a later opt-in boundary. Chunk failures are reported as `index_status=failed` while the Webhook still returns `code=0`. The default `AI_INDEX_MODE=memo` path keeps `memo-v1` IDs and the public complete-Memo `POST /api/ai/chat` response unchanged.
 
 ## GET /api/ai/ops/outbox
 
@@ -155,7 +162,7 @@ Phase 5c adds no public HTTP endpoint. `OfflineChunkIndex` uses the existing det
 
 ## POST /api/integrations/memos/webhook
 
-接收 Memos memo.created、memo.updated 和 memo.deleted webhook。可选顶层 `eventId` 用于幂等；删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。
+接收 Memos memo.created、memo.updated 和 memo.deleted webhook。可选顶层 `eventId` 用于幂等；删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。默认 `AI_INDEX_MODE=memo` 使用完整 Memo；显式 `AI_INDEX_MODE=chunk` 时返回 chunk 数量、版本和旧 chunk 删除数量，且生命周期状态仅写入 AI Service 自有 SQLite。
 
 配置 `AI_WEBHOOK_SECRET` 后，服务使用原始 request body 计算 HMAC-SHA256，并通过 `hmac.compare_digest` 校验 `X-DevMemo-Signature`。签名缺失、格式错误或不匹配返回 401；未配置 secret 时不改变既有 Webhook 行为。
 
@@ -173,4 +180,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c 离线评估与 chunk 边界已完成，下一阶段为 Phase 5d 可选 chunk 索引生命周期。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d 离线评估、chunk 边界和可选生命周期已完成，下一阶段为 Phase 5e 检索与可观测性收敛。
