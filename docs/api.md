@@ -96,13 +96,22 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 `citations` 不返回索引内部的 `content` 字段；完整 Memo 原文只用于服务端上下文组装。空知识库返回 200 和空 citations；非法 question/limit 返回 422；向量检索不可用返回 503；LLM provider 失败或空回答返回 502。
 
+## GET /api/ai/ops/outbox
+
+读取 AI Service 自有 SQLite 中最近的 Webhook outbox 状态，不会启动重试 worker。
+
+- `status`：可选 `pending|processed|failed`
+- `limit`：可选 1–100，默认 50
+
+返回 `event_id`、`event_type`、结构化 `payload`、`status`、`attempts`、`last_error`、`created_at` 和 `updated_at`。重复 `eventId` 不重复处理；无显式 eventId 时服务使用原始 body hash 作为稳定 ID。Webhook 业务失败仍返回 `code=0`，并可通过该 API 查看 `failed` 状态。
+
 ## GET /api/ai/templates/{memo_id}
 
 读取 Code Snippet 或 Bug Report 派生模板，找不到返回 404；raw_content 保留原始 Markdown。
 
 ## POST /api/integrations/memos/webhook
 
-接收 Memos memo.created、memo.updated 和 memo.deleted webhook。删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。
+接收 Memos memo.created、memo.updated 和 memo.deleted webhook。可选顶层 `eventId` 用于幂等；删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。
 
 配置 `AI_WEBHOOK_SECRET` 后，服务使用原始 request body 计算 HMAC-SHA256，并通过 `hmac.compare_digest` 校验 `X-DevMemo-Signature`。签名缺失、格式错误或不匹配返回 401；未配置 secret 时不改变既有 Webhook 行为。
 
@@ -120,4 +129,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox、重试、限流和观测留给 Phase 4c。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；显式重试、限流和观测留给 Phase 4d。

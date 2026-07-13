@@ -24,6 +24,7 @@ ai-service/
 ├── app/services/retrieval_service.py
 │                                   # query embedding -> search -> context/citations
 ├── app/services/webhook_security.py # optional HMAC request verification
+├── database.py                       # AI SQLite notes/templates/outbox persistence
 ├── scripts/smoke_qdrant.py         # opt-in real Qdrant lifecycle smoke
 └── model-cache/                    # local generated cache, gitignored
 ~~~
@@ -99,6 +100,18 @@ AI_WEBHOOK_SECRET configured
   -> HMAC-SHA256
   -> X-DevMemo-Signature compare_digest
   -> 401 on missing/mismatch, existing code=0 flow on success
+~~~
+
+## Webhook outbox flow
+
+~~~text
+verified request
+  -> eventId or body SHA-256
+  -> webhook_events UNIQUE(event_id) insert
+  -> duplicate: skip business processing
+  -> new: legacy summary/template/index flow
+  -> processed or failed + attempts/last_error
+  -> GET /api/ai/ops/outbox read-only status
 ~~~
 
 ## Webhook indexing flow

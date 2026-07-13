@@ -106,6 +106,17 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 90 passed；Go `go test -p 2 ./...`、前端 131 tests、TypeScript/build 和 Compose config 通过；`pnpm lint` 受 377 个既有 CRLF 诊断阻塞。
 
-## Phase 4c：outbox、重试与观测
+## Phase 4c：Outbox 与失败状态读取
 
-下一阶段评估 AI Service 自有 SQLite outbox、有限重试和最小运行指标；保持默认 Compose deterministic + memory，不把外部服务变成启动依赖。
+已完成最小切片：
+
+1. AI Service SQLite 新增 `webhook_events`，不修改 `ai_notes`、`memo_templates` 或 Memos 数据库。
+2. Webhook 按显式 `eventId` 或原始 body hash 幂等入队，重复事件不重复执行。
+3. 处理失败记录 `failed`、`attempts` 和 `last_error`，同时保持旧 `code=0` 响应契约。
+4. 新增 GET `/api/ai/ops/outbox`，只读返回最近状态；不启动 worker 或外部队列。
+
+验证：AI Service 95 passed；Go `go test -p 2 ./...`、前端 131 tests、TypeScript/build 和 Compose config 通过；`pnpm lint` 受既有 CRLF 诊断阻塞。
+
+## Phase 4d：显式重试与最小观测
+
+下一阶段只评估有上限的显式重试命令/API、退避字段和最小计数指标；保持默认 Compose deterministic + memory，不启动常驻后台 worker。

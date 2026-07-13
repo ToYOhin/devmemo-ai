@@ -83,3 +83,7 @@ Phase 4 需要让检索结果能够形成可回答的上下文，因此 `MemoInd
 ## ADR-019：Webhook HMAC 作为可选安全门
 
 Phase 4b 使用标准库 HMAC-SHA256 校验原始 Webhook body。`AI_WEBHOOK_SECRET` 为空时不启用校验，保持既有客户端和 `code=0` 处理契约；显式配置后要求 `X-DevMemo-Signature: sha256=<hex>`，缺失、格式错误或内容篡改返回 401。签名 helper 位于 AI Service service 层，不修改 Memos 核心 API、数据库、Proto，也不引入第三方依赖。后续 outbox/重试仍需单独设计。
+
+## ADR-020：AI Service SQLite Outbox 先做幂等记录，不启动 Worker
+
+Phase 4c 在 AI Service 自有 SQLite 新增 `webhook_events`，以唯一 `event_id` 记录 Webhook payload、处理状态、attempts 和 last_error。显式 eventId 优先使用；缺失时由原始 body SHA-256 派生。重复事件直接返回 duplicate，不重复触发摘要、模板或索引；业务异常记录 failed 但保持 `code=0`。当前只提供 GET 运维读取 API，不引入常驻 worker、Redis、Celery、外部队列或无限重试；显式有上限的重试留到 Phase 4d。

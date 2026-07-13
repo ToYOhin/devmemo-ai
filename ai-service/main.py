@@ -3,15 +3,25 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 from dataclasses import asdict
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
-from database import get_ai_note, get_memo_template, save_ai_note, save_memo_template
+from database import (
+    get_ai_note,
+    get_memo_template,
+    get_webhook_event,
+    list_webhook_events,
+    save_ai_note,
+    save_memo_template,
+    save_webhook_event,
+    update_webhook_event,
+)
 from llm import create_provider
 from app.services.content_parser import parse_memo_content
 from app.services.embedding_factory import build_embedding_service
@@ -86,6 +96,7 @@ class MemoWebhookRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     activity_type: str = Field(alias="activityType")
+    event_id: str | None = Field(default=None, alias="eventId")
     memo: dict[str, object] = Field(default_factory=dict)
 
 
@@ -296,6 +307,22 @@ async def read_memo_template(memo_id: str) -> dict[str, object]:
     return template
 
 
+@app.get("/api/ai/ops/outbox")
+async def read_webhook_outbox(
+    status: str | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> dict[str, object]:
+    """Read recent Webhook outbox state without starting a worker."""
+
+    if status is not None and status not in {"pending", "processed", "failed"}:
+        raise HTTPException(status_code=422, detail="unsupported webhook event status")
+    try:
+        items = list_webhook_events(status=status, limit=limit)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"items": items, "count": len(items)}
+
+
 @app.post("/api/integrations/memos/webhook")
 async def memos_webhook(
     request: MemoWebhookRequest,
@@ -310,6 +337,34 @@ async def memos_webhook(
         os.getenv("AI_WEBHOOK_SECRET", "").strip(),
     ):
         raise HTTPException(status_code=401, detail="invalid webhook signature")
+
+    raw_body = await raw_request.body()
+    event_id = _webhook_event_id(request, raw_body)
+    existing = _read_or_enqueue_webhook_event(request, event_id)
+    if existing["is_duplicate"]:
+        return {
+            "code": 0,
+            "message": "duplicate webhook ignored",
+            "event_id": event_id,
+            "outbox_status": existing["event"]["status"],
+        }
+
+    try:
+        response = await _process_memos_webhook(request)
+    except Exception as error:
+        failed = update_webhook_event(event_id, "failed", str(error))
+        return {
+            "code": 0,
+            "message": "webhook processing failed",
+            "event_id": event_id,
+            "outbox_status": failed["status"],
+        }
+    update_webhook_event(event_id, "processed")
+    return response
+
+
+async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, object]:
+    """Run the legacy Webhook business flow after idempotent enqueue."""
 
     if request.activity_type.endswith("deleted"):
         if _webhook_index_enabled():
@@ -360,6 +415,27 @@ async def memos_webhook(
     else:
         response["index_status"] = "skipped"
     return response
+
+
+def _read_or_enqueue_webhook_event(
+    request: MemoWebhookRequest,
+    event_id: str,
+) -> dict[str, object]:
+    existing = get_webhook_event(event_id)
+    if existing is not None:
+        return {"is_duplicate": True, "event": existing}
+    payload = request.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return {
+        "is_duplicate": False,
+        "event": save_webhook_event(event_id, request.activity_type, payload),
+    }
+
+
+def _webhook_event_id(request: MemoWebhookRequest, raw_body: bytes) -> str:
+    if request.event_id and request.event_id.strip():
+        return request.event_id.strip()
+    digest = hashlib.sha256(raw_body).hexdigest()
+    return f"body-{digest}"
 
 
 def _webhook_index_enabled() -> bool:

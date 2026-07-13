@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Phase 4c：Webhook Outbox 与失败状态读取
+
+- AI Service SQLite 新增兼容 `webhook_events` 表，保存事件 payload、状态、尝试次数和最后错误。
+- Webhook 按显式 `eventId` 或 body hash 幂等入队，重复事件不重复处理；处理失败仍返回 `code=0` 并记录 `failed`。
+- 新增 GET `/api/ai/ops/outbox`，支持按状态和数量读取最近事件；不启动后台 worker。
+- 验证：AI Service 95 passed；Go 全量、前端 131 tests、TypeScript/build、Compose config 通过。
+- 未完成：自动重试执行、限流和指标观测留到 Phase 4d。
+
 ### Phase 4b：Webhook HMAC 安全边界
 
 - 新增可选 `AI_WEBHOOK_SECRET` 和 `X-DevMemo-Signature: sha256=<hex>` HMAC-SHA256 校验。

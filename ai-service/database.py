@@ -193,6 +193,163 @@ def get_memo_template(memo_id: str | int) -> dict[str, Any] | None:
     return _template_row(row) if row else None
 
 
+def save_webhook_event(
+    event_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Insert one Webhook event or return its existing idempotent row."""
+
+    path = database_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        connection.execute(
+            """
+            INSERT INTO webhook_events
+                (event_id, event_type, payload, status, attempts, created_at, updated_at)
+            VALUES (?, ?, ?, 'pending', 0, ?, ?)
+            ON CONFLICT(event_id) DO NOTHING
+            """,
+            (event_id, event_type, json.dumps(payload, ensure_ascii=False), now, now),
+        )
+        row = connection.execute(
+            """
+            SELECT event_id, event_type, payload, status, attempts, last_error,
+                   created_at, updated_at
+            FROM webhook_events
+            WHERE event_id = ?
+            """,
+            (event_id,),
+        ).fetchone()
+    return _webhook_event_row(row)
+
+
+def update_webhook_event(
+    event_id: str,
+    status: str,
+    last_error: str | None = None,
+) -> dict[str, Any]:
+    """Update processing status and increment the finite attempt counter."""
+
+    if status not in {"pending", "processed", "failed"}:
+        raise ValueError("unsupported webhook event status")
+    path = database_path()
+    if not path.exists():
+        raise ValueError("webhook event database does not exist")
+    now = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        connection.execute(
+            """
+            UPDATE webhook_events
+            SET status = ?, attempts = attempts + 1, last_error = ?, updated_at = ?
+            WHERE event_id = ?
+            """,
+            (status, last_error, now, event_id),
+        )
+        row = connection.execute(
+            """
+            SELECT event_id, event_type, payload, status, attempts, last_error,
+                   created_at, updated_at
+            FROM webhook_events
+            WHERE event_id = ?
+            """,
+            (event_id,),
+        ).fetchone()
+    return _webhook_event_row(row)
+
+
+def get_webhook_event(event_id: str) -> dict[str, Any] | None:
+    """Read one outbox event without starting processing."""
+
+    path = database_path()
+    if not path.exists():
+        return None
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        row = connection.execute(
+            """
+            SELECT event_id, event_type, payload, status, attempts, last_error,
+                   created_at, updated_at
+            FROM webhook_events
+            WHERE event_id = ?
+            """,
+            (event_id,),
+        ).fetchone()
+    return _webhook_event_row(row) if row else None
+
+
+def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    """Read recent outbox state for a small operational status surface."""
+
+    if limit < 1 or limit > 100:
+        raise ValueError("webhook event limit must be between 1 and 100")
+    path = database_path()
+    if not path.exists():
+        return []
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        if status is None:
+            rows = connection.execute(
+                """
+                SELECT event_id, event_type, payload, status, attempts, last_error,
+                       created_at, updated_at
+                FROM webhook_events
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT event_id, event_type, payload, status, attempts, last_error,
+                       created_at, updated_at
+                FROM webhook_events
+                WHERE status = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (status, limit),
+            ).fetchall()
+    return [_webhook_event_row(row) for row in rows]
+
+
+def _ensure_webhook_events_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS webhook_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL UNIQUE,
+            event_type TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'processed', 'failed')),
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def _webhook_event_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
+    if row is None:
+        raise RuntimeError("webhook event row was not found")
+    return {
+        "event_id": row[0],
+        "event_type": row[1],
+        "payload": json.loads(row[2]),
+        "status": row[3],
+        "attempts": row[4],
+        "last_error": row[5],
+        "created_at": row[6],
+        "updated_at": row[7],
+    }
+
+
 def _template_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
     if row is None:
         raise RuntimeError("memo template row was not found after save")

@@ -1,6 +1,15 @@
 import sqlite3
 
-from database import get_ai_note, get_memo_template, save_ai_note, save_memo_template
+from database import (
+    get_ai_note,
+    get_memo_template,
+    get_webhook_event,
+    list_webhook_events,
+    save_ai_note,
+    save_memo_template,
+    save_webhook_event,
+    update_webhook_event,
+)
 
 
 def test_ai_note_create_and_read(monkeypatch, tmp_path):
@@ -62,3 +71,37 @@ def test_missing_template_returns_none(monkeypatch, tmp_path):
     monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "missing.db"))
 
     assert get_memo_template("missing") is None
+
+
+def test_webhook_event_create_is_idempotent_and_readable(monkeypatch, tmp_path):
+    database = tmp_path / "outbox.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    payload = {"activityType": "memos.memo.created", "memo": {"uid": "memo-1"}}
+
+    first = save_webhook_event("event-1", "memos.memo.created", payload)
+    second = save_webhook_event("event-1", "memos.memo.created", {"changed": True})
+
+    assert second == first
+    assert first["status"] == "pending"
+    assert first["attempts"] == 0
+    assert first["payload"] == payload
+    assert get_webhook_event("event-1") == first
+    assert len(list_webhook_events()) == 1
+
+
+def test_webhook_event_status_tracks_success_and_failure(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "outbox-status.db"))
+    save_webhook_event("event-success", "memo.created", {})
+    save_webhook_event("event-failed", "memo.updated", {})
+
+    processed = update_webhook_event("event-success", "processed")
+    failed = update_webhook_event("event-failed", "failed", "summary provider unavailable")
+
+    assert processed["status"] == "processed"
+    assert processed["attempts"] == 1
+    assert failed["status"] == "failed"
+    assert failed["attempts"] == 1
+    assert failed["last_error"] == "summary provider unavailable"
+    assert [item["event_id"] for item in list_webhook_events(status="failed")] == [
+        "event-failed"
+    ]

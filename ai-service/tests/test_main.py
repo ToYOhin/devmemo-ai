@@ -342,7 +342,8 @@ def test_invalid_template_is_acknowledged_without_persistence(monkeypatch, tmp_p
     assert "parse_errors" in response.json()
 
 
-def test_memos_webhook_acknowledges_empty_memo():
+def test_memos_webhook_acknowledges_empty_memo(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "empty.db"))
     response = client.post(
         "/api/integrations/memos/webhook",
         json={"activityType": "memos.memo.created", "memo": {"uid": "empty"}},

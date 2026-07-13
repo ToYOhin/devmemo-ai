@@ -1,5 +1,15 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4c
+
+Phase 4c 已完成 AI Service SQLite outbox 最小切片：
+
+- `webhook_events` 以唯一 `event_id` 保存 event type、payload、pending/processed/failed、attempts 和 last_error。
+- Webhook 优先入队；显式 `eventId` 优先，没有时使用原始 body hash；重复事件不重复执行旧业务流程。
+- 处理异常仍返回 `code=0`，状态可通过 GET `/api/ai/ops/outbox` 查询。
+- 没有启动 worker、自动重试或引入 Redis/Celery；下一阶段只做有上限的显式重试和最小观测。
+- AI Service 全量 95 passed；Go、前端、TypeScript/build、Compose config 已通过。
+
 ## 2026-07-13 Phase 4b
 
 Phase 4b 已完成可选 Webhook HMAC 最小切片：
@@ -7,7 +17,7 @@ Phase 4b 已完成可选 Webhook HMAC 最小切片：
 - `app/services/webhook_security.py` 使用标准库 HMAC-SHA256 签名原始 body。
 - `AI_WEBHOOK_SECRET` 为空时兼容旧客户端；配置后要求 `X-DevMemo-Signature: sha256=<hex>`，无效签名返回 401。
 - 未修改 Memos 核心、SQLite schema、Qdrant、LLM 或前端；默认 Compose CPU/网络行为不变。
-- HMAC/API 定向测试和 AI Service 全量 90 passed；Go、前端、TypeScript/build、Compose config 也已通过，下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4c。
+- HMAC/API 定向测试和 AI Service 全量 95 passed；Go、前端、TypeScript/build、Compose config 也已通过，下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4d。
 
 ## 2026-07-13 Phase 4
 
