@@ -1,5 +1,15 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4d
+
+Phase 4d 已完成显式有限重试与最小观测：
+
+- `webhook_events` 兼容增加 `max_attempts`，默认每个事件最多 3 次总尝试，旧表和旧数据保留。
+- 新增 `POST /api/ai/ops/outbox/{event_id}/retry`，只允许 `failed` 事件；达到上限返回 409。
+- 重试成功清除 `last_error` 并转为 `processed`；重试失败仍返回 `code=0`，记录新的 attempts/error。
+- GET outbox 增加 `by_status` 和最多 5 条 `recent_errors`；没有启动 worker、定时任务或外部队列。
+- AI Service 全量 100 passed；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4e。
+
 ## 2026-07-13 Phase 4c
 
 Phase 4c 已完成 AI Service SQLite outbox 最小切片：
@@ -17,7 +27,7 @@ Phase 4b 已完成可选 Webhook HMAC 最小切片：
 - `app/services/webhook_security.py` 使用标准库 HMAC-SHA256 签名原始 body。
 - `AI_WEBHOOK_SECRET` 为空时兼容旧客户端；配置后要求 `X-DevMemo-Signature: sha256=<hex>`，无效签名返回 401。
 - 未修改 Memos 核心、SQLite schema、Qdrant、LLM 或前端；默认 Compose CPU/网络行为不变。
-- HMAC/API 定向测试和 AI Service 全量 95 passed；Go、前端、TypeScript/build、Compose config 也已通过，下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4d。
+- HMAC/API 定向测试和 AI Service 全量 95 passed；Go、前端、TypeScript/build、Compose config 也已通过。
 
 ## 2026-07-13 Phase 4
 
@@ -34,7 +44,7 @@ Phase 4 RAG 最小切片已完成，新增 commit：
 - `POST /api/ai/chat` 默认 deterministic + memory 离线运行；空库 200，检索不可用 503，LLM 失败 502。
 - 当前 AI Service 全量测试为 79 passed；Phase 4 不包含 chunk、rerank 或前端聊天 UI。
 
-下一步使用 `docs/prompts/NEXT_STAGE_PROMPT.md`，进入 Phase 4b 索引可靠性与 Webhook 运维边界。
+Phase 4b、4c、4d 已在顶部交接记录；后续以 `docs/prompts/NEXT_STAGE_PROMPT.md` 为准。
 
 ## 2026-07-13 Phase 3g
 
@@ -97,4 +107,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4 RAG 检索与引用问答。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 4e 运维 API 安全与告警边界。

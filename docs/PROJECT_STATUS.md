@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c 已完成。下一阶段为 Phase 4d：显式重试与最小观测。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d 已完成。下一阶段为 Phase 4e：运维 API 安全与告警边界。
 
 ## 当前事实
 
@@ -20,7 +20,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 索引健康接口：GET `/api/ai/index/health`，默认 memory 路径不连接 Qdrant
 - RAG 接口：POST `/api/ai/chat`，当前检索完整 Memo 并返回引用；默认 deterministic + memory 可离线运行
 - Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
-- Webhook outbox：GET `/api/ai/ops/outbox`，默认只读，不启动 worker
+- Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 
 ## Phase 4 已完成
 
@@ -43,6 +43,13 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Webhook 优先入队；显式 `eventId` 使用原值，没有 eventId 时使用原始 body SHA-256 派生稳定 ID。
 - 重复 event ID 不重复执行摘要、模板或索引；业务异常记录 `failed`，仍返回 `code=0`。
 - 新增 GET `/api/ai/ops/outbox?status=&limit=` 运维读取 API；不引入后台 worker、Redis、Celery 或新依赖。
+
+## Phase 4d 已完成
+
+- `webhook_events` 通过兼容 SQLite 补列增加 `max_attempts`，默认总尝试上限为 3；旧表和旧数据保留。
+- 新增 POST `/api/ai/ops/outbox/{event_id}/retry`，仅允许 `failed` 事件；重试准备在 SQLite 事务中原子切换为 `pending`。
+- 重试成功转为 `processed` 并清除 `last_error`；再次失败保持 `failed` 并递增 `attempts`；达到上限返回 409。
+- GET outbox 增加 `by_status` 和最多 5 条 `recent_errors`，不引入后台 worker、定时任务、外部队列或观测依赖。
 
 ## Phase 3c 已完成
 
@@ -100,7 +107,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             95 passed
+AI Service full pytest             100 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
 frontend full tests                131 passed
@@ -132,9 +139,9 @@ pnpm lint                          BLOCKED / 377 existing Biome CRLF diagnostics
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- 当前 outbox 只记录 attempts 和失败状态，没有自动重试 worker、限流或指标导出。
+- 当前 outbox 只提供显式有限重试和基础状态计数，没有自动 worker、ops API 认证、错误摘要脱敏或外部告警导出。
 - 全量 pnpm lint 当前报告 377 个仓库既有 Biome CRLF 格式诊断；本轮未执行格式化修复，避免混入无关前端变更。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 4d 显式重试和最小观测。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 4e 运维 API 安全与告警边界。

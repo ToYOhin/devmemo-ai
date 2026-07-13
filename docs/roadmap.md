@@ -119,4 +119,15 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 ## Phase 4d：显式重试与最小观测
 
-下一阶段只评估有上限的显式重试命令/API、退避字段和最小计数指标；保持默认 Compose deterministic + memory，不启动常驻后台 worker。
+已完成最小切片：
+
+1. 通过兼容 SQLite 补列为 `webhook_events` 增加 `max_attempts`，默认总尝试次数为 3，不删除旧表和数据。
+2. 新增 `POST /api/ai/ops/outbox/{event_id}/retry`，只重试 `failed` 事件；成功转 `processed`，失败保持 `failed` 并记录最新错误。
+3. 达到上限后返回 409，不执行无限重试；没有后台 worker、定时任务或外部队列。
+4. 扩展 GET outbox 返回 `by_status` 和最多 5 条 `recent_errors`，作为最小观测契约。
+
+验证：AI Service 100 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。默认 Compose 仍为 deterministic + memory。
+
+## Phase 4e：运维 API 安全与告警边界
+
+下一阶段只评估 ops API 的最小认证/来源限制、错误摘要脱敏和可选告警导出；不引入前端运维 UI、后台 worker、外部队列或 Prometheus 运行时。

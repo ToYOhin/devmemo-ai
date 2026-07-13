@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 
+DEFAULT_WEBHOOK_MAX_ATTEMPTS = 3
+
+
 def database_path() -> Path:
     return Path(os.getenv("AI_NOTES_DB", "data/ai_notes.db"))
 
@@ -208,21 +211,20 @@ def save_webhook_event(
         connection.execute(
             """
             INSERT INTO webhook_events
-                (event_id, event_type, payload, status, attempts, created_at, updated_at)
-            VALUES (?, ?, ?, 'pending', 0, ?, ?)
+                (event_id, event_type, payload, status, attempts, max_attempts, created_at, updated_at)
+            VALUES (?, ?, ?, 'pending', 0, ?, ?, ?)
             ON CONFLICT(event_id) DO NOTHING
             """,
-            (event_id, event_type, json.dumps(payload, ensure_ascii=False), now, now),
+            (
+                event_id,
+                event_type,
+                json.dumps(payload, ensure_ascii=False),
+                DEFAULT_WEBHOOK_MAX_ATTEMPTS,
+                now,
+                now,
+            ),
         )
-        row = connection.execute(
-            """
-            SELECT event_id, event_type, payload, status, attempts, last_error,
-                   created_at, updated_at
-            FROM webhook_events
-            WHERE event_id = ?
-            """,
-            (event_id,),
-        ).fetchone()
+        row = _select_webhook_event(connection, event_id)
     return _webhook_event_row(row)
 
 
@@ -247,17 +249,40 @@ def update_webhook_event(
             SET status = ?, attempts = attempts + 1, last_error = ?, updated_at = ?
             WHERE event_id = ?
             """,
-            (status, last_error, now, event_id),
+            (status, last_error if status == "failed" else None, now, event_id),
         )
-        row = connection.execute(
+        row = _select_webhook_event(connection, event_id)
+    return _webhook_event_row(row)
+
+
+def begin_webhook_retry(event_id: str) -> dict[str, Any] | None:
+    """Atomically move one failed event to pending for an explicit retry."""
+
+    path = database_path()
+    if not path.exists():
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        row = _select_webhook_event(connection, event_id)
+        if row is None:
+            return None
+        event = _webhook_event_row(row)
+        if event["status"] != "failed":
+            raise ValueError("only failed webhook events can be retried")
+        if event["attempts"] >= event["max_attempts"]:
+            raise ValueError("webhook retry limit reached")
+        updated = connection.execute(
             """
-            SELECT event_id, event_type, payload, status, attempts, last_error,
-                   created_at, updated_at
-            FROM webhook_events
-            WHERE event_id = ?
+            UPDATE webhook_events
+            SET status = 'pending', updated_at = ?
+            WHERE event_id = ? AND status = 'failed' AND attempts < max_attempts
             """,
-            (event_id,),
-        ).fetchone()
+            (now, event_id),
+        )
+        if updated.rowcount != 1:
+            raise ValueError("webhook event is no longer retryable")
+        row = _select_webhook_event(connection, event_id)
     return _webhook_event_row(row)
 
 
@@ -269,15 +294,7 @@ def get_webhook_event(event_id: str) -> dict[str, Any] | None:
         return None
     with sqlite3.connect(path) as connection:
         _ensure_webhook_events_schema(connection)
-        row = connection.execute(
-            """
-            SELECT event_id, event_type, payload, status, attempts, last_error,
-                   created_at, updated_at
-            FROM webhook_events
-            WHERE event_id = ?
-            """,
-            (event_id,),
-        ).fetchone()
+        row = _select_webhook_event(connection, event_id)
     return _webhook_event_row(row) if row else None
 
 
@@ -294,8 +311,8 @@ def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict
         if status is None:
             rows = connection.execute(
                 """
-                SELECT event_id, event_type, payload, status, attempts, last_error,
-                       created_at, updated_at
+                SELECT event_id, event_type, payload, status, attempts, max_attempts,
+                       last_error, created_at, updated_at
                 FROM webhook_events
                 ORDER BY created_at DESC
                 LIMIT ?
@@ -305,8 +322,8 @@ def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict
         else:
             rows = connection.execute(
                 """
-                SELECT event_id, event_type, payload, status, attempts, last_error,
-                       created_at, updated_at
+                SELECT event_id, event_type, payload, status, attempts, max_attempts,
+                       last_error, created_at, updated_at
                 FROM webhook_events
                 WHERE status = ?
                 ORDER BY created_at DESC
@@ -315,6 +332,44 @@ def list_webhook_events(status: str | None = None, limit: int = 50) -> list[dict
                 (status, limit),
             ).fetchall()
     return [_webhook_event_row(row) for row in rows]
+
+
+def get_webhook_event_stats() -> dict[str, Any]:
+    """Return bounded status counts and recent failure summaries."""
+
+    empty_counts = {"pending": 0, "processed": 0, "failed": 0}
+    path = database_path()
+    if not path.exists():
+        return {"by_status": empty_counts, "recent_errors": []}
+    with sqlite3.connect(path) as connection:
+        _ensure_webhook_events_schema(connection)
+        counts = connection.execute(
+            "SELECT status, COUNT(*) FROM webhook_events GROUP BY status"
+        ).fetchall()
+        errors = connection.execute(
+            """
+            SELECT event_id, last_error, attempts, max_attempts, updated_at
+            FROM webhook_events
+            WHERE status = 'failed' AND last_error IS NOT NULL
+            ORDER BY updated_at DESC
+            LIMIT 5
+            """
+        ).fetchall()
+    for status, count in counts:
+        empty_counts[status] = count
+    return {
+        "by_status": empty_counts,
+        "recent_errors": [
+            {
+                "event_id": row[0],
+                "last_error": row[1],
+                "attempts": row[2],
+                "max_attempts": row[3],
+                "updated_at": row[4],
+            }
+            for row in errors
+        ],
+    }
 
 
 def _ensure_webhook_events_schema(connection: sqlite3.Connection) -> None:
@@ -327,12 +382,36 @@ def _ensure_webhook_events_schema(connection: sqlite3.Connection) -> None:
             payload TEXT NOT NULL,
             status TEXT NOT NULL CHECK (status IN ('pending', 'processed', 'failed')),
             attempts INTEGER NOT NULL DEFAULT 0,
+            max_attempts INTEGER NOT NULL DEFAULT 3,
             last_error TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """
     )
+    columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(webhook_events)").fetchall()
+    }
+    if "max_attempts" not in columns:
+        connection.execute(
+            "ALTER TABLE webhook_events ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3"
+        )
+
+
+def _select_webhook_event(
+    connection: sqlite3.Connection,
+    event_id: str,
+) -> tuple[Any, ...] | None:
+    return connection.execute(
+        """
+        SELECT event_id, event_type, payload, status, attempts, max_attempts,
+               last_error, created_at, updated_at
+        FROM webhook_events
+        WHERE event_id = ?
+        """,
+        (event_id,),
+    ).fetchone()
 
 
 def _webhook_event_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
@@ -344,9 +423,10 @@ def _webhook_event_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
         "payload": json.loads(row[2]),
         "status": row[3],
         "attempts": row[4],
-        "last_error": row[5],
-        "created_at": row[6],
-        "updated_at": row[7],
+        "max_attempts": row[5],
+        "last_error": row[6],
+        "created_at": row[7],
+        "updated_at": row[8],
     }
 
 

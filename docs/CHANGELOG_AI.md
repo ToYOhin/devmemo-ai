@@ -2,6 +2,15 @@
 
 ## 2026-07-13
 
+### Phase 4d：显式有限重试与最小观测
+
+- AI Service 自有 `webhook_events` 兼容补充 `max_attempts`，默认每个事件最多 3 次总处理尝试。
+- 新增 `POST /api/ai/ops/outbox/{event_id}/retry`，只允许失败事件显式重试；达到上限返回 409，成功清除旧错误。
+- GET outbox 增加 `by_status` 和最多 5 条 `recent_errors`，不启动后台 worker 或新增运行时依赖。
+- 默认 deterministic + memory、Memos Webhook `code=0` 和 HMAC 显式开关保持不变。
+- 验证：AI Service 100 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 未完成：ops API 认证/来源限制、错误摘要脱敏和外部告警导出留到 Phase 4e。
+
 ### Phase 4c：Webhook Outbox 与失败状态读取
 
 - AI Service SQLite 新增兼容 `webhook_events` 表，保存事件 payload、状态、尝试次数和最后错误。

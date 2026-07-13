@@ -112,6 +112,9 @@ verified request
   -> new: legacy summary/template/index flow
   -> processed or failed + attempts/last_error
   -> GET /api/ai/ops/outbox read-only status
+  -> POST /api/ai/ops/outbox/{event_id}/retry only failed events
+  -> max_attempts guard (default 3 total attempts)
+  -> by_status + recent_errors bounded observation
 ~~~
 
 ## Webhook indexing flow

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 import re
 from dataclasses import asdict
@@ -13,9 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
 from database import (
+    begin_webhook_retry,
     get_ai_note,
     get_memo_template,
     get_webhook_event,
+    get_webhook_event_stats,
     list_webhook_events,
     save_ai_note,
     save_memo_template,
@@ -320,7 +322,44 @@ async def read_webhook_outbox(
         items = list_webhook_events(status=status, limit=limit)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return {"items": items, "count": len(items)}
+    return {"items": items, "count": len(items), **get_webhook_event_stats()}
+
+
+@app.post("/api/ai/ops/outbox/{event_id}/retry")
+async def retry_webhook_outbox(event_id: str) -> dict[str, object]:
+    """Explicitly retry one failed Webhook event within its persisted limit."""
+
+    try:
+        event = begin_webhook_retry(event_id)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if event is None:
+        raise HTTPException(status_code=404, detail="webhook event not found")
+
+    try:
+        request = MemoWebhookRequest.model_validate(event["payload"])
+        response = await _process_memos_webhook(request)
+    except Exception as error:
+        failed = update_webhook_event(event_id, "failed", str(error))
+        return {
+            "code": 0,
+            "message": "webhook retry failed",
+            "event_id": event_id,
+            "outbox_status": failed["status"],
+            "attempts": failed["attempts"],
+            "max_attempts": failed["max_attempts"],
+        }
+
+    processed = update_webhook_event(event_id, "processed")
+    return {
+        "code": 0,
+        "message": "webhook retried",
+        "event_id": event_id,
+        "outbox_status": processed["status"],
+        "attempts": processed["attempts"],
+        "max_attempts": processed["max_attempts"],
+        "result": response,
+    }
 
 
 @app.post("/api/integrations/memos/webhook")

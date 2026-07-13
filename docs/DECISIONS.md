@@ -87,3 +87,9 @@ Phase 4b 使用标准库 HMAC-SHA256 校验原始 Webhook body。`AI_WEBHOOK_SEC
 ## ADR-020：AI Service SQLite Outbox 先做幂等记录，不启动 Worker
 
 Phase 4c 在 AI Service 自有 SQLite 新增 `webhook_events`，以唯一 `event_id` 记录 Webhook payload、处理状态、attempts 和 last_error。显式 eventId 优先使用；缺失时由原始 body SHA-256 派生。重复事件直接返回 duplicate，不重复触发摘要、模板或索引；业务异常记录 failed 但保持 `code=0`。当前只提供 GET 运维读取 API，不引入常驻 worker、Redis、Celery、外部队列或无限重试；显式有上限的重试留到 Phase 4d。
+
+## ADR-021：Phase 4d 只提供有上限的显式重试与 SQLite 观测
+
+Phase 4d 在现有 `webhook_events` 上通过兼容 `ALTER TABLE` 补充 `max_attempts`，默认总尝试次数为 3；首次 Webhook 处理和最多两次显式重试共用该上限。`POST /api/ai/ops/outbox/{event_id}/retry` 只允许 `failed` 事件，并在数据库事务中先将事件原子置为 `pending`，避免同一事件被两个显式请求同时领取。成功转为 `processed` 并清除 `last_error`，失败继续保持 `failed` 并递增 `attempts`。
+
+观测只扩展现有 outbox GET，返回按状态计数和最多 5 条最近错误摘要。不启动 worker、定时任务、Redis、Celery、Prometheus 或其他运行时依赖；默认 Compose deterministic + memory 和 Memos Webhook `code=0` 契约保持不变。
