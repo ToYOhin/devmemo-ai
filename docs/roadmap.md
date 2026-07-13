@@ -182,6 +182,17 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 129 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
 
-## Phase 5c：chunk 离线检索评估（下一阶段）
+## Phase 5c：chunk 离线检索评估
 
-计划使用 deterministic + memory 构造 chunk 试验索引，与完整 Memo 基线复用 Phase 5a 评估边界做 Recall@K 对照；仍不接入默认 Webhook、Qdrant、FastEmbed、rerank 或前端聊天 UI。
+已完成：
+
+1. 新增 provider-neutral `OfflineChunkIndex`，使用 deterministic + memory 写入独立 chunk 试验索引。
+2. 复用 `RetrievalService` 和 Phase 5a `RetrievalEvaluator`，对完整 Memo 与 chunk 结果做 Recall@K/首个相关结果排名对照。
+3. chunk citation metadata 明确包含 Memo ID、chunk ID、chunk position、index version；上下文组装保留原始 chunk 内容，公共 chat API 不变。
+4. 覆盖 upsert、显式 stale delete、重复/空 chunk 和 baseline 对照；不接入默认 Webhook、Qdrant、FastEmbed 或生产索引。
+
+验证：AI Service 133 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+
+## Phase 5d：可选 chunk 索引生命周期（下一阶段）
+
+计划在显式 opt-in、可回滚前提下定义 chunk create/update/delete 编排；默认仍使用完整 Memo `memo-v1`，不自动修改 Webhook、Compose 或公共 chat citation 契约。

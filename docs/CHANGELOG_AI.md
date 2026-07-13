@@ -2,6 +2,13 @@
 
 ## 2026-07-13
 
+### Phase 5c：chunk 离线检索评估
+- 新增 provider-neutral `OfflineChunkIndex`，使用 deterministic + memory 构造独立 chunk 试验索引，不改变完整 Memo 生产索引。
+- 复用 `RetrievalService` 和 Phase 5a `RetrievalEvaluator`，对照 Recall@K/首个相关结果排名；chunk citation 保留 Memo、chunk 和版本 metadata，上下文保留原始 chunk 内容。
+- 覆盖 upsert、更新后的显式 stale delete、重复/空 chunk 和完整 Memo baseline 对照 contract tests；不访问网络、不加载模型、不连接 Qdrant。
+- 验证：AI Service 133 passed；Go 全量、前端 131 tests、TypeScript/build 和 Compose config 通过。
+- 下一阶段：Phase 5d 可选 chunk 索引生命周期。
+
 ### Phase 5b：Memo chunking 边界
 - 新增 provider-neutral `MemoChunk` 和纯函数 `chunk_memo`，按换行边界/字符上限切分，同时保留 Markdown 原始字符序列。
 - 使用 `memo-chunk-v1` 与 `index_mode=chunk` metadata；chunk ID 由 Memo、版本和位置稳定派生，支持更新复用和显式 stale ID 删除。

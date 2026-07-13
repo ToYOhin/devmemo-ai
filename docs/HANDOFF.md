@@ -1,5 +1,15 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 5c
+
+Phase 5c 已完成 chunk 离线检索评估：
+
+- 新增 `OfflineChunkIndex`，用现有 deterministic provider 和 InMemoryVectorStore 构造独立试验索引；chunk ID 作为 embedding ID。
+- 复用 `RetrievalService` 和 Phase 5a `RetrievalEvaluator`，可将完整 Memo 与 chunk 结果按 Recall@K/首个命中排名对照。
+- chunk citation metadata 明确包含 `memo_id`、`chunk_id`、`chunk_index`、`index_version`；服务端上下文仍保留 chunk 原文，公共 chat API 不变。
+- 更新、重复 ID、空内容和显式 stale delete 有 contract tests；没有接入 Webhook、Qdrant、FastEmbed、Compose 或 Memos 核心。
+- AI Service 全量 133 passed；下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5d 可选 chunk 索引生命周期。
+
 ## 2026-07-13 Phase 5b
 
 Phase 5b 已完成 Memo chunking 纯函数/内存边界：
@@ -156,4 +166,4 @@ Set-Location H:\DevMemoAI\ai-service
 
 ## 下一阶段
 
-使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5c chunk 离线检索评估。
+使用 docs/prompts/NEXT_STAGE_PROMPT.md，执行 Phase 5d 可选 chunk 索引生命周期。

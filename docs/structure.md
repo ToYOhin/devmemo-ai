@@ -203,3 +203,17 @@ raw Memo Markdown
 ~~~
 
 The existing `MemoIndexDocument` path remains `memo-v1` and continues to be the only production Webhook/RAG indexing path. `MemoChunk` is provider-neutral and does not import FastAPI, FastEmbed, Qdrant or SQLite types.
+
+## Offline chunk retrieval evaluation flow
+
+~~~text
+MemoChunk tuple
+  -> OfflineChunkIndex.upsert
+  -> deterministic EmbeddingProvider + InMemoryVectorStore
+  -> RetrievalService.retrieve
+  -> chunk citation metadata + server-side chunk context
+  -> RetrievalEvaluator
+  -> complete Memo baseline Recall@K comparison
+~~~
+
+`OfflineChunkIndex` is an evaluation-only composition. It does not change `AI_INDEX_ON_WEBHOOK`, Qdrant collections, FastEmbed configuration or the public `POST /api/ai/chat` citation contract.
