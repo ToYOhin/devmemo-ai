@@ -19,11 +19,12 @@ git status --short --branch
 git log --oneline -8
 .\scripts\verify-devmemo.ps1
 
-当前默认阶段是 Phase 4b：索引可靠性与 Webhook 运维边界。Phase 4 RAG 最小切片已经完成，必须保持：
+当前默认阶段是 Phase 4c：outbox、重试与观测。Phase 4/4b 的 RAG 和可选 Webhook HMAC 最小切片已经完成，必须保持：
 - 默认 deterministic + memory，低 CPU、无网络依赖。
 - FastEmbed/Qdrant 只进入 adapters，不进入 domain/service。
 - 当前一个完整 Memo 对应一个向量；RAG `/api/ai/chat` 已完成，但不加入 chunk、rerank 或前端聊天 UI。
 - 原文只作为索引派生上下文，公共 citations 不返回内部 `content` 字段。
+- Webhook HMAC 只有显式配置 `AI_WEBHOOK_SECRET` 才启用，默认保持旧 `code=0` 行为。
 - 每个小步骤先测试；完成后更新状态、变更、交接和下一阶段 Prompt。
 - 最终报告真实测试结果、未验证项、网络阻塞证据、commit 和下一个 Prompt。
 

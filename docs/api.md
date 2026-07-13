@@ -23,6 +23,7 @@ VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http:
 - AI_FASTEMBED_CACHE_DIR：可选模型缓存目录；Compose 默认 `/app/model-cache`，由 `ai-model-cache` volume 持久化。
 - FastEmbed 初始化会触发模型准备/下载；因此不属于默认启动路径。
 - AI_INDEX_ON_WEBHOOK=false：默认关闭 Webhook 向量索引；设为 `true` 后 create/update/delete 才编排向量生命周期。
+- AI_WEBHOOK_SECRET：可选 Webhook HMAC secret；为空时保持兼容放行，配置后请求必须携带 `X-DevMemo-Signature: sha256=<hex>`。
 
 ## GET /health
 
@@ -103,6 +104,8 @@ memory 模式和 qdrant 模式共享同一 API contract。空输入、维度错�
 
 接收 Memos memo.created、memo.updated 和 memo.deleted webhook。删除、空内容和非法模板事件保持 code=0；结构化模板写入 AI Service 自有 memo_templates。开启 `AI_INDEX_ON_WEBHOOK` 后返回 `index_status=indexed|skipped|failed|deleted`，索引失败不阻断 Webhook。
 
+配置 `AI_WEBHOOK_SECRET` 后，服务使用原始 request body 计算 HMAC-SHA256，并通过 `hmac.compare_digest` 校验 `X-DevMemo-Signature`。签名缺失、格式错误或不匹配返回 401；未配置 secret 时不改变既有 Webhook 行为。
+
 ## Operational smoke
 
 真实 Qdrant smoke 命令：
@@ -117,4 +120,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；chunk、rerank、outbox 和 Webhook 可靠性留给 Phase 4b。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox、重试、限流和观测留给 Phase 4c。

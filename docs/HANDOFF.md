@@ -1,5 +1,14 @@
 # DevMemo AI 当前交接
 
+## 2026-07-13 Phase 4b
+
+Phase 4b 已完成可选 Webhook HMAC 最小切片：
+
+- `app/services/webhook_security.py` 使用标准库 HMAC-SHA256 签名原始 body。
+- `AI_WEBHOOK_SECRET` 为空时兼容旧客户端；配置后要求 `X-DevMemo-Signature: sha256=<hex>`，无效签名返回 401。
+- 未修改 Memos 核心、SQLite schema、Qdrant、LLM 或前端；默认 Compose CPU/网络行为不变。
+- HMAC/API 定向测试和 AI Service 全量 90 passed；Go、前端、TypeScript/build、Compose config 也已通过，下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 4c。
+
 ## 2026-07-13 Phase 4
 
 Phase 4 RAG 最小切片已完成，新增 commit：

@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4 已完成。下一阶段为 Phase 4b：索引可靠性与 Webhook 运维边界。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b 已完成。下一阶段为 Phase 4c：outbox、重试与观测。
 
 ## 当前事实
 
@@ -19,6 +19,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 可选 embedding：FastEmbedEmbeddingProvider，默认不启用、不加载模型；本机已安装依赖用于 smoke
 - 索引健康接口：GET `/api/ai/index/health`，默认 memory 路径不连接 Qdrant
 - RAG 接口：POST `/api/ai/chat`，当前检索完整 Memo 并返回引用；默认 deterministic + memory 可离线运行
+- Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
 
 ## Phase 4 已完成
 
@@ -27,6 +28,13 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - 新增 POST `/api/ai/chat`，接收 `question` 和 `limit`，返回 `answer`、`citations`、`provider`、`retrieved_count`。
 - deterministic provider 返回可复现的引用式离线答案；OpenAI/Ollama 复用现有 LLM adapter。
 - 空知识库返回明确空结果；非法 limit 返回 422；检索不可用返回 503；LLM 失败返回 502。
+
+## Phase 4b 已完成
+
+- 新增 provider-neutral `app/services/webhook_security.py`，使用标准库 HMAC-SHA256 校验原始 Webhook body。
+- `AI_WEBHOOK_SECRET` 未配置时保持兼容放行；显式配置后缺失、错误或篡改签名返回 401。
+- 签名校验位于 Webhook 业务处理前，不改变有效请求和默认 `code=0` 契约；未修改 Memos API、数据库或 Proto。
+- Docker Compose 暴露空默认的 `AI_WEBHOOK_SECRET` 配置，不增加默认 CPU、网络或模型负担。
 
 ## Phase 3c 已完成
 
@@ -84,7 +92,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             79 passed
+AI Service full pytest             90 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
 frontend full tests                131 passed
@@ -116,10 +124,9 @@ pnpm lint                          BLOCKED / 377 existing Biome CRLF diagnostics
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- Phase 4b 尚未实现 Webhook 签名/HMAC、outbox、重试、限流和观测。
-- Webhook 签名/HMAC、outbox、重试和观测尚未实现。
+- Phase 4c 尚未实现 SQLite outbox、失败重试、限流和观测。
 - 全量 pnpm lint 当前报告 377 个仓库既有 Biome CRLF 格式诊断；本轮未执行格式化修复，避免混入无关前端变更。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 4b 索引可靠性与 Webhook 运维边界。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，开始 Phase 4c outbox、重试和观测。

@@ -7,7 +7,7 @@ import os
 import re
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +17,7 @@ from app.services.content_parser import parse_memo_content
 from app.services.embedding_factory import build_embedding_service
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.retrieval_service import RetrievalService
+from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
 from app.settings import parse_env_bool
 
@@ -296,8 +297,19 @@ async def read_memo_template(memo_id: str) -> dict[str, object]:
 
 
 @app.post("/api/integrations/memos/webhook")
-async def memos_webhook(request: MemoWebhookRequest) -> dict[str, object]:
+async def memos_webhook(
+    request: MemoWebhookRequest,
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Signature"),
+) -> dict[str, object]:
     """Receive Memos create/update events without changing Memos core code."""
+
+    if not verify_signature(
+        await raw_request.body(),
+        signature,
+        os.getenv("AI_WEBHOOK_SECRET", "").strip(),
+    ):
+        raise HTTPException(status_code=401, detail="invalid webhook signature")
 
     if request.activity_type.endswith("deleted"):
         if _webhook_index_enabled():

@@ -98,4 +98,14 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 ## Phase 4b：索引可靠性与 Webhook 运维边界
 
-下一阶段再实现 outbox、Webhook 签名/HMAC、重试、限流和最小观测；保持默认 Compose deterministic + memory，不把外部服务变成启动依赖。
+已完成最小切片：
+
+1. 新增可选 Webhook HMAC-SHA256 签名验证，使用 `AI_WEBHOOK_SECRET` 和 `X-DevMemo-Signature`。
+2. 默认未配置 secret 时保持旧 Webhook `code=0` 和业务处理兼容；显式配置后无效签名返回 401。
+3. 签名逻辑独立于 FastAPI、Qdrant、LLM 和 Memos 核心，测试不访问网络。
+
+验证：AI Service 90 passed；Go `go test -p 2 ./...`、前端 131 tests、TypeScript/build 和 Compose config 通过；`pnpm lint` 受 377 个既有 CRLF 诊断阻塞。
+
+## Phase 4c：outbox、重试与观测
+
+下一阶段评估 AI Service 自有 SQLite outbox、有限重试和最小运行指标；保持默认 Compose deterministic + memory，不把外部服务变成启动依赖。

@@ -23,6 +23,7 @@ ai-service/
 ├── app/domain/retrieval.py         # provider-neutral citation/result contracts
 ├── app/services/retrieval_service.py
 │                                   # query embedding -> search -> context/citations
+├── app/services/webhook_security.py # optional HMAC request verification
 ├── scripts/smoke_qdrant.py         # opt-in real Qdrant lifecycle smoke
 └── model-cache/                    # local generated cache, gitignored
 ~~~
@@ -86,6 +87,19 @@ POST /api/ai/chat
 
 The index stores derived `content` metadata for server-side context assembly.
 The API removes that internal field from public citation metadata.
+
+## Webhook security flow
+
+~~~text
+AI_WEBHOOK_SECRET empty
+  -> legacy-compatible request processing
+
+AI_WEBHOOK_SECRET configured
+  -> raw request body
+  -> HMAC-SHA256
+  -> X-DevMemo-Signature compare_digest
+  -> 401 on missing/mismatch, existing code=0 flow on success
+~~~
 
 ## Webhook indexing flow
 

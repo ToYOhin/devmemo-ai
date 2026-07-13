@@ -2,6 +2,14 @@
 
 ## 2026-07-13
 
+### Phase 4b：Webhook HMAC 安全边界
+
+- 新增可选 `AI_WEBHOOK_SECRET` 和 `X-DevMemo-Signature: sha256=<hex>` HMAC-SHA256 校验。
+- 默认未配置 secret 时保持现有 Webhook 兼容行为；显式配置后无效签名返回 401。
+- 使用原始 request body 和标准库 `hmac.compare_digest`，不增加第三方依赖或默认外部服务。
+- 验证：AI Service 90 passed；Go `go test -p 2 ./...`、Compose config、前端 131 tests、TypeScript/build 均通过。
+- `pnpm lint` 仍受仓库既有 377 个 Biome CRLF 诊断阻塞，本轮未格式化无关前端文件。
+
 ### Phase 4：RAG 检索与引用问答最小切片
 
 - 新增 provider-neutral `RetrievalService`，按问题 embedding、向量搜索和完整 Memo 上下文组装执行检索。
