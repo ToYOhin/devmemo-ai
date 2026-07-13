@@ -112,7 +112,7 @@ AI_INDEX_ON_WEBHOOK=true
   -> delete/empty content registered chunk delete
 ```
 
-chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。当前阶段没有把 chunk store 接入 Qdrant；Qdrant chunk collection 是后续显式扩展。失败仍返回 Webhook `code=0` 和 `index_status=failed`。
+chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读独立 store 和 `memo_chunk_index_state` 统计。当前阶段没有把 chunk store 接入 Qdrant；Qdrant chunk collection 是后续显式扩展。失败仍返回 Webhook `code=0` 和 `index_status=failed`。
 
 ## Webhook 与可靠性边界
 

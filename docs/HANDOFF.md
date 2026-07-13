@@ -1,5 +1,14 @@
 # DevMemo AI 当前交接
 
+## 2026-07-14 Phase 5e
+
+Phase 5e 已完成 chunk health/status 最小切片：
+
+- 新增 `ChunkIndexStateStats`、`ChunkIndexHealth` 和 GET `/api/ai/index/chunk-health`，返回 `memo-chunk-v1`、向量点数、tracked Memo/chunk 数、state backend 和 degraded detail。
+- health 只读，不触发索引、不读取原始 Markdown、不改变完整 Memo `/api/ai/index/health` 或 `/api/ai/chat`。
+- 覆盖空状态、生命周期计数、版本隔离、SQLite 状态读取和 HTTP contract；AI Service 当前 144 passed。
+- 下一阶段执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5f Qdrant chunk 持久化与显式 chunk 检索。
+
 ## 2026-07-14 文档与结构同步
 
 - 已按实际仓库目录刷新 `docs/structure.md`：Memos Go/React 核心、`web/src/features/ai/`、AI Service domain/services/adapters、SQLite、Webhook 和 Compose 均已列出。

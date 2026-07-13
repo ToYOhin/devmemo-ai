@@ -2,6 +2,13 @@
 
 ## 2026-07-14
 
+### Phase 5e：chunk 检索与可观测性收敛
+- 新增 provider-neutral `ChunkIndexStateStats`/`ChunkIndexHealth`，对照 VectorStore 点数与 SQLite 登记状态。
+- 新增只读 GET `/api/ai/index/chunk-health`，显式返回 chunk mode/version、provider、点数、登记 Memo/chunk 数和状态后端；状态异常返回 degraded。
+- 覆盖空状态、生命周期计数、版本隔离、SQLite 状态读取和 HTTP contract；不改变完整 Memo chat、默认 deterministic + memory 或公共索引 health。
+- 验证：AI Service 144 passed；后续执行前端、Go、Docker 和完整验证门禁。
+- 下一阶段：Phase 5f Qdrant chunk 持久化与显式 chunk 检索。
+
 ### 文档与项目结构同步
 - 根据当前仓库实际目录更新 `docs/structure.md`，补充 Memos Go/React、AI Service domain/services/adapters、AI SQLite、Webhook 和 Compose 边界。
 - 同步 `README_AI.md`、`docs/architecture.md`、`docs/development.md`、`docs/api.md`、`docs/oss-adoption.md` 和项目状态中的 Phase 5d/5e、lint 与结构事实。

@@ -116,6 +116,28 @@ When `AI_INDEX_ON_WEBHOOK=true` and `AI_INDEX_MODE=chunk`, create/update events 
 
 The AI-owned SQLite table `memo_chunk_index_state` stores only the Memo ID, version, chunk IDs and timestamp needed for lifecycle bookkeeping. Missing state is treated as “no known chunks” and never triggers a broad vector-store scan. In this phase chunk vectors use a separate in-memory store, so they cannot contaminate the complete-Memo chat index; a Qdrant chunk collection is a later opt-in boundary. Chunk failures are reported as `index_status=failed` while the Webhook still returns `code=0`. The default `AI_INDEX_MODE=memo` path keeps `memo-v1` IDs and the public complete-Memo `POST /api/ai/chat` response unchanged.
 
+## GET /api/ai/index/chunk-health
+
+Read-only health for the explicit chunk lifecycle index. It always declares `index_mode=chunk` and `index_version=memo-chunk-v1`; it does not enable chunk indexing or change the complete-Memo index.
+
+~~~json
+{
+  "index_mode": "chunk",
+  "index_version": "memo-chunk-v1",
+  "provider": "memory",
+  "available": true,
+  "status": "ready",
+  "dimension": 8,
+  "point_count": 2,
+  "tracked_memos": 1,
+  "tracked_chunks": 2,
+  "state_backend": "sqlite",
+  "detail": null
+}
+~~~
+
+`point_count` comes from the isolated chunk VectorStore; `tracked_memos` and `tracked_chunks` come from `memo_chunk_index_state`. If either store is unavailable or malformed, the endpoint returns `available=false` and `status=degraded` with a bounded detail string. It never returns original Markdown or chunk payloads.
+
 ## GET /api/ai/ops/outbox
 
 读取 AI Service 自有 SQLite 中最近的 Webhook outbox 状态，不会启动重试 worker。
@@ -180,4 +202,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d 离线评估、chunk 边界和可选生命周期已完成，下一阶段为 Phase 5e 检索与可观测性收敛。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d/5e 离线评估、chunk 边界、可选生命周期和 health 已完成，下一阶段为 Phase 5f Qdrant chunk 持久化与显式 chunk 检索。

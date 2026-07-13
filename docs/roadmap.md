@@ -205,6 +205,17 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 142 passed；Go 全量、前端 131 tests、TypeScript/build、pnpm lint 和 Compose config 通过。
 
-## Phase 5e：chunk 检索与可观测性收敛（下一阶段）
+## Phase 5e：chunk 检索与可观测性收敛
 
-计划在不改变默认完整 Memo chat 契约的前提下，为显式 chunk 模式补充可观测索引状态和离线/显式检索对照；继续保持 deterministic + memory 默认和可回滚版本隔离。
+已完成：
+
+1. 新增 `ChunkIndexStateStats` 和 `ChunkIndexHealth`，对照 VectorStore 点数与 AI SQLite 登记的 Memo/chunk 数量。
+2. 新增 GET `/api/ai/index/chunk-health`，显式返回 `index_mode=chunk`、`index_version=memo-chunk-v1`、provider、dimension、point_count、tracked_memos、tracked_chunks、state_backend 和 detail。
+3. SQLite 状态异常返回 degraded；health 只读，不改变完整 Memo index health、Webhook code=0 或公共 chat citation。
+4. 覆盖空状态、create/update/delete 计数、版本隔离、SQLite 状态读取和 HTTP contract；默认 deterministic + memory。
+
+验证：AI Service 144 passed；前端、Go、Docker 和完整验证门禁沿用 Phase 5d 已验证结果，最终提交前重新执行。
+
+## Phase 5f：Qdrant chunk 持久化与显式 chunk 检索（下一阶段）
+
+计划为 chunk 模式增加独立 Qdrant collection 或等价持久化边界，并设计显式 chunk 检索 contract；默认完整 Memo `memo-v1`、memory、Webhook 和 `/api/ai/chat` 不切换。

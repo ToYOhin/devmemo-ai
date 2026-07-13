@@ -100,6 +100,10 @@ def test_sqlite_chunk_state_survives_a_new_adapter(monkeypatch, tmp_path):
     assert state is not None
     assert state.index_version == "memo-chunk-v1"
     assert state.chunk_ids == ("chunk-1", "chunk-2")
+    stats = second.stats()
+    assert stats.status == "ready"
+    assert stats.tracked_memos == 1
+    assert stats.tracked_chunks == 2
 
     with sqlite3.connect(database) as connection:
         assert connection.execute(
@@ -188,3 +192,58 @@ def test_chunk_webhook_failure_keeps_code_zero(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert response.json()["code"] == 0
     assert response.json()["index_status"] == "failed"
+
+
+def test_chunk_health_reports_store_and_state_counts():
+    coordinator, store = _coordinator()
+
+    before = coordinator.health()
+    assert before.index_mode == "chunk"
+    assert before.index_version == "memo-chunk-v1"
+    assert before.status == "ready"
+    assert before.point_count == 0
+    assert before.tracked_memos == 0
+    assert before.tracked_chunks == 0
+
+    coordinator.upsert_memo("memo-health", "abcdefghij", max_chars=5)
+    after = coordinator.health()
+    assert after.point_count == store.health().point_count == 2
+    assert after.tracked_memos == 1
+    assert after.tracked_chunks == 2
+    assert after.state_backend == "memory"
+
+    coordinator.upsert_memo("memo-health", "abcde", max_chars=5)
+    updated = coordinator.health()
+    assert updated.point_count == 1
+    assert updated.tracked_memos == 1
+    assert updated.tracked_chunks == 1
+
+    coordinator.delete_memo("memo-health")
+    deleted = coordinator.health()
+    assert deleted.point_count == 0
+    assert deleted.tracked_memos == 0
+    assert deleted.tracked_chunks == 0
+
+
+def test_chunk_health_api_has_explicit_mode_and_version(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "chunk-health.db"))
+    coordinator, _ = _coordinator(SqliteChunkIndexStateStore())
+    coordinator.upsert_memo("memo-health-api", "chunk content")
+    monkeypatch.setattr(main, "chunk_lifecycle_coordinator", coordinator)
+
+    response = TestClient(main.app).get("/api/ai/index/chunk-health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "index_mode": "chunk",
+        "index_version": "memo-chunk-v1",
+        "provider": "memory",
+        "available": True,
+        "status": "ready",
+        "dimension": 8,
+        "point_count": 1,
+        "tracked_memos": 1,
+        "tracked_chunks": 1,
+        "state_backend": "sqlite",
+        "detail": None,
+    }

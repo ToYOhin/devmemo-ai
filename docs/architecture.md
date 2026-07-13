@@ -41,3 +41,5 @@ The repository keeps the official Memos remote as `upstream` and pins the initia
 The default indexing boundary is `MemoIndexDocument`: one complete Memo is passed to the configured provider and VectorStore with `index_version=memo-v1`. Phase 5d adds an explicit `AI_INDEX_ON_WEBHOOK=true` + `AI_INDEX_MODE=chunk` path using `MemoChunk` and `memo-chunk-v1`; it uses a separate in-memory chunk store so the existing complete-Memo chat path is not contaminated.
 
 The public `POST /api/ai/chat` contract remains complete-Memo oriented. A future Qdrant chunk collection and chunk-aware public retrieval contract require a separate phase.
+
+`GET /api/ai/index/chunk-health` is a read-only operational view for the explicit chunk path. It compares isolated VectorStore `point_count` with SQLite lifecycle `tracked_memos`/`tracked_chunks`; it does not mutate indexes or expose Markdown.

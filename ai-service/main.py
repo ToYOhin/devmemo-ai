@@ -207,6 +207,13 @@ async def index_health() -> dict[str, object]:
     return asdict(embedding_service.store.health())
 
 
+@app.get("/api/ai/index/chunk-health")
+async def chunk_index_health() -> dict[str, object]:
+    """Report the explicit chunk index without changing complete-Memo chat."""
+
+    return asdict(chunk_lifecycle_coordinator.health())
+
+
 @app.post("/api/ai/summarize", response_model=SummaryResponse)
 async def summarize(request: SummaryRequest) -> SummaryResponse:
     """Summarization contract; deterministic mode is safe for local MVP demos."""

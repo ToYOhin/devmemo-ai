@@ -258,6 +258,23 @@ def delete_chunk_index_state(memo_id: str | int) -> bool:
     return cursor.rowcount > 0
 
 
+def get_chunk_index_state_stats() -> dict[str, int]:
+    """Return counts without exposing chunk payload or original Markdown."""
+
+    path = database_path()
+    if not path.exists():
+        return {"tracked_memos": 0, "tracked_chunks": 0}
+    with sqlite3.connect(path) as connection:
+        _ensure_chunk_index_state_schema(connection)
+        rows = connection.execute(
+            "SELECT chunk_ids FROM memo_chunk_index_state"
+        ).fetchall()
+    return {
+        "tracked_memos": len(rows),
+        "tracked_chunks": sum(len(json.loads(row[0])) for row in rows),
+    }
+
+
 def _ensure_chunk_index_state_schema(connection: sqlite3.Connection) -> None:
     connection.execute(
         """

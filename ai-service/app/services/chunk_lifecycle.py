@@ -18,6 +18,14 @@ class ChunkIndexState:
     chunk_ids: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ChunkIndexStateStats:
+    tracked_memos: int
+    tracked_chunks: int
+    status: str
+    detail: str | None = None
+
+
 class ChunkIndexStateStore(Protocol):
     """Persist only lifecycle bookkeeping, never the original Markdown."""
 
@@ -30,6 +38,13 @@ class ChunkIndexStateStore(Protocol):
     def delete(self, memo_id: str) -> bool:
         ...
 
+    @property
+    def backend_name(self) -> str:
+        ...
+
+    def stats(self) -> ChunkIndexStateStats:
+        ...
+
 
 @dataclass(frozen=True)
 class ChunkLifecycleResult:
@@ -40,6 +55,21 @@ class ChunkLifecycleResult:
     upserted_count: int
     deleted_count: int
     provider: str
+
+
+@dataclass(frozen=True)
+class ChunkIndexHealth:
+    index_mode: str
+    index_version: str
+    provider: str
+    available: bool
+    status: str
+    dimension: int
+    point_count: int | None
+    tracked_memos: int
+    tracked_chunks: int
+    state_backend: str
+    detail: str | None = None
 
 
 class ChunkLifecycleCoordinator:
@@ -111,4 +141,25 @@ class ChunkLifecycleCoordinator:
             upserted_count=0,
             deleted_count=deleted_count,
             provider=self.provider.name,
+        )
+
+    def health(self) -> ChunkIndexHealth:
+        """Report vector points and lifecycle state without mutating either store."""
+
+        store_health = self.store.health()
+        state_stats = self.state_store.stats()
+        available = store_health.available and state_stats.status == "ready"
+        detail = state_stats.detail or store_health.detail
+        return ChunkIndexHealth(
+            index_mode=CHUNK_INDEX_MODE,
+            index_version=CHUNK_INDEX_VERSION,
+            provider=store_health.provider,
+            available=available,
+            status="ready" if available else "degraded",
+            dimension=store_health.dimension,
+            point_count=store_health.point_count,
+            tracked_memos=state_stats.tracked_memos,
+            tracked_chunks=state_stats.tracked_chunks,
+            state_backend=self.state_store.backend_name,
+            detail=detail,
         )

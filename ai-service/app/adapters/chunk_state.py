@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from app.services.chunk_lifecycle import ChunkIndexState, ChunkIndexStateStore
+from app.services.chunk_lifecycle import (
+    ChunkIndexState,
+    ChunkIndexStateStats,
+    ChunkIndexStateStore,
+)
 from database import (
     delete_chunk_index_state,
     get_chunk_index_state,
+    get_chunk_index_state_stats,
     save_chunk_index_state,
 )
 
@@ -29,6 +34,17 @@ class InMemoryChunkIndexStateStore(ChunkIndexStateStore):
     def delete(self, memo_id: str) -> bool:
         return self._states.pop(str(memo_id), None) is not None
 
+    @property
+    def backend_name(self) -> str:
+        return "memory"
+
+    def stats(self) -> ChunkIndexStateStats:
+        return ChunkIndexStateStats(
+            tracked_memos=len(self._states),
+            tracked_chunks=sum(len(state.chunk_ids) for state in self._states.values()),
+            status="ready",
+        )
+
 
 class SqliteChunkIndexStateStore(ChunkIndexStateStore):
     """Persist chunk IDs in the AI Service SQLite database only."""
@@ -48,3 +64,23 @@ class SqliteChunkIndexStateStore(ChunkIndexStateStore):
 
     def delete(self, memo_id: str) -> bool:
         return delete_chunk_index_state(memo_id)
+
+    @property
+    def backend_name(self) -> str:
+        return "sqlite"
+
+    def stats(self) -> ChunkIndexStateStats:
+        try:
+            row = get_chunk_index_state_stats()
+        except Exception as error:
+            return ChunkIndexStateStats(
+                tracked_memos=0,
+                tracked_chunks=0,
+                status="unavailable",
+                detail=str(error)[:240],
+            )
+        return ChunkIndexStateStats(
+            tracked_memos=row["tracked_memos"],
+            tracked_chunks=row["tracked_chunks"],
+            status="ready",
+        )

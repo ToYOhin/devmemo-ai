@@ -19,10 +19,11 @@ git status --short --branch
 git log --oneline -8
 .\scripts\verify-devmemo.ps1
 
-当前默认阶段是 Phase 5e：chunk 检索与可观测性收敛。Phase 4/4b/4c/4d/4e/4f/4g/5a/5b/5c/5d 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览、告警轮询、显式清理批准、审计、离线检索评估、纯函数 chunking、OfflineChunkIndex 和显式 chunk 生命周期已经完成，必须保持：
+当前默认阶段是 Phase 5f：Qdrant chunk 持久化与显式 chunk 检索。Phase 4/4b/4c/4d/4e/4f/4g/5a/5b/5c/5d/5e 的 RAG、HMAC、outbox、显式有限重试、ops 安全、保留预览、告警轮询、显式清理批准、审计、离线检索评估、纯函数 chunking、OfflineChunkIndex、显式 chunk 生命周期和 chunk health 已经完成，必须保持：
 - 默认 deterministic + memory，低 CPU、无网络依赖。
 - FastEmbed/Qdrant 只进入 adapters，不进入 domain/service。
 - 当前默认生产路径一个完整 Memo 对应一个向量；只有 `AI_INDEX_ON_WEBHOOK=true` + `AI_INDEX_MODE=chunk` 才启用 `ChunkLifecycleCoordinator`，并通过 `memo-chunk-v1` 与 `memo-v1` 隔离；RAG `/api/ai/chat` 已完成，但不加入 rerank 或前端聊天 UI。
+- `GET /api/ai/index/chunk-health` 只读统计 isolated chunk store 与 SQLite state；当前 chunk store 仍是 memory，Qdrant chunk collection 尚未接入。
 - 原文只作为索引派生上下文，公共 citations 不返回内部 `content` 字段。
 - Webhook HMAC 只有显式配置 `AI_WEBHOOK_SECRET` 才启用，默认保持旧 `code=0` 行为。
 - Webhook outbox 只做 SQLite 幂等记录、有限显式 retry 和基础状态查询，默认不启动 worker 或自动重试。
