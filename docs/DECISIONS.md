@@ -195,3 +195,9 @@ Phase 9 的产品差异化目标是把 Memo 从一次性摘要升级为可审核
 该方向借鉴 Khoj 的个人 AI/语义搜索和自动化、AnythingLLM 的 workspace memory 与来源引用、AFFiNE 的知识工作区、Logseq 的本地知识图谱、Outline 的历史/协作意识，但不复制第三方源码。Khoj/Logseq 的 AGPL-3.0、Outline 的 BSL 1.1、AFFiNE 的仓库许可证边界均要求保持参考而非直接采用；任何新增依赖必须另做许可证、安全和维护评估。
 
 未来 Context Pack 只能消费已确认 insight，并限制来源、字数和输出格式；不得默认引入 agent、网页搜索、MCP、图数据库、Redis、Celery 或常驻 worker。这样保留 local-first、可撤销和可回滚特性，同时形成区别于通用 RAG 的开发者工作流。
+
+## ADR-037：Phase 9a 先落地可回滚 AI Inbox，不公开 chunk retrieval
+
+Phase 9a 已按 ADR-036 实现首个垂直切片：`MemoInsight` 使用稳定的 `insight_id` 和 `(memo_id, insight_type)` 幂等身份；SQLite 保存版本和审计时间；preview 不落库；approve/reject 必须带当前版本，过期写入返回 409。deterministic 提取器只从现有 Code Snippet、Bug Report 和 plain Memo 生成有界候选，不做自由发挥式知识图谱。
+
+Memo 详情页 AI Inbox 是本地产品边界，展示候选的类型、置信度、状态和 `source_refs`，不暴露原始 content。该切片不修改 Memos 核心、公共 `POST /api/ai/chat`、完整 Memo/chunk collection 或默认 `deterministic + memory`。Phase 8 public chunk API 仍保持 pending approval；下一步只定义消费已确认 insight 的 bounded Context Pack contract/fixture。

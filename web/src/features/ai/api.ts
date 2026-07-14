@@ -44,6 +44,23 @@ export interface AiSummarizeRequest {
   tags: string[];
 }
 
+export type AiInsightType = "fact" | "decision" | "action" | "bug";
+export type AiInsightStatus = "pending" | "accepted" | "rejected";
+
+export interface AiMemoInsight {
+  insight_id: string;
+  memo_id: string;
+  insight_type: AiInsightType;
+  title: string;
+  summary: string;
+  confidence: number;
+  status: AiInsightStatus;
+  source_refs: string[];
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export const getAiServiceUrl = (): string => {
   const configuredUrl = import.meta.env.VITE_AI_SERVICE_URL?.trim();
   return configuredUrl ? configuredUrl.replace(/\/+$/, "") : "";
@@ -66,6 +83,18 @@ export const buildAiMemoTemplateUrl = (memoId: string): string | null => {
   const baseUrl = getAiServiceUrl();
   if (!baseUrl || !memoId) return null;
   return `${baseUrl}/api/ai/templates/${encodeURIComponent(memoId)}`;
+};
+
+export const buildAiMemoInsightsUrl = (memoId: string): string | null => {
+  const baseUrl = getAiServiceUrl();
+  if (!baseUrl || !memoId) return null;
+  return `${baseUrl}/api/ai/insights/${encodeURIComponent(memoId)}`;
+};
+
+export const buildAiMemoInsightStatusUrl = (insightId: string): string | null => {
+  const baseUrl = getAiServiceUrl();
+  if (!baseUrl || !insightId) return null;
+  return `${baseUrl}/api/ai/insights/${encodeURIComponent(insightId)}/status`;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -158,6 +187,49 @@ export const parseAiMemoTemplate = (value: unknown): AiMemoTemplate | null => {
   return null;
 };
 
+export const parseAiMemoInsight = (value: unknown): AiMemoInsight | null => {
+  if (!isRecord(value)) return null;
+  const insightId = readString(value.insight_id);
+  const memoId = readString(value.memo_id);
+  const insightType = value.insight_type;
+  const title = readString(value.title);
+  const summary = readString(value.summary);
+  const confidence = typeof value.confidence === "number" ? value.confidence : null;
+  const status = value.status;
+  const sourceRefs = readTags(value.source_refs);
+  const version = typeof value.version === "number" ? value.version : null;
+  const createdAt = readString(value.created_at);
+  const updatedAt = readString(value.updated_at);
+  if (
+    insightId === null ||
+    memoId === null ||
+    !["fact", "decision", "action", "bug"].includes(String(insightType)) ||
+    title === null ||
+    summary === null ||
+    confidence === null ||
+    !["pending", "accepted", "rejected"].includes(String(status)) ||
+    sourceRefs === null ||
+    version === null ||
+    createdAt === null ||
+    updatedAt === null
+  ) {
+    return null;
+  }
+  return {
+    insight_id: insightId,
+    memo_id: memoId,
+    insight_type: insightType as AiInsightType,
+    title,
+    summary,
+    confidence,
+    status: status as AiInsightStatus,
+    source_refs: sourceRefs,
+    version,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+};
+
 export async function getAiMemoTemplate(memoId: string, signal?: AbortSignal): Promise<AiMemoTemplate | null> {
   const url = buildAiMemoTemplateUrl(memoId);
   if (!url) return null;
@@ -184,6 +256,36 @@ export async function getAiMemoNote(memoId: string, signal?: AbortSignal): Promi
   if (!response.ok) throw new Error("AI note request failed with status " + response.status);
 
   return parseAiMemoNote(await response.json());
+}
+
+export async function getAiMemoInsights(memoId: string, signal?: AbortSignal): Promise<AiMemoInsight[]> {
+  const url = buildAiMemoInsightsUrl(memoId);
+  if (!url) return [];
+
+  const response = await fetch(url, { headers: { Accept: "application/json" }, signal });
+  if (!response.ok) throw new Error(`AI insights request failed with status ${response.status}`);
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) throw new Error("AI insights response was invalid");
+  return payload.map(parseAiMemoInsight).filter((item): item is AiMemoInsight => item !== null);
+}
+
+export async function updateAiMemoInsightStatus(
+  insightId: string,
+  status: Exclude<AiInsightStatus, "pending">,
+  version: number,
+): Promise<AiMemoInsight> {
+  const url = buildAiMemoInsightStatusUrl(insightId);
+  if (!url) throw new Error("AI Service is not configured");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ status, version }),
+  });
+  if (response.status === 409) throw new Error("AI insight is stale; refresh and try again");
+  if (!response.ok) throw new Error(`AI insight status update failed with status ${response.status}`);
+  const insight = parseAiMemoInsight(await response.json());
+  if (!insight) throw new Error("AI insight response was invalid");
+  return insight;
 }
 
 export async function summarizeAiMemo(request: AiSummarizeRequest): Promise<AiMemoNote> {

@@ -12,6 +12,15 @@
 - 对比 Memos、Khoj、AnythingLLM、AFFiNE、Logseq、Outline 后，确定不复制第三方源码、不引入通用 agent 平台，优先构建 provenance + approval + temporal lifecycle 差异化。
 - `docs/prompts/NEXT_STAGE_PROMPT.md` 已切换到 Phase 9；Phase 8 public chunk API 仍保持 pending approval。
 
+### Phase 9a：AI Inbox / Decision Ledger 首个垂直切片
+
+- 新增 provider-neutral `MemoInsight` contract，包含稳定 ID、来源 Memo、类型、置信度、版本和 pending/accepted/rejected 生命周期。
+- 复用现有 parser 为 Code Snippet、Bug Report 和 plain Memo 生成有限 deterministic 候选；AI Service SQLite 按 Memo/类型幂等 upsert，语义变化重置 pending 并递增版本。
+- 新增内部 `POST /api/ai/insights/preview`、`GET /api/ai/insights/{memo_id}` 和显式状态变更 API；preview 不落库，过期 approve/reject 返回 409。
+- Memo 详情页新增 AI Inbox 卡片，展示类型、置信度、状态、来源和 approve/reject；不暴露原始 content，不改变公共 chat 或 public chunk API。
+- 验证：AI Service 162 passed；前端 136 passed；TypeScript/build/lint、Compose API smoke 和人工页面截图通过。
+- 下一阶段：Phase 9b 只定义已确认 insight 的 bounded Context Pack contract/fixture。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

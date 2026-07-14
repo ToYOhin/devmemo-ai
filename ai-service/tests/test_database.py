@@ -6,6 +6,7 @@ from database import (
     begin_webhook_retry,
     delete_webhook_retention_candidates,
     get_ai_note,
+    get_memo_insights,
     get_memo_template,
     get_webhook_event,
     get_webhook_event_stats,
@@ -13,9 +14,11 @@ from database import (
     list_webhook_events,
     list_webhook_retention_candidates,
     save_ai_note,
+    save_memo_insights,
     save_memo_template,
     save_webhook_event,
     update_webhook_event,
+    update_memo_insight_status,
 )
 
 
@@ -78,6 +81,55 @@ def test_missing_template_returns_none(monkeypatch, tmp_path):
     monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "missing.db"))
 
     assert get_memo_template("missing") is None
+
+
+def test_memo_insights_upsert_preserves_approval_until_source_changes(monkeypatch, tmp_path):
+    database = tmp_path / "insights.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    candidate = {
+        "insight_id": "insight-1",
+        "memo_id": "memo-1",
+        "insight_type": "fact",
+        "title": "Port mapping",
+        "summary": "Use port 8080",
+        "confidence": 0.8,
+        "source_refs": ["summary"],
+    }
+
+    first = save_memo_insights([candidate])[0]
+    accepted = update_memo_insight_status("insight-1", first["version"], "accepted")
+    replay = save_memo_insights([candidate])[0]
+
+    assert accepted["status"] == "accepted"
+    assert replay["status"] == "accepted"
+    assert replay["version"] == accepted["version"]
+    assert len(get_memo_insights("memo-1")) == 1
+
+    changed = {**candidate, "summary": "Use port 9090"}
+    refreshed = save_memo_insights([changed])[0]
+    assert refreshed["status"] == "pending"
+    assert refreshed["version"] == replay["version"] + 1
+
+
+def test_memo_insight_status_rejects_stale_version(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "stale-insight.db"))
+    saved = save_memo_insights(
+        [
+            {
+                "insight_id": "insight-stale",
+                "memo_id": "memo-stale",
+                "insight_type": "bug",
+                "title": "Failure",
+                "summary": "Fix it",
+                "confidence": 0.9,
+                "source_refs": ["template.error"],
+            }
+        ]
+    )[0]
+
+    update_memo_insight_status("insight-stale", saved["version"], "rejected")
+    with pytest.raises(ValueError, match="stale"):
+        update_memo_insight_status("insight-stale", saved["version"], "accepted")
 
 
 def test_webhook_event_create_is_idempotent_and_readable(monkeypatch, tmp_path):

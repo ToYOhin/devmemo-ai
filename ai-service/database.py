@@ -196,6 +196,196 @@ def get_memo_template(memo_id: str | int) -> dict[str, Any] | None:
     return _template_row(row) if row else None
 
 
+def save_memo_insights(insights: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Idempotently upsert pending insight candidates for one or more Memos."""
+
+    if not insights:
+        return []
+    path = database_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    saved: list[dict[str, Any]] = []
+    with sqlite3.connect(path) as connection:
+        _ensure_memo_insights_schema(connection)
+        for insight in insights:
+            memo_id = str(insight["memo_id"])
+            insight_type = str(insight["insight_type"])
+            row = connection.execute(
+                """
+                SELECT insight_id, memo_id, insight_type, title, summary, confidence,
+                       status, source_refs, version, created_at, updated_at
+                FROM memo_insights
+                WHERE memo_id = ? AND insight_type = ?
+                """,
+                (memo_id, insight_type),
+            ).fetchone()
+            now = datetime.now(timezone.utc).isoformat()
+            source_refs = list(insight.get("source_refs", []))
+            if row is None:
+                connection.execute(
+                    """
+                    INSERT INTO memo_insights
+                        (insight_id, memo_id, insight_type, title, summary, confidence,
+                         status, source_refs, version, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, 1, ?, ?)
+                    """,
+                    (
+                        str(insight["insight_id"]),
+                        memo_id,
+                        insight_type,
+                        str(insight["title"]),
+                        str(insight["summary"]),
+                        float(insight["confidence"]),
+                        json.dumps(source_refs, ensure_ascii=False),
+                        str(insight.get("created_at") or now),
+                        now,
+                    ),
+                )
+            else:
+                changed = (
+                    row[3] != str(insight["title"])
+                    or row[4] != str(insight["summary"])
+                    or float(row[5]) != float(insight["confidence"])
+                    or json.loads(row[7]) != source_refs
+                )
+                connection.execute(
+                    """
+                    UPDATE memo_insights
+                    SET title = ?, summary = ?, confidence = ?, source_refs = ?,
+                        status = ?, version = ?, updated_at = ?
+                    WHERE insight_id = ?
+                    """,
+                    (
+                        str(insight["title"]),
+                        str(insight["summary"]),
+                        float(insight["confidence"]),
+                        json.dumps(source_refs, ensure_ascii=False),
+                        "pending" if changed else row[6],
+                        int(row[8]) + (1 if changed else 0),
+                        now,
+                        row[0],
+                    ),
+                )
+            saved_row = connection.execute(
+                """
+                SELECT insight_id, memo_id, insight_type, title, summary, confidence,
+                       status, source_refs, version, created_at, updated_at
+                FROM memo_insights
+                WHERE memo_id = ? AND insight_type = ?
+                """,
+                (memo_id, insight_type),
+            ).fetchone()
+            saved.append(_memo_insight_row(saved_row))
+    return saved
+
+
+def get_memo_insights(memo_id: str | int, status: str | None = None) -> list[dict[str, Any]]:
+    path = database_path()
+    if not path.exists():
+        return []
+    with sqlite3.connect(path) as connection:
+        _ensure_memo_insights_schema(connection)
+        if status is None:
+            rows = connection.execute(
+                """
+                SELECT insight_id, memo_id, insight_type, title, summary, confidence,
+                       status, source_refs, version, created_at, updated_at
+                FROM memo_insights WHERE memo_id = ?
+                ORDER BY insight_type, insight_id
+                """,
+                (str(memo_id),),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT insight_id, memo_id, insight_type, title, summary, confidence,
+                       status, source_refs, version, created_at, updated_at
+                FROM memo_insights WHERE memo_id = ? AND status = ?
+                ORDER BY insight_type, insight_id
+                """,
+                (str(memo_id), status),
+            ).fetchall()
+    return [_memo_insight_row(row) for row in rows]
+
+
+def update_memo_insight_status(
+    insight_id: str,
+    expected_version: int,
+    status: str,
+) -> dict[str, Any] | None:
+    if status not in {"accepted", "rejected"}:
+        raise ValueError("unsupported insight status")
+    path = database_path()
+    if not path.exists():
+        return None
+    with sqlite3.connect(path) as connection:
+        _ensure_memo_insights_schema(connection)
+        row = connection.execute(
+            "SELECT version FROM memo_insights WHERE insight_id = ?",
+            (insight_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        if int(row[0]) != expected_version:
+            raise ValueError("insight version is stale")
+        now = datetime.now(timezone.utc).isoformat()
+        connection.execute(
+            """
+            UPDATE memo_insights
+            SET status = ?, version = version + 1, updated_at = ?
+            WHERE insight_id = ?
+            """,
+            (status, now, insight_id),
+        )
+        updated = connection.execute(
+            """
+            SELECT insight_id, memo_id, insight_type, title, summary, confidence,
+                   status, source_refs, version, created_at, updated_at
+            FROM memo_insights WHERE insight_id = ?
+            """,
+            (insight_id,),
+        ).fetchone()
+    return _memo_insight_row(updated)
+
+
+def _ensure_memo_insights_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS memo_insights (
+            insight_id TEXT PRIMARY KEY,
+            memo_id TEXT NOT NULL,
+            insight_type TEXT NOT NULL CHECK (insight_type IN ('fact', 'decision', 'action', 'bug')),
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected')),
+            source_refs TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(memo_id, insight_type)
+        )
+        """
+    )
+
+
+def _memo_insight_row(row: tuple[Any, ...] | None) -> dict[str, Any]:
+    if row is None:
+        raise RuntimeError("Memo insight row was not found after save")
+    return {
+        "insight_id": row[0],
+        "memo_id": row[1],
+        "insight_type": row[2],
+        "title": row[3],
+        "summary": row[4],
+        "confidence": float(row[5]),
+        "status": row[6],
+        "source_refs": json.loads(row[7]),
+        "version": int(row[8]),
+        "created_at": row[9],
+        "updated_at": row[10],
+    }
+
+
 def save_chunk_index_state(
     memo_id: str | int,
     index_version: str,

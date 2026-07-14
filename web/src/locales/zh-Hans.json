@@ -6,6 +6,22 @@
     "github-repository": "GitHub 仓库",
     "official-website": "官网"
   },
+  "ai-insights": {
+    "title": "AI 收件箱",
+    "review": "可审核记忆",
+    "sources": "来源",
+    "accept": "接受",
+    "reject": "拒绝",
+    "update-failed": "更新 insight 失败",
+    "load-failed": "加载 insight 失败",
+    "type-fact": "事实",
+    "type-decision": "决策",
+    "type-action": "行动",
+    "type-bug": "问题",
+    "status-pending": "待审核",
+    "status-accepted": "已接受",
+    "status-rejected": "已拒绝"
+  },
   "auth": {
     "create-your-account": "创建您的账户",
     "host-tip": "您正在注册为站点管理员。",

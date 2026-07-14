@@ -52,7 +52,8 @@ ai-service/
 │   │   ├── memo_chunking.py         # MemoChunk、稳定 ID、memo-chunk-v1
 │   │   ├── models.py                # CodeSnippet、BugReport、ParsedMemo
 │   │   ├── retrieval.py             # Citation、RetrievalResult 等 provider-neutral 类型
-│   │   └── retrieval_evaluation.py  # 离线评估输入/结果类型
+│   │   ├── retrieval_evaluation.py  # 离线评估输入/结果类型
+│   │   └── memo_insight.py          # AI Inbox/Decision Ledger contract
 │   ├── services/
 │   │   ├── content_parser.py        # Markdown 模板解析
 │   │   ├── embedding_service.py     # provider -> vector record -> store 编排
@@ -64,7 +65,8 @@ ai-service/
 │   │   ├── offline_chunk_index.py   # 独立 chunk 试验索引
 │   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
-│   │   └── ops_security.py          # ops token 与错误脱敏
+│   │   ├── ops_security.py          # ops token 与错误脱敏
+│   │   └── memo_insights.py         # deterministic insight 提取与稳定 ID
 │   └── adapters/
 │       ├── embedding.py             # deterministic embedding
 │       ├── fastembed_embedding.py   # 可选 FastEmbed，第三方类型只在此处

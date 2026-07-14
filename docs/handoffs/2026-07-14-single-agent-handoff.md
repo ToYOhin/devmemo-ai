@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-14
+更新时间：2026-07-14（Phase 9a 完成后更新）
 
 ## 当前工作模式
 
@@ -12,8 +12,8 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：`760f58c docs(ai): gate public chunk api on approval`
-- GitHub remote：`origin/codex/devmemo-ai-mvp` 尚未包含本地最新 commit；本轮未 push
+- 当前 HEAD：Phase 9a implementation commit（以 `git log --oneline -8` 为准）
+- GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
 - Go：`G:\Go`；工作区/缓存：`G:\GoWorkspace`
@@ -42,7 +42,7 @@
 
 ## 当前已完成与未完成
 
-Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision 和 Phase 7 public API proposal 已完成；Phase 8 implementation gate pending approval：
+Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal 和 Phase 9a AI Inbox 首个切片已完成；Phase 8 implementation gate 仍 pending approval：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
@@ -54,6 +54,10 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision �
 3. Phase 6 决定 chunk-aware retrieval 继续保持内部 contract，未替换或修改公共 `POST /api/ai/chat`。
 4. Phase 7 只形成 `POST /api/ai/v1/chunks/search` / `public-chunk-v1` 提案，默认关闭、同 Memo 保留最高分 chunk、脱敏 metadata；未新增运行时代码或公共路由。
 5. 当前没有明确产品/兼容批准，Phase 8 不实现 endpoint；批准前保持 proposal、公共 chat 和完整 Memo collection 不变。
+
+6. Phase 9a 已新增 `MemoInsight` contract、deterministic 提取器、AI SQLite `memo_insights` 幂等表，以及 preview/查询/版本化 approve/reject API；语义变化重置 pending，过期版本返回 409。
+7. Memo 详情页已接入 AI Inbox 卡片；真实 Compose API Bug Report smoke 生成 bug/action 并完成批准；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
+8. Phase 9a 验证：AI Service 162 passed；前端 136 passed；TypeScript/build/lint 和 Compose API smoke 通过。下一阶段只做 bounded Context Pack contract/fixture，不实现 agent、网页搜索或 MCP。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
@@ -83,4 +87,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；收到明确批准后，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 8 单 Agent Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b Context Pack contract Prompt。

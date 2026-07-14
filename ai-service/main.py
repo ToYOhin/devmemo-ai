@@ -7,6 +7,7 @@ import json
 import os
 import re
 from dataclasses import asdict
+from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from database import (
     begin_webhook_retry,
     get_ai_note,
+    get_memo_insights,
     get_memo_template,
     get_webhook_event,
     get_webhook_event_stats,
@@ -23,9 +25,11 @@ from database import (
     list_webhook_events,
     list_webhook_retention_candidates,
     save_ai_note,
+    save_memo_insights,
     save_memo_template,
     save_webhook_event,
     update_webhook_event,
+    update_memo_insight_status,
     webhook_retention_cutoff,
 )
 from llm import create_provider
@@ -36,6 +40,7 @@ from app.services.embedding_factory import (
     build_embedding_service,
 )
 from app.services.memo_indexing import MemoIndexDocument, index_memo
+from app.services.memo_insights import derive_memo_insights
 from app.services.ops_security import summarize_error, verify_ops_token
 from app.services.retrieval_service import RetrievalService
 from app.services.webhook_security import verify_signature
@@ -102,6 +107,32 @@ class SummaryResponse(BaseModel):
     created_at: str
     memo_type: str = "plain"
     template_id: int | None = None
+
+
+class InsightPreviewRequest(BaseModel):
+    memo_id: str = Field(min_length=1)
+    title: str = ""
+    content: str = Field(min_length=1)
+    summary: str = ""
+
+
+class InsightStatusRequest(BaseModel):
+    status: Literal["accepted", "rejected"]
+    version: int = Field(ge=1)
+
+
+class MemoInsightResponse(BaseModel):
+    insight_id: str
+    memo_id: str
+    insight_type: Literal["fact", "decision", "action", "bug"]
+    title: str
+    summary: str
+    confidence: float
+    status: Literal["pending", "accepted", "rejected"]
+    source_refs: list[str]
+    version: int
+    created_at: str
+    updated_at: str
 
 
 class AiNoteResponse(BaseModel):
@@ -251,6 +282,11 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
             request.content,
         )
         template_id = int(template["id"])
+    if request.memo_id is not None:
+        insights = derive_memo_insights(
+            str(request.memo_id), request.title, request.content, summary=summary
+        )
+        save_memo_insights([asdict(insight) for insight in insights])
     return SummaryResponse(
         memo_id=request.memo_id,
         summary=summary,
@@ -263,6 +299,43 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
         memo_type=parsed.kind,
         template_id=template_id,
     )
+
+
+@app.post("/api/ai/insights/preview", response_model=list[MemoInsightResponse])
+async def preview_memo_insights(request: InsightPreviewRequest) -> list[MemoInsightResponse]:
+    """Preview deterministic insights without persisting or changing a Memo."""
+
+    insights = derive_memo_insights(
+        request.memo_id,
+        request.title,
+        request.content,
+        summary=request.summary,
+    )
+    return [MemoInsightResponse(**asdict(insight)) for insight in insights]
+
+
+@app.get("/api/ai/insights/{memo_id}", response_model=list[MemoInsightResponse])
+async def read_memo_insights(
+    memo_id: str,
+    status: Literal["pending", "accepted", "rejected"] | None = None,
+) -> list[MemoInsightResponse]:
+    return [MemoInsightResponse(**item) for item in get_memo_insights(memo_id, status=status)]
+
+
+@app.post("/api/ai/insights/{insight_id}/status", response_model=MemoInsightResponse)
+async def change_memo_insight_status(
+    insight_id: str,
+    request: InsightStatusRequest,
+) -> MemoInsightResponse:
+    try:
+        updated = update_memo_insight_status(insight_id, request.version, request.status)
+    except ValueError as error:
+        if "stale" in str(error):
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if updated is None:
+        raise HTTPException(status_code=404, detail="memo insight not found")
+    return MemoInsightResponse(**updated)
 
 
 @app.post("/api/ai/embed", response_model=EmbedResponse)

@@ -158,6 +158,16 @@ Phase 6 keeps chunk retrieval internal. The existing `POST /api/ai/chat` respons
 
 Any future public chunk API must use an explicit versioned endpoint or response contract and define chunk citation fields, same-Memo deduplication, ordering, context limits, content redaction, migration and rollback before implementation. `ChunkRetrievalService` and `/api/ai/index/chunk-health` remain the internal/operations boundary.
 
+## Phase 9a internal MemoInsight contract
+
+The AI Inbox is an internal product-boundary API, not a public chunk retrieval API. `MemoInsight` contains `insight_id`, `memo_id`, `insight_type` (`fact`, `decision`, `action`, or `bug`), `title`, bounded `summary`, `confidence`, `status` (`pending`, `accepted`, or `rejected`), `source_refs`, `version`, `created_at`, and `updated_at`. Raw Memo content is only an input to derivation and is not returned in this contract.
+
+- `POST /api/ai/insights/preview` derives candidates from `{memo_id, title, content, summary}` without writing SQLite state.
+- `GET /api/ai/insights/{memo_id}` reads persisted candidates; optional `status` filters the lifecycle state.
+- `POST /api/ai/insights/{insight_id}/status` accepts `{status, version}`. The current version is required; stale updates return `409` and do not overwrite a newer decision.
+
+The summarization path persists deterministic candidates for an explicit `memo_id`. Upsert identity is `(memo_id, insight_type)`; unchanged candidates retain review status, while changed semantic fields reset to `pending` and increment `version`. These routes do not modify Memos storage, `/api/ai/chat`, complete-Memo citations, or either vector collection.
+
 ## Phase 7 public chunk API proposal（未实现）
 
 This is a reviewable proposal only. It does not add a route or change the existing chat API.

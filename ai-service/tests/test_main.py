@@ -120,6 +120,50 @@ def test_summary_persists_structured_template_for_detail_page(monkeypatch, tmp_p
     assert template.json()["payload"]["code"] == "print(8080)"
 
 
+def test_summary_creates_pending_insights_and_status_is_versioned(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "summary-insights.db"))
+    content = "---\ntype: bug\ntitle: Port failure\n---\nError: refused\nRoot cause: wrong port\nSolution: fix mapping"
+    response = client.post(
+        "/api/ai/summarize",
+        json={"memo_id": "memo-insight-api", "content": content},
+    )
+
+    assert response.status_code == 200
+    insights = client.get("/api/ai/insights/memo-insight-api")
+    assert insights.status_code == 200
+    assert [item["insight_type"] for item in insights.json()] == ["action", "bug"]
+
+    action = insights.json()[0]
+    updated = client.post(
+        f"/api/ai/insights/{action['insight_id']}/status",
+        json={"status": "accepted", "version": action["version"]},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "accepted"
+    stale = client.post(
+        f"/api/ai/insights/{action['insight_id']}/status",
+        json={"status": "rejected", "version": action["version"]},
+    )
+    assert stale.status_code == 409
+
+
+def test_insight_preview_does_not_persist(monkeypatch, tmp_path):
+    database = tmp_path / "preview.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    response = client.post(
+        "/api/ai/insights/preview",
+        json={
+            "memo_id": "memo-preview",
+            "title": "Preview",
+            "content": "---\ntype: code\nlanguage: Python\n---\n```python\nprint(1)\n```",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["insight_type"] == "fact"
+    assert not database.exists()
+
+
 def test_ai_note_read_returns_persisted_summary(monkeypatch, tmp_path):
     database = tmp_path / "read.db"
     monkeypatch.setenv("AI_NOTES_DB", str(database))

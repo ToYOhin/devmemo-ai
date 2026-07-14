@@ -7,6 +7,22 @@
     "github-repository": "GitHub 儲存庫",
     "official-website": "官方網站"
   },
+  "ai-insights": {
+    "title": "AI 收件匣",
+    "review": "可審核記憶",
+    "sources": "來源",
+    "accept": "接受",
+    "reject": "拒絕",
+    "update-failed": "更新 insight 失敗",
+    "load-failed": "載入 insight 失敗",
+    "type-fact": "事實",
+    "type-decision": "決策",
+    "type-action": "行動",
+    "type-bug": "問題",
+    "status-pending": "待審核",
+    "status-accepted": "已接受",
+    "status-rejected": "已拒絕"
+  },
   "auth": {
     "create-your-account": "建立您的帳號",
     "host-tip": "您即將註冊為網站管理員。",

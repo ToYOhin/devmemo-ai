@@ -6,11 +6,13 @@
 - 已记录源码变更后使用 `docker compose up -d --build`，避免 AI Service 复用旧镜像。
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
 
-## Phase 9 DevMemory Loop 路线已准备
+## Phase 9a DevMemory Loop 首个切片已完成
 
-- 下一阶段不继续堆叠通用 RAG，而是实现可审核的 `MemoInsight`/AI Inbox/Decision Ledger：fact、decision、action、bug 候选具备 source_refs、confidence、pending/accepted/rejected 生命周期。
-- 该路线不依赖 Phase 8 public chunk API 批准；不修改公共 chat、完整 Memo collection、chunk collection 或默认 deterministic + memory。
-- 详细执行入口已切换为 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)；Context Pack 只先定义 contract/fixture，不实现 agent、网页搜索或 MCP。
+- 已落地 provider-neutral `MemoInsight` contract、deterministic 候选提取、AI SQLite 幂等表，以及 preview/查询/approve/reject 内部 API。
+- Memo 详情页已接入 AI Inbox 卡片，支持 pending 状态人工确认/拒绝、空态、失败态和来源引用；过期版本更新返回 409。
+- 验证：AI Service `162 passed`；前端 `136 passed`；TypeScript、build、lint 通过；Compose API Bug Report smoke 生成 bug/action 并成功批准；Playwright 截图 artifact：`devmemo-phase9-ai-inbox.png`。
+- 该路线不依赖 Phase 8 public chunk API 批准；不修改公共 chat、完整 Memo collection、chunk collection 或默认 deterministic + memory。Context Pack 仍只定义 contract/fixture，不实现 agent、网页搜索或 MCP。
+- 下一阶段执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9b Context Pack contract。
 
 ## 2026-07-14 单 Agent 模式切换
 
@@ -33,7 +35,7 @@
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含本轮 isolated Qdrant chunk collection commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 8 gate 事实；只有收到明确批准后，才执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 implementation slice。
+下一窗口先读取该快照和本文件顶部 Phase 9a 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b contract slice。
 
 ## 2026-07-14 Phase 5e
 

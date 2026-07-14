@@ -5,13 +5,14 @@
 - 已修复本地回环地址 CORS 缺口：Compose 默认同时允许 `localhost:3001` 与 `127.0.0.1:3001`。
 - 已记录源码变更后使用 `docker compose up -d --build`，避免 AI Service 复用旧镜像。
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
-- Phase 9 已形成创新路线提案：DevMemory Loop / AI Inbox / Decision Ledger；当前仍不实现 Phase 8 public chunk API，下一阶段 Prompt 已切换为可审核 insight 垂直切片。
+- Phase 9 首个垂直切片已完成：`MemoInsight` contract、AI Service SQLite 幂等状态、preview/查询/approve/reject 内部 API，以及 Memo 详情页 AI Inbox 卡片均已落地；当前仍不实现 Phase 8 public chunk API。
+- Phase 9 离线验证：AI Service `162 passed`；前端 `136 passed`，TypeScript、build、lint 通过；真实 Compose API 已验证 Bug Report 生成 bug/action、状态批准和版本递增；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
 
 更新时间：2026-07-14
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7 已完成。当前为 Phase 8 public chunk API implementation gate，状态为 pending approval，未实现公共路由。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9b Context Pack contract。
 
 ## 当前事实
 
@@ -44,6 +45,9 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 6 compatibility decision：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint，未来必须使用版本化 contract
 - Phase 7 public API proposal：提出 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，默认关闭，固定 memo-chunk-v1，同 Memo 保留最高分 chunk，未新增 HTTP 行为
 - Phase 8 implementation gate：当前仅收到阶段名称，没有明确产品/兼容批准；保持 proposal、不新增路由、不改变公共 chat 或完整 Memo collection
+- Phase 9a DevMemory Loop：`MemoInsight` 统一包含 `insight_id`、`memo_id`、`insight_type`、`title`、`summary`、`confidence`、`status`、`source_refs`、版本和审计时间；deterministic parser 只为 Code/Bug/plain Memo 生成有限候选，不做自由发挥式知识图谱
+- Phase 9a SQLite：AI 自有 `memo_insights` 表按 `(memo_id, insight_type)` 幂等 upsert；语义变化会重置为 pending 并递增版本，approve/reject 必须携带当前版本，过期更新返回 409
+- Phase 9a API/UI：新增内部 preview、Memo insight 查询和显式状态变更 API；Memo 详情页 AI Inbox 支持空、失败、窄屏和 pending approve/reject；原文 content 不进入公共 citation 或卡片响应
 - 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
@@ -226,4 +230,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-Phase 8 public chunk API 仍等待明确批准；未批准时执行 docs/prompts/NEXT_STAGE_PROMPT.md 的 Phase 9 DevMemory Loop，先做可审核 insight，不实现 public chunk endpoint。
+Phase 8 public chunk API 仍等待明确批准，不改变现有公共 chat。Phase 9a 已完成；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b Context Pack contract/fixture，只消费已确认 insight，不实现跨 Memo agent、网页搜索或 MCP。

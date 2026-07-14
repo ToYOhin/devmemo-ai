@@ -31,6 +31,22 @@
     "generated": "Summary generated",
     "generate-failed": "Failed to generate summary"
   },
+  "ai-insights": {
+    "title": "AI Inbox",
+    "review": "Reviewable memory",
+    "sources": "Sources",
+    "accept": "Accept",
+    "reject": "Reject",
+    "update-failed": "Failed to update insight",
+    "load-failed": "Failed to load insights",
+    "type-fact": "Fact",
+    "type-decision": "Decision",
+    "type-action": "Action",
+    "type-bug": "Bug",
+    "status-pending": "Pending",
+    "status-accepted": "Accepted",
+    "status-rejected": "Rejected"
+  },
   "auth": {
     "create-your-account": "Create your account",
     "host-tip": "You are registering as the Site Host.",
