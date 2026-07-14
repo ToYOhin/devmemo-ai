@@ -99,6 +99,27 @@ def test_summary_accepts_a_memo(monkeypatch, tmp_path):
     assert row == ("7", "Docker 容器端口映射问题分析", "DevOps")
 
 
+def test_summary_persists_structured_template_for_detail_page(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "summary-template.db"))
+    response = client.post(
+        "/api/ai/summarize",
+        json={
+            "memo_id": "memo-summary-code",
+            "title": "Port check",
+            "content": "---\ntype: code\nlanguage: Python\n---\n```python\nprint(8080)\n```",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["memo_type"] == "code"
+    assert response.json()["template_id"] == 1
+
+    template = client.get("/api/ai/templates/memo-summary-code")
+    assert template.status_code == 200
+    assert template.json()["payload"]["language"] == "Python"
+    assert template.json()["payload"]["code"] == "print(8080)"
+
+
 def test_ai_note_read_returns_persisted_summary(monkeypatch, tmp_path):
     database = tmp_path / "read.db"
     monkeypatch.setenv("AI_NOTES_DB", str(database))
@@ -311,6 +332,13 @@ def test_summary_api_allows_post_from_the_configured_local_frontend_origin(
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
+
+
+def test_ai_api_allows_the_loopback_frontend_origin():
+    response = client.get("/health", headers={"Origin": "http://127.0.0.1:3001"})
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3001"
 
 
 def test_template_read_returns_not_found(monkeypatch, tmp_path):

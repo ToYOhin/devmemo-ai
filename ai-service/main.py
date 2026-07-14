@@ -100,6 +100,8 @@ class SummaryResponse(BaseModel):
     provider: str
     ai_note_id: int
     created_at: str
+    memo_type: str = "plain"
+    template_id: int | None = None
 
 
 class AiNoteResponse(BaseModel):
@@ -132,7 +134,10 @@ chunk_lifecycle_coordinator = build_chunk_lifecycle_coordinator(
 
 
 def _cors_origins() -> list[str]:
-    configured = os.getenv("AI_CORS_ORIGINS", "http://localhost:3001")
+    configured = os.getenv(
+        "AI_CORS_ORIGINS",
+        "http://localhost:3001,http://127.0.0.1:3001",
+    )
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
 
 
@@ -236,6 +241,16 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
         suggested_tags=suggested_tags,
         provider=result.provider if result.text else "deterministic-fallback",
     )
+    parsed = parse_memo_content(request.content)
+    template_id: int | None = None
+    if request.memo_id is not None and parsed.template is not None:
+        template = save_memo_template(
+            request.memo_id,
+            parsed.kind,
+            asdict(parsed.template),
+            request.content,
+        )
+        template_id = int(template["id"])
     return SummaryResponse(
         memo_id=request.memo_id,
         summary=summary,
@@ -245,6 +260,8 @@ async def summarize(request: SummaryRequest) -> SummaryResponse:
         provider=result.provider if result.text else "deterministic-fallback",
         ai_note_id=note["id"],
         created_at=note["created_at"],
+        memo_type=parsed.kind,
+        template_id=template_id,
     )
 
 
@@ -638,9 +655,8 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
     }
     if parsed.template is not None:
         response["template"] = asdict(parsed.template)
-        if memo_id is not None:
-            persisted = save_memo_template(memo_id, parsed.kind, asdict(parsed.template), content)
-            response["template_id"] = persisted["id"]
+        if result.template_id is not None:
+            response["template_id"] = result.template_id
     if parsed.errors:
         response["parse_errors"] = list(parsed.errors)
     if _webhook_index_enabled():

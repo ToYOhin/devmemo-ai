@@ -36,8 +36,10 @@ web/src/features/ai: summary + template UI via HTTP
 
 ```powershell
 docker compose config
-docker compose up -d
+docker compose up -d --build
 ```
+
+源码或 AI Service 配置变更后请使用 `--build`，避免容器继续运行旧镜像；仅重启未变更的服务时才使用 `docker compose up -d`。默认 CORS 同时允许 `http://localhost:3001` 和 `http://127.0.0.1:3001`。
 
 访问：
 

@@ -1,5 +1,11 @@
 # DevMemo AI 当前交接
 
+## 人工功能检查修复（2026-07-14）
+
+- 已修复本地回环地址 CORS 缺口：Compose 默认同时允许 `localhost:3001` 与 `127.0.0.1:3001`。
+- 已记录源码变更后使用 `docker compose up -d --build`，避免 AI Service 复用旧镜像。
+- `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
+
 ## 2026-07-14 单 Agent 模式切换
 
 ## 2026-07-14 Phase 8 public chunk API implementation gate pending approval

@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-14 人工功能检查修复
+
+- Compose 默认 CORS 同时允许 `localhost:3001` 与 `127.0.0.1:3001`。
+- 源码变更后的本地启动示例改为 `docker compose up -d --build`，避免 AI Service 继续运行旧镜像。
+- `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；默认 chat 和完整 Memo 检索不变。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

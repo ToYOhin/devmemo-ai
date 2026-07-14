@@ -1,5 +1,10 @@
 # DevMemo AI API
 
+## Manual UI integration notes (2026-07-14)
+
+- The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.
+- `POST /api/ai/summarize` persists an explicit Code Snippet or Bug Report template when `memo_id` is present. The response includes `memo_type` and optional `template_id`; plain Memos do not create templates.
+
 Base URL：http://localhost:8000
 
 ## Frontend configuration
@@ -52,7 +57,7 @@ memory 模式不连接 Qdrant；qdrant 模式会读取 collection 状态。Qdran
 
 ## POST /api/ai/summarize
 
-接收 memo_id、title、content、tags，生成并 upsert ai_notes，返回 summary、keywords、category、suggested_tags、provider、ai_note_id、created_at。
+接收 `memo_id`、`title`、`content`、`tags`，生成并 upsert `ai_notes`。当内容显式声明 Code Snippet 或 Bug Report 且提供 `memo_id` 时，同时 upsert `memo_templates`；响应返回 `summary`、`keywords`、`category`、`suggested_tags`、`provider`、`ai_note_id`、`created_at`、`memo_type` 和可选 `template_id`。
 
 ## GET /api/ai/notes/{memo_id}
 
