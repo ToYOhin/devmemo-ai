@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7 已完成。Phase 7 形成了可评审的 public chunk API proposal，但未实现公共路由。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7 已完成。当前为 Phase 8 public chunk API implementation gate，状态为 pending approval，未实现公共路由。
 
 ## 当前事实
 
@@ -36,6 +36,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 5g rollout gate：AI 153 passed；前端 131 passed；TypeScript、build、lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2 chunk smoke 通过
 - Phase 6 compatibility decision：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint，未来必须使用版本化 contract
 - Phase 7 public API proposal：提出 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，默认关闭，固定 memo-chunk-v1，同 Memo 保留最高分 chunk，未新增 HTTP 行为
+- Phase 8 implementation gate：当前仅收到阶段名称，没有明确产品/兼容批准；保持 proposal、不新增路由、不改变公共 chat 或完整 Memo collection
 - 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
@@ -218,4 +219,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 8 public chunk API implementation gate。
+等待明确批准后，执行 docs/prompts/NEXT_STAGE_PROMPT.md 的 Phase 8 public chunk API implementation gate；未批准前不实现 endpoint。

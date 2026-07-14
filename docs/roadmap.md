@@ -257,3 +257,7 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 验证：提案文档与现有 `test_chat_api_retrieves_memo_and_returns_citations` 对齐；运行时代码未修改，公共 chat 默认行为保持不变。
 
 下一阶段：Phase 8 public chunk API implementation gate；只有获得明确产品/兼容批准后才实现提案 endpoint。
+
+## Phase 8：public chunk API implementation gate（pending approval）
+
+当前只收到阶段名称，没有明确产品/兼容批准。根据 ADR-035，本阶段不实现 `POST /api/ai/v1/chunks/search`，不新增公共路由或运行时 feature flag，不启动灰度，不改变现有 chat、memo-v1 collection 或 chunk collection。收到明确批准并接受 ADR-034 的版本化字段、去重、脱敏、认证和回滚条件后，才进入实现切片。

@@ -179,3 +179,9 @@ Phase 6 对比了现有公共 `POST /api/ai/chat` 与内部 `ChunkRetrievalServi
 错误提案：question/limit 非法返回 422；chunk store 未启用、不可用或 health 为 degraded 返回 503；公共暴露必须由网关认证和 Memo 权限层保护，AI Service 本身不把当前本地兼容模式误当成多租户授权。默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`，关闭时不注册或不接受该 endpoint。
 
 迁移/回滚：先以离线双路径评估确认 Recall、去重、排序和脱敏，再在独立 feature flag 下灰度；现有 chat 和 `memo-v1` collection 不迁移、不重写。回滚只需关闭 flag/路由，不删除 chunk collection 或 volume；`public-chunk-v1` 不复用旧 `CitationResponse` 字段语义。
+
+## ADR-035：Phase 8 implementation gate 等待明确批准
+
+Phase 8 的实现闸门要求明确的产品/兼容批准后，才能把 ADR-034 的提案变成公共 HTTP 路由。本轮只收到阶段名称，没有收到批准实现 `POST /api/ai/v1/chunks/search` 的授权，因此保持 gate pending approval。
+
+在批准前不新增路由、不新增 `AI_PUBLIC_CHUNK_RETRIEVAL` 运行时行为、不改变公共 chat、不改完整 Memo collection，也不启动灰度。批准消息必须明确接受 `public-chunk-v1` 的字段、同 Memo 最高分去重、脱敏、认证前提和关闭 flag 回滚策略。

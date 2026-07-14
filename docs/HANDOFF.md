@@ -2,7 +2,7 @@
 
 ## 2026-07-14 单 Agent 模式切换
 
-## 2026-07-14 Phase 7 public chunk API proposal completed
+## 2026-07-14 Phase 8 public chunk API implementation gate pending approval
 
 - 新增 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并由 Compose 透传。
 - 配置拒绝空 chunk collection 名称或与完整 Memo `QDRANT_COLLECTION` 重合；fake Qdrant contract 校验独立 collection 的维度和 Cosine distance。
@@ -15,12 +15,13 @@
 - rollout gate 结论：chunk retrieval 继续保持内部边界，不接入公共 `/api/ai/chat`，不修改完整 Memo collection。
 - Phase 6 决策：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint。未来公开 chunk retrieval 必须先有版本化 schema、Memo 去重/排序、content 脱敏和迁移/回滚测试。
 - Phase 7 提案：未来独立 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，默认关闭；固定 `memo-chunk-v1`，同 Memo 只保留最高分 chunk，使用确定性排序和脱敏 metadata。本阶段未新增路由或运行时代码。
+- Phase 8 gate：当前没有明确产品/兼容批准，故不实现 proposal endpoint、不新增 feature flag 运行时行为、不启动灰度；等待批准后再执行实现。
 
 后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含本轮 isolated Qdrant chunk collection commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 7 public chunk API proposal 事实，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 8 implementation gate。
+下一窗口先读取该快照和本文件顶部 Phase 8 gate 事实；只有收到明确批准后，才执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 implementation slice。
 
 ## 2026-07-14 Phase 5e
 
