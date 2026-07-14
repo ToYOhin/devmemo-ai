@@ -261,3 +261,16 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 ## Phase 8：public chunk API implementation gate（pending approval）
 
 当前只收到阶段名称，没有明确产品/兼容批准。根据 ADR-035，本阶段不实现 `POST /api/ai/v1/chunks/search`，不新增公共路由或运行时 feature flag，不启动灰度，不改变现有 chat、memo-v1 collection 或 chunk collection。收到明确批准并接受 ADR-034 的版本化字段、去重、脱敏、认证和回滚条件后，才进入实现切片。
+
+## Phase 9：DevMemory Loop / AI Inbox 与 Decision Ledger（下一阶段提案）
+
+Phase 9 不依赖 Phase 8 public chunk API 的批准，先在现有 AI Service 边界内做产品差异化：
+
+1. 将一次性摘要升级为可审核的 `MemoInsight`：事实、决策、行动和 Bug 候选都有来源、置信度和 pending/accepted/rejected 生命周期。
+2. 复用现有内容解析器、AI 摘要、模板和 SQLite，增加幂等 insight 派生表；不写回 Memos 原文，不引入图数据库或后台 worker。
+3. 增加 AI Inbox 详情页卡片，让用户确认/拒绝 AI 派生内容；过期版本拒绝写入，删除 Memo 时只清理派生 insight。
+4. 只为未来 Context Pack 定义 fixture：把已确认的 Memo/insight 组合成有来源、有限预算的 Markdown/JSON 上下文包；本阶段不做 agent、网页搜索或 MCP。
+
+差异化判断：Memos 擅长快速捕获，Khoj 擅长个人 AI/语义搜索/自动化，AnythingLLM 擅长 workspace RAG/agents，AFFiNE 擅长文档-画布-表格工作区，Logseq 擅长本地知识图谱，Outline 擅长协作知识库。DevMemo AI 应聚焦“开发记忆的可审核生命周期”：把 Bug、决策、代码片段和上下文变成可撤销、可追溯的工程资产，而不是复制任一项目的完整平台。
+
+Phase 9 仍保持默认 deterministic + memory、公共 chat 完整 Memo 语义、Phase 8 pending approval 和所有第三方仅参考边界。

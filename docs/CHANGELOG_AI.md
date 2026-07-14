@@ -6,6 +6,12 @@
 - 源码变更后的本地启动示例改为 `docker compose up -d --build`，避免 AI Service 继续运行旧镜像。
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；默认 chat 和完整 Memo 检索不变。
 
+### Phase 9 路线提案：DevMemory Loop
+
+- 新增下一阶段方向：AI Inbox + Decision Ledger，将 Memo 派生为可审核、可撤销、可追溯的 fact/decision/action/bug insight。
+- 对比 Memos、Khoj、AnythingLLM、AFFiNE、Logseq、Outline 后，确定不复制第三方源码、不引入通用 agent 平台，优先构建 provenance + approval + temporal lifecycle 差异化。
+- `docs/prompts/NEXT_STAGE_PROMPT.md` 已切换到 Phase 9；Phase 8 public chunk API 仍保持 pending approval。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

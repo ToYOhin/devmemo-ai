@@ -5,6 +5,7 @@
 - 已修复本地回环地址 CORS 缺口：Compose 默认同时允许 `localhost:3001` 与 `127.0.0.1:3001`。
 - 已记录源码变更后使用 `docker compose up -d --build`，避免 AI Service 复用旧镜像。
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
+- Phase 9 已形成创新路线提案：DevMemory Loop / AI Inbox / Decision Ledger；当前仍不实现 Phase 8 public chunk API，下一阶段 Prompt 已切换为可审核 insight 垂直切片。
 
 更新时间：2026-07-14
 
@@ -225,4 +226,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-等待明确批准后，执行 docs/prompts/NEXT_STAGE_PROMPT.md 的 Phase 8 public chunk API implementation gate；未批准前不实现 endpoint。
+Phase 8 public chunk API 仍等待明确批准；未批准时执行 docs/prompts/NEXT_STAGE_PROMPT.md 的 Phase 9 DevMemory Loop，先做可审核 insight，不实现 public chunk endpoint。

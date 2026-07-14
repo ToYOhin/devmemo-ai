@@ -6,6 +6,12 @@
 - 已记录源码变更后使用 `docker compose up -d --build`，避免 AI Service 复用旧镜像。
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
 
+## Phase 9 DevMemory Loop 路线已准备
+
+- 下一阶段不继续堆叠通用 RAG，而是实现可审核的 `MemoInsight`/AI Inbox/Decision Ledger：fact、decision、action、bug 候选具备 source_refs、confidence、pending/accepted/rejected 生命周期。
+- 该路线不依赖 Phase 8 public chunk API 批准；不修改公共 chat、完整 Memo collection、chunk collection 或默认 deterministic + memory。
+- 详细执行入口已切换为 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)；Context Pack 只先定义 contract/fixture，不实现 agent、网页搜索或 MCP。
+
 ## 2026-07-14 单 Agent 模式切换
 
 ## 2026-07-14 Phase 8 public chunk API implementation gate pending approval

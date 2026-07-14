@@ -185,3 +185,13 @@ Phase 6 对比了现有公共 `POST /api/ai/chat` 与内部 `ChunkRetrievalServi
 Phase 8 的实现闸门要求明确的产品/兼容批准后，才能把 ADR-034 的提案变成公共 HTTP 路由。本轮只收到阶段名称，没有收到批准实现 `POST /api/ai/v1/chunks/search` 的授权，因此保持 gate pending approval。
 
 在批准前不新增路由、不新增 `AI_PUBLIC_CHUNK_RETRIEVAL` 运行时行为、不改变公共 chat、不改完整 Memo collection，也不启动灰度。批准消息必须明确接受 `public-chunk-v1` 的字段、同 Memo 最高分去重、脱敏、认证前提和关闭 flag 回滚策略。
+
+## ADR-036：Phase 9 先做可审核的 DevMemory Loop，不复制通用 AI 平台
+
+Phase 9 的产品差异化目标是把 Memo 从一次性摘要升级为可审核的开发记忆资产：`MemoInsight` 以 fact/decision/action/bug 为类型，带有来源 Memo、置信度、pending/accepted/rejected 状态和可审计时间。AI 只提出候选，用户显式确认后才成为可复用的派生知识；原始 Memo 不被 AI 改写。
+
+第一切片使用现有 parser、SummaryResponse、deterministic provider 和 AI Service SQLite，增加幂等 insight 状态与本地产品边界的 preview/approve/reject contract。它不依赖 public chunk API，不改变 `POST /api/ai/chat`、完整 Memo `memo-v1`、chunk collection 或默认 deterministic + memory。
+
+该方向借鉴 Khoj 的个人 AI/语义搜索和自动化、AnythingLLM 的 workspace memory 与来源引用、AFFiNE 的知识工作区、Logseq 的本地知识图谱、Outline 的历史/协作意识，但不复制第三方源码。Khoj/Logseq 的 AGPL-3.0、Outline 的 BSL 1.1、AFFiNE 的仓库许可证边界均要求保持参考而非直接采用；任何新增依赖必须另做许可证、安全和维护评估。
+
+未来 Context Pack 只能消费已确认 insight，并限制来源、字数和输出格式；不得默认引入 agent、网页搜索、MCP、图数据库、Redis、Celery 或常驻 worker。这样保留 local-first、可撤销和可回滚特性，同时形成区别于通用 RAG 的开发者工作流。
