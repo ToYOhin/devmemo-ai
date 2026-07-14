@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e 已完成。当前阶段为 Phase 5f：Qdrant chunk 持久化与显式 chunk 检索，collection/config contract 已完成，composition 尚未接入。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e 已完成。当前阶段为 Phase 5f：Qdrant chunk 持久化与显式 chunk 检索，collection/config 和 composition 已完成，retrieval/smoke 尚未完成。
 
 ## 当前事实
 
@@ -24,14 +24,14 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Chunking 边界：provider-neutral `MemoChunk` 使用 `memo-chunk-v1`/`chunk` metadata；通过显式 `AI_INDEX_MODE=chunk` 接入 Webhook 生命周期，默认不启用
 - Chunk 离线评估：`OfflineChunkIndex` 复用 deterministic + memory 与 `RetrievalEvaluator`，可对照完整 Memo 基线，不改变公共 chat API
 - Chunk 生命周期：`AI_INDEX_MODE=chunk` 显式启用 `ChunkLifecycleCoordinator`；默认 `memo-v1` 不变，AI SQLite 只持久化 chunk ID 状态
-- Chunk store 隔离：当前 chunk Webhook 使用独立 InMemoryVectorStore，不污染完整 Memo chat 检索；Qdrant chunk collection 留到后续阶段
-- Phase 5f collection contract：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，必须与完整 Memo `QDRANT_COLLECTION` 不同；当前尚未接入 chunk composition
+- Chunk store 隔离：chunk Webhook 使用独立 VectorStore；仅显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 选择 `QDRANT_CHUNK_COLLECTION`，默认仍为独立 InMemoryVectorStore
+- Phase 5f composition：完整 Memo 使用 `QDRANT_COLLECTION`/`memo-v1`，chunk 使用 `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1`，两者 collection、metadata 和检索源隔离
 - Chunk health：GET `/api/ai/index/chunk-health` 返回 `memo-chunk-v1`、点数、已登记 Memo/chunk 数量和 SQLite/memory 状态
 - Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
 - Outbox 运维：retention preview 只读，alerts 提供失败/耗尽摘要；清理必须显式确认并写入审计，不自动删除或主动推送
-- 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；本次同时完成 Phase 5f collection/config contract 与 Compose 透传
+- 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；本次同时完成 Phase 5f collection/config/composition 与 Compose 透传
 
 ## Phase 4 已完成
 
@@ -207,7 +207,7 @@ pnpm lint                          PASS
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- Phase 5e 已增加 chunk health/status；Phase 5f 已完成独立 collection/config 与 fake contract，Qdrant chunk composition、真实 health 和 chunk-aware 公共检索仍未接入，chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
+- Phase 5e 已增加 chunk health/status；Phase 5f 已完成独立 collection/config/composition 与 fake contract，真实 Qdrant health/smoke 和内部 chunk retrieval 仍未完成，chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
 - 当前 outbox 提供显式有限重试、基础状态计数、ops token、保留预览、告警轮询和显式清理审计；没有自动 worker、主动告警推送或定时清理。
 - 全量 pnpm lint 已在上一阶段通过；本阶段未修改前端源码。
 

@@ -110,13 +110,16 @@ AI_INDEX_ON_WEBHOOK=true
   -> chunk_memo
   -> memo-chunk-v1 / index_mode=chunk / stable chunk IDs
   -> ChunkLifecycleCoordinator
-  -> 独立 InMemoryVectorStore（Phase 5f composition 前仍为默认）
+  -> AI_VECTOR_STORE=qdrant 且 AI_INDEX_MODE=chunk
+       -> 独立 QdrantVectorStore（QDRANT_CHUNK_COLLECTION）
+     否则
+       -> 独立 InMemoryVectorStore
   -> AI SQLite memo_chunk_index_state
   -> create/update upsert + stale delete
   -> delete/empty content registered chunk delete
 ```
 
-chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读独立 store 和 `memo_chunk_index_state` 统计。Phase 5f 已预留 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并要求与完整 Memo collection 不同；当前 chunk store 尚未接入 Qdrant，失败仍返回 Webhook `code=0` 和 `index_status=failed`。
+chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读所选独立 store 和 `memo_chunk_index_state` 统计。显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时使用 `QDRANT_CHUNK_COLLECTION`，默认 chunk 路径仍使用 memory；失败仍返回 Webhook `code=0` 和 `index_status=failed`。
 
 ## Webhook 与可靠性边界
 

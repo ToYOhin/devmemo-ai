@@ -2,18 +2,19 @@
 
 ## 2026-07-14 单 Agent 模式切换
 
-## 2026-07-14 Phase 5f collection/config contract
+## 2026-07-14 Phase 5f collection/config/composition
 
 - 新增 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并由 Compose 透传。
 - 配置拒绝空 chunk collection 名称或与完整 Memo `QDRANT_COLLECTION` 重合；fake Qdrant contract 校验独立 collection 的维度和 Cosine distance。
-- 本轮只完成 contract/config slice；`ChunkLifecycleCoordinator` 仍使用独立 memory store，默认完整 Memo、Webhook `code=0` 和 `/api/ai/chat` 不变。
-- AI Service 全量测试：148 passed；下一小步是 qdrant chunk composition。
+- 组合根已接入 chunk store 选择：仅 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 使用 `QDRANT_CHUNK_COLLECTION`，其他路径继续使用独立 memory store。
+- chunk health 读取所选 store；默认完整 Memo、Webhook `code=0` 和 `/api/ai/chat` 不变。
+- AI Service 全量测试：150 passed；下一小步是内部 chunk retrieval contract 和显式 Qdrant smoke。
 
 后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含本轮 isolated Qdrant chunk collection commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 5f contract 事实，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 chunk composition 小步。
+下一窗口先读取该快照和本文件顶部 Phase 5f composition 事实，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 retrieval/smoke 小步。
 
 ## 2026-07-14 Phase 5e
 

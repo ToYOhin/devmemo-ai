@@ -30,16 +30,17 @@ from database import (
 )
 from llm import create_provider
 from app.adapters.chunk_state import SqliteChunkIndexStateStore
-from app.adapters.vector_store import InMemoryVectorStore
 from app.services.content_parser import parse_memo_content
-from app.services.chunk_lifecycle import ChunkLifecycleCoordinator
-from app.services.embedding_factory import build_embedding_service
+from app.services.embedding_factory import (
+    build_chunk_lifecycle_coordinator,
+    build_embedding_service,
+)
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.ops_security import summarize_error, verify_ops_token
 from app.services.retrieval_service import RetrievalService
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
-from app.settings import parse_env_bool
+from app.settings import AiSettings, parse_env_bool
 
 
 class SummaryRequest(BaseModel):
@@ -121,11 +122,11 @@ class MemoWebhookRequest(BaseModel):
 
 app = FastAPI(title="DevMemo AI Service", version="0.1.0")
 provider = create_provider()
-embedding_service = build_embedding_service()
-chunk_lifecycle_coordinator = ChunkLifecycleCoordinator(
+settings = AiSettings.from_env()
+embedding_service = build_embedding_service(settings)
+chunk_lifecycle_coordinator = build_chunk_lifecycle_coordinator(
+    settings,
     provider=embedding_service.provider,
-    # Keep optional chunk vectors out of the complete-Memo chat index.
-    store=InMemoryVectorStore(embedding_service.provider.dimension),
     state_store=SqliteChunkIndexStateStore(),
 )
 

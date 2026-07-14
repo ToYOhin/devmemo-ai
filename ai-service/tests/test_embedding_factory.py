@@ -4,7 +4,13 @@ import pytest
 
 from app.adapters.qdrant_vector_store import QdrantUnavailableError
 from app.adapters.vector_store import InMemoryVectorStore
-from app.services.embedding_factory import build_embedding_service
+from app.adapters.chunk_state import InMemoryChunkIndexStateStore
+from app.adapters.embedding import DeterministicEmbeddingProvider
+from app.domain.embeddings import VectorStoreHealth
+from app.services.embedding_factory import (
+    build_chunk_lifecycle_coordinator,
+    build_embedding_service,
+)
 from app.settings import AiSettings, parse_env_bool
 
 
@@ -68,6 +74,67 @@ def test_qdrant_collection_names_cannot_be_empty(monkeypatch):
 
     with pytest.raises(ValueError, match="QDRANT_CHUNK_COLLECTION"):
         AiSettings.from_env()
+
+
+def test_chunk_qdrant_composition_uses_the_isolated_collection(monkeypatch):
+    calls = []
+
+    class FakeQdrantStore(InMemoryVectorStore):
+        def health(self):
+            return VectorStoreHealth(
+                provider="qdrant",
+                available=True,
+                dimension=self.dimension,
+                status="green",
+                collection="devmemo_memo_chunks",
+                point_count=0,
+            )
+
+    def fake_qdrant_store(cls, url, dimension, collection_name, api_key=None):
+        calls.append((url, dimension, collection_name, api_key))
+        return FakeQdrantStore(dimension)
+
+    monkeypatch.setattr(
+        "app.services.embedding_factory.QdrantVectorStore.from_url",
+        classmethod(fake_qdrant_store),
+    )
+    settings = AiSettings(
+        index_mode="chunk",
+        vector_store="qdrant",
+        qdrant_url="http://qdrant.test:6333",
+        qdrant_collection="devmemo_memos",
+        qdrant_chunk_collection="devmemo_memo_chunks",
+        qdrant_api_key="secret",
+    )
+
+    coordinator = build_chunk_lifecycle_coordinator(
+        settings,
+        provider=DeterministicEmbeddingProvider(),
+        state_store=InMemoryChunkIndexStateStore(),
+    )
+
+    assert calls == [
+        ("http://qdrant.test:6333", 8, "devmemo_memo_chunks", "secret")
+    ]
+    assert coordinator.health().provider == "qdrant"
+    assert coordinator.health().status == "ready"
+
+
+def test_chunk_composition_stays_memory_when_qdrant_is_not_explicit(monkeypatch):
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Qdrant must not be selected for the default chunk path")
+
+    monkeypatch.setattr(
+        "app.services.embedding_factory.QdrantVectorStore.from_url", fail_if_called
+    )
+
+    coordinator = build_chunk_lifecycle_coordinator(
+        AiSettings(index_mode="chunk", vector_store="memory"),
+        provider=DeterministicEmbeddingProvider(),
+        state_store=InMemoryChunkIndexStateStore(),
+    )
+
+    assert coordinator.store.health().provider == "memory"
 
 
 def test_webhook_indexing_is_disabled_by_default(monkeypatch):

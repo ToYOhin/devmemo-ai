@@ -44,19 +44,19 @@
 
 Phase 5f 尚未完成：
 
-- 已完成第一小步：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，配置拒绝空名称和与完整 Memo collection 重合，fake Qdrant contract 已覆盖维度/Cosine distance。
-- 该小步未接入 chunk composition；当前 `ChunkLifecycleCoordinator` 仍使用独立 memory store。
+- 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
+- fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
 
-1. Qdrant 独立 chunk collection 尚未接入 `ChunkLifecycleCoordinator`。
-2. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`。
-3. chunk citation 的公共 HTTP 契约尚未确定。
+1. 内部 chunk retrieval contract 尚未补齐。
+2. 显式 Qdrant health/persistence smoke 尚未在本机执行。
+3. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service full pytest       148 passed
+AI Service full pytest       150 passed
 Frontend full tests          131 passed
 pnpm lint                    PASS
 TypeScript/build             PASS

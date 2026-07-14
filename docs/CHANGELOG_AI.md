@@ -2,12 +2,13 @@
 
 ## 2026-07-14
 
-### Phase 5f：Qdrant chunk collection/config contract
+### Phase 5f：Qdrant chunk collection/config/composition
 - 增加 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并通过 Compose 透传；配置层拒绝空名称或复用完整 Memo collection。
 - fake Qdrant contract 明确校验独立 collection 的 provider dimension 和 Cosine distance；chunk `memo-chunk-v1` 与完整 Memo `memo-v1` 继续隔离。
-- 本轮未接入 chunk composition、真实 Qdrant chunk health 或 chunk-aware retrieval；默认 deterministic + memory、Webhook `code=0` 和公共 chat 契约不变。
-- 验证：AI Service 148 passed；保留既有 Starlette/httpx 弃用警告。
-- 下一小步：仅在 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时组合 Qdrant chunk store。
+- 组合根已接入 chunk store 选择：仅在 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时使用独立 Qdrant collection，其他 chunk 路径继续使用独立 memory。
+- chunk health 复用所选 VectorStore 的 provider/status/point_count，默认 deterministic + memory、Webhook `code=0` 和公共 chat 契约不变。
+- 验证：AI Service 150 passed；保留既有 Starlette/httpx 弃用警告。
+- 下一小步：内部 chunk retrieval contract 与显式 Qdrant health/persistence smoke。
 
 ### 单 Agent 接管模式
 - 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。

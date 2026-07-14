@@ -19,20 +19,18 @@
 - Phase 5a RetrievalEvaluator；Phase 5b MemoChunk；Phase 5c OfflineChunkIndex；Phase 5d ChunkLifecycleCoordinator。
 - Phase 5e 新增 GET `/api/ai/index/chunk-health`，返回 chunk mode/version、VectorStore point_count、SQLite tracked_memos/tracked_chunks 和 degraded detail。
 - 默认完整 Memo `memo-v1`、默认 deterministic + memory、Webhook `code=0`、公共 `POST /api/ai/chat` citation 契约保持不变。
-- 当前 chunk Webhook 使用独立 InMemoryVectorStore；本轮已预留并校验 `QDRANT_CHUNK_COLLECTION=devmemo_memo_chunks`，但 Qdrant chunk collection 尚未接入 composition。
-- AI Service 当前测试为 148 passed；前端 131 tests、TypeScript/build、pnpm lint、Go 全量和 Docker Compose config 已通过上一阶段验证。
+- 当前 chunk Webhook 已接入独立 store composition：只有 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 使用 `QDRANT_CHUNK_COLLECTION=devmemo_memo_chunks`，其他路径使用独立 memory。
+- AI Service 当前测试为 150 passed；前端 131 tests、TypeScript/build、pnpm lint、Go 全量和 Docker Compose config 已通过上一阶段验证。
 
 当前目标：实现 Phase 5f 的“Qdrant chunk 持久化与显式 chunk 检索”最小可验证切片。
 
-执行顺序：先完成 collection/config contract 和 fake tests，再接入 chunk composition，再完成内部 retrieval contract，最后进行显式 Qdrant smoke；任何一步失败先修复或记录阻塞，不跨步扩大范围。
+执行顺序：先完成内部 retrieval contract，再执行显式 Qdrant health/persistence smoke；任何一步失败先修复或记录阻塞，不改变公共 chat 契约。
 
 本次只做：
-1. 在现有 collection/config contract 基础上，增加 chunk store composition：默认仍使用独立 memory；只有显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 才连接 `QDRANT_CHUNK_COLLECTION`。
-2. 保持完整 Memo `QDRANT_COLLECTION`/`memo-v1` 和 chunk `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1` 的 collection、metadata、dimension、distance 隔离。
-3. 先补 fake composition tests，再接入 `ChunkLifecycleCoordinator`；不得改变默认 memory、完整 Memo chat 或 Webhook `code=0`。
-4. 让 chunk-health 在显式 Qdrant chunk 模式下读取真实 collection 状态；Qdrant 不可用时返回 degraded/明确错误，不影响默认 memory 和完整 Memo chat。
-5. 增加最小显式 chunk retrieval contract（优先内部 service/测试边界；如增加 HTTP，必须声明 `index_mode=chunk` 和 `index_version=memo-chunk-v1`），不要直接改变公共 `/api/ai/chat` citations。
-6. 覆盖 fake client contract、collection 隔离、create/update/delete、重启持久化 smoke；默认单元测试不得访问网络。
+1. 增加 provider-neutral 的内部 chunk retrieval contract，明确 `memo_id`、`chunk_id`、`chunk_index`、`index_version` 和服务端 context 边界。
+2. 让 chunk-health 在显式 Qdrant chunk 模式下验证真实 collection status/point_count，并保持 degraded/明确错误行为。
+3. 覆盖 fake client contract、collection 隔离、create/update/delete 和默认路径不连接 Qdrant；不改变公共 `/api/ai/chat` citations。
+4. Docker/Qdrant 可用时执行临时 collection 的 deterministic health/persistence smoke，验证后删除临时 collection，不删除 volume。
 
 不要做：
 - 不修改 Memos server/store/proto/web 核心。
@@ -60,8 +58,8 @@
 - 显式 Qdrant chunk smoke：使用临时 collection，验证后删除临时 collection，不删除 volume
 
 完成条件：
-- 独立 Qdrant chunk collection、配置、fake contract 和隔离测试通过。
-- chunk-health 在 memory/Qdrant 显式模式下契约清晰；默认完整 Memo health/chat 不回归。
+- 独立 Qdrant chunk collection、配置、composition、fake contract 和隔离测试通过。
+- chunk-health 已复用显式选择的 memory/Qdrant store；默认完整 Memo health/chat 不回归。
 - AI Service、前端、TypeScript/build、pnpm lint、Go 全量、Docker 配置和真实 Qdrant smoke 结果被如实记录。
 - 更新 docs/PROJECT_STATUS.md、docs/CHANGELOG_AI.md、docs/HANDOFF.md、docs/roadmap.md、docs/api.md、docs/structure.md、docs/DECISIONS.md。
 - 更新本文件和 docs/prompts/NEW_WINDOW_PROMPT.md 的默认阶段描述。

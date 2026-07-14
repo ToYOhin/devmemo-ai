@@ -12,7 +12,7 @@ VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http:
 - AI_VECTOR_STORE=qdrant：显式启用 QdrantVectorStore，需要安装 requirements-qdrant.txt。
 - QDRANT_URL：默认 http://localhost:6333；Compose 默认使用 http://qdrant:6333。
 - QDRANT_COLLECTION：默认 devmemo_memos。
-- QDRANT_CHUNK_COLLECTION：默认 devmemo_memo_chunks；必须与 QDRANT_COLLECTION 不同，用于后续显式 chunk Qdrant store。
+- QDRANT_CHUNK_COLLECTION：默认 devmemo_memo_chunks；必须与 QDRANT_COLLECTION 不同，用于显式 chunk Qdrant store。
 - QDRANT_API_KEY：可选，写入环境变量，不写入仓库。
 
 ## Embedding provider configuration
@@ -141,7 +141,7 @@ Read-only health for the explicit chunk lifecycle index. It always declares `ind
 
 ## Phase 5f collection/config boundary
 
-The complete-Memo Qdrant collection remains `QDRANT_COLLECTION`/`memo-v1`. The explicit chunk path reserves the separate `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1` boundary, using the provider dimension and Cosine distance. The configuration rejects an empty chunk collection name or reuse of the complete-Memo collection. This slice only defines the configuration and fake adapter contract; chunk composition and Qdrant-backed health/retrieval remain opt-in follow-up work.
+The complete-Memo Qdrant collection remains `QDRANT_COLLECTION`/`memo-v1`. When `AI_INDEX_MODE=chunk` and `AI_VECTOR_STORE=qdrant`, the chunk lifecycle uses the separate `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1` boundary with the provider dimension and Cosine distance. Other chunk paths use an isolated in-memory store. The configuration rejects an empty chunk collection name or reuse of the complete-Memo collection; chunk health reports the selected store without changing public complete-Memo chat.
 
 ## GET /api/ai/ops/outbox
 
@@ -207,4 +207,4 @@ Set-Location H:\DevMemoAI\ai-service
 ## Planned APIs
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
-- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d/5e 离线评估、chunk 边界、可选生命周期和 health 已完成，当前 Phase 5f 已先完成 Qdrant chunk collection/config contract，尚未接入 composition 或公共 chunk retrieval。
+- POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d/5e 离线评估、chunk 边界、可选生命周期和 health 已完成，当前 Phase 5f 已完成 Qdrant chunk collection/config/composition，尚未接入内部 chunk retrieval 或公共 chunk retrieval。
