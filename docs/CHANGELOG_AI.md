@@ -13,7 +13,8 @@
 - Phase 5g rollout gate：AI Service 153 passed；前端 131 passed；TypeScript/build/lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2。
 - rollout 结论：chunk retrieval 继续保持内部边界，不接入公共 `/api/ai/chat`，不修改完整 Memo collection。
 - Phase 6 compatibility decision：现有 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint；未来公开接入必须先定义版本化 contract、去重/排序、脱敏和迁移回滚。
-- 下一阶段：Phase 7 public chunk API proposal。
+- Phase 7 public chunk API proposal：定义未来 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`、默认关闭、固定 memo-chunk-v1、同 Memo 最高分去重、确定性排序、脱敏和灰度回滚；本阶段未实现路由。
+- 下一阶段：Phase 8 public chunk API implementation gate。
 
 ### 单 Agent 接管模式
 - 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。

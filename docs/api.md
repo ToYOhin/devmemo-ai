@@ -153,6 +153,47 @@ Phase 6 keeps chunk retrieval internal. The existing `POST /api/ai/chat` respons
 
 Any future public chunk API must use an explicit versioned endpoint or response contract and define chunk citation fields, same-Memo deduplication, ordering, context limits, content redaction, migration and rollback before implementation. `ChunkRetrievalService` and `/api/ai/index/chunk-health` remain the internal/operations boundary.
 
+## Phase 7 public chunk API proposal（未实现）
+
+This is a reviewable proposal only. It does not add a route or change the existing chat API.
+
+Proposed endpoint: `POST /api/ai/v1/chunks/search` with `api_version=public-chunk-v1`.
+
+Request:
+
+~~~json
+{
+  "question": "Docker port mapping",
+  "limit": 5
+}
+~~~
+
+`question` is required and non-empty; `limit` is 1–10 and defaults to 5. The server always selects `index_version=memo-chunk-v1`; clients cannot select arbitrary index versions.
+
+Proposed response:
+
+~~~json
+{
+  "api_version": "public-chunk-v1",
+  "index_version": "memo-chunk-v1",
+  "provider": "deterministic",
+  "chunks": [
+    {
+      "memo_id": "memo-42",
+      "chunk_id": "memo-chunk-v1:memo-42:0000",
+      "chunk_index": 0,
+      "score": 0.912345,
+      "metadata": {"title": "Docker ports", "source_type": "memo_chunk"}
+    }
+  ],
+  "retrieved_count": 1
+}
+~~~
+
+The default contract keeps only the highest-scoring chunk per Memo. Results sort by score descending, then `memo_id`, `chunk_index`, and `chunk_id` ascending. `retrieved_count` counts deduplicated chunks. Metadata is an allowlist and never contains `content`, raw Markdown, Webhook payloads, secrets, or internal storage fields.
+
+Proposed errors: invalid question/limit → 422; disabled, unavailable, or degraded chunk store → 503. Public exposure requires gateway authentication and Memo-level authorization; the current local-compatible AI Service auth boundary is not multi-tenant authorization. Default `AI_PUBLIC_CHUNK_RETRIEVAL=false`; the endpoint is not implemented until product/API compatibility approval. Migration requires offline dual-path evaluation and feature-flagged canary; rollback disables the flag/route without touching `memo-v1`, the chunk collection, or volumes.
+
 ## GET /api/ai/ops/outbox
 
 读取 AI Service 自有 SQLite 中最近的 Webhook outbox 状态，不会启动重试 worker。

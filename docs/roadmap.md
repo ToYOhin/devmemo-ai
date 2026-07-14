@@ -247,3 +247,13 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 验证：现有 `test_chat_api_retrieves_memo_and_returns_citations` 保持公共完整 Memo citation 契约；AI Service 全量 153 passed，未修改运行时代码。
 
 下一阶段：Phase 7 public chunk API proposal；仅在获得明确版本化公共契约后实现，不自动扩大现有 chat。
+
+## Phase 7：public chunk API proposal（已完成提案，未实现）
+
+1. 提出独立 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，不复用或修改现有 `POST /api/ai/chat`。
+2. 定义请求 `question`/`limit`、固定 `memo-chunk-v1`、脱敏 chunk citation、同 Memo 只保留最高分 chunk、确定性排序和 `422/503` 错误边界。
+3. 定义默认关闭的 `AI_PUBLIC_CHUNK_RETRIEVAL=false`、网关认证/ Memo 权限前提、离线双路径评估、灰度与仅关闭 flag 的回滚；本阶段不新增 HTTP 路由。
+
+验证：提案文档与现有 `test_chat_api_retrieves_memo_and_returns_citations` 对齐；运行时代码未修改，公共 chat 默认行为保持不变。
+
+下一阶段：Phase 8 public chunk API implementation gate；只有获得明确产品/兼容批准后才实现提案 endpoint。

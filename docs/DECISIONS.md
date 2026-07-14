@@ -167,3 +167,15 @@ Phase 6 对比了现有公共 `POST /api/ai/chat` 与内部 `ChunkRetrievalServi
 因此 Phase 6 决定：不增加 `POST /api/ai/chat` 的隐式 chunk mode，不把 `embedding_id` 改成 chunk ID，不新增未定义的公共 chunk endpoint。默认完整 Memo `memo-v1`、公共 citation schema、Webhook 默认行为和完整 Memo collection 继续保持不变；`ChunkRetrievalService` 与 `GET /api/ai/index/chunk-health` 作为内部/运维边界保留。
 
 未来若要公开 chunk retrieval，必须先单独定义 versioned endpoint 或明确的请求/响应版本，并补齐 chunk citation schema、同 Memo 去重规则、排序/上下文预算、content 脱敏、迁移/回滚和双路径 contract tests。没有这些兼容性证据，不扩大公共 API。
+
+## ADR-034：Phase 7 public chunk API proposal（仅提案，不实现）
+
+提出未来独立 endpoint `POST /api/ai/v1/chunks/search`，响应版本固定为 `public-chunk-v1`。本 ADR 只定义可评审 contract，不新增路由、不改变现有 `POST /api/ai/chat`。
+
+请求提案：`question` 为必填非空字符串，`limit` 范围 1–10、默认 5；服务固定检索 `memo-chunk-v1`，不允许客户端随意选择 index version。响应提案包含 `api_version`、`index_version`、`provider`、`chunks` 和 `retrieved_count`。每个 chunk citation 只包含 `memo_id`、`chunk_id`、`chunk_index`、`score` 和 allowlist metadata；不包含 `content`、原始 Markdown、Webhook payload、secret 或内部存储字段。
+
+同一 Memo 默认只保留最高分 chunk；排序为 score 降序、`memo_id` 升序、`chunk_index` 升序、`chunk_id` 升序，保证结果可复现。`retrieved_count` 表示去重后的 chunk 数量，不复用现有 chat 的完整 Memo 计数语义。未来若需要同一 Memo 多 chunk，必须另行版本化，不在此 contract 中隐式扩展。
+
+错误提案：question/limit 非法返回 422；chunk store 未启用、不可用或 health 为 degraded 返回 503；公共暴露必须由网关认证和 Memo 权限层保护，AI Service 本身不把当前本地兼容模式误当成多租户授权。默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`，关闭时不注册或不接受该 endpoint。
+
+迁移/回滚：先以离线双路径评估确认 Recall、去重、排序和脱敏，再在独立 feature flag 下灰度；现有 chat 和 `memo-v1` collection 不迁移、不重写。回滚只需关闭 flag/路由，不删除 chunk collection 或 volume；`public-chunk-v1` 不复用旧 `CitationResponse` 字段语义。
