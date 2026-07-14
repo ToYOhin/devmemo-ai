@@ -59,6 +59,7 @@ ai-service/
 │   │   ├── embedding_factory.py     # memory/Qdrant 与 deterministic/FastEmbed 组合根
 │   │   ├── memo_indexing.py          # 完整 Memo memo-v1 索引边界
 │   │   ├── retrieval_service.py     # query embedding -> search -> context/citations
+│   │   ├── chunk_retrieval.py       # 内部 memo-chunk-v1 retrieval contract
 │   │   ├── retrieval_evaluator.py   # Recall@K/首个相关结果离线评估
 │   │   ├── offline_chunk_index.py   # 独立 chunk 试验索引
 │   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
@@ -117,9 +118,10 @@ AI_INDEX_ON_WEBHOOK=true
   -> AI SQLite memo_chunk_index_state
   -> create/update upsert + stale delete
   -> delete/empty content registered chunk delete
+  -> ChunkRetrievalService -> ChunkRetrievalResult（内部，不接公共 chat）
 ```
 
-chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`GET /api/ai/index/chunk-health` 只读所选独立 store 和 `memo_chunk_index_state` 统计。显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时使用 `QDRANT_CHUNK_COLLECTION`，默认 chunk 路径仍使用 memory；失败仍返回 Webhook `code=0` 和 `index_status=failed`。
+chunk lifecycle 使用独立 VectorStore，避免 chunk 向量污染完整 Memo 的 chat 检索。`ChunkRetrievalService` 只接受 `memo-chunk-v1`/`memo_chunk` 元数据，把 `content` 留在服务端 context，返回显式 chunk citation。`GET /api/ai/index/chunk-health` 只读所选独立 store 和 `memo_chunk_index_state` 统计。显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时使用 `QDRANT_CHUNK_COLLECTION`，默认 chunk 路径仍使用 memory；失败仍返回 Webhook `code=0` 和 `index_status=failed`。
 
 ## Webhook 与可靠性边界
 

@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：已包含 `feat(ai): reserve isolated qdrant chunk collection` 本轮 commit
+- 当前 HEAD：`7e37d09 feat(ai): add chunk retrieval contract smoke`
 - GitHub remote：`origin/codex/devmemo-ai-mvp` 尚未包含本地最新 commit；本轮未 push
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -40,23 +40,24 @@
 - `ai-service/main.py`：FastAPI HTTP/Webhook 边界；旧的 `embedding.py`、`rag.py` 仍保留兼容入口。
 - `docs/`：状态、路线、API、结构、决策、交接和下一阶段 Prompt。
 
-## 当前未完成
+## 当前已完成与未完成
 
-Phase 5f 尚未完成：
+Phase 5f 代码切片已完成：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
+- `ChunkRetrievalService`、`ChunkCitation`、`ChunkRetrievalResult` 已落地；严格校验 `memo-chunk-v1` metadata，原文仅用于服务端 context。
+- `scripts/smoke_qdrant.py --mode chunk` 已覆盖 health、重新连接后的 point_count/检索持久性、内部 retrieval contract 和 delete。
 
-1. 内部 chunk retrieval contract 尚未补齐。
-2. 显式 Qdrant health/persistence smoke 尚未在本机执行。
-3. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`。
+1. 显式 Qdrant health/persistence smoke 已尝试但未通过：`http://127.0.0.1:6333` 返回 `[WinError 10061]`，Docker Desktop Linux Engine named pipe 不存在；等待 Docker Engine 可用后重跑。
+2. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`，这是刻意保留的边界。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service full pytest       150 passed
+AI Service focused pytest    24 passed
 Frontend full tests          131 passed
 pnpm lint                    PASS
 TypeScript/build             PASS
@@ -79,4 +80,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口，或者执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5f 单 Agent Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口，或者执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 5g 单 Agent Prompt。

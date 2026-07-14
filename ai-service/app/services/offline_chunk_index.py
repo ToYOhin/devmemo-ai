@@ -13,7 +13,8 @@ from app.domain.embeddings import (
     VectorStoreHealth,
 )
 from app.domain.memo_chunking import MemoChunk, ensure_unique_chunk_ids
-from app.domain.retrieval import RetrievalResult
+from app.domain.retrieval import ChunkRetrievalResult, RetrievalResult
+from app.services.chunk_retrieval import ChunkRetrievalService
 from app.services.embedding_service import EmbeddingService
 from app.services.retrieval_service import RetrievalService
 
@@ -33,6 +34,7 @@ class OfflineChunkIndex:
         self.retrieval_service = RetrievalService(
             EmbeddingService(self.provider, self.store)
         )
+        self.chunk_retrieval_service = ChunkRetrievalService(self.retrieval_service)
 
     def upsert(self, chunks: Iterable[MemoChunk]) -> tuple[str, ...]:
         """Upsert chunks by stable chunk ID and return the IDs written."""
@@ -67,6 +69,11 @@ class OfflineChunkIndex:
         """Reuse the existing retrieval/context contract for offline comparisons."""
 
         return self.retrieval_service.retrieve(question, limit=limit)
+
+    def retrieve_chunks(self, question: str, limit: int = 5) -> ChunkRetrievalResult:
+        """Return the explicit internal chunk contract without changing public chat."""
+
+        return self.chunk_retrieval_service.retrieve(question, limit=limit)
 
     def health(self) -> VectorStoreHealth:
         """Expose the provider-neutral store health for fixture assertions."""

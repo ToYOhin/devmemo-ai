@@ -24,6 +24,26 @@ class RetrievalResult:
     citations: tuple[Citation, ...]
 
 
+@dataclass(frozen=True)
+class ChunkCitation:
+    """Internal chunk reference; original content stays server-side in context."""
+
+    memo_id: str
+    chunk_id: str
+    chunk_index: int
+    index_version: str
+    score: float
+    metadata: Mapping[str, object]
+
+
+@dataclass(frozen=True)
+class ChunkRetrievalResult:
+    """Internal chunk retrieval result, deliberately separate from public chat."""
+
+    context: str
+    citations: tuple[ChunkCitation, ...]
+
+
 class RetrievalInputError(ValueError):
     """Raised when a question or result limit is invalid."""
 

@@ -7,8 +7,10 @@
 - fake Qdrant contract 明确校验独立 collection 的 provider dimension 和 Cosine distance；chunk `memo-chunk-v1` 与完整 Memo `memo-v1` 继续隔离。
 - 组合根已接入 chunk store 选择：仅在 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 时使用独立 Qdrant collection，其他 chunk 路径继续使用独立 memory。
 - chunk health 复用所选 VectorStore 的 provider/status/point_count，默认 deterministic + memory、Webhook `code=0` 和公共 chat 契约不变。
-- 验证：AI Service 150 passed；保留既有 Starlette/httpx 弃用警告。
-- 下一小步：内部 chunk retrieval contract 与显式 Qdrant health/persistence smoke。
+- 新增内部 `ChunkRetrievalService`、`ChunkCitation`、`ChunkRetrievalResult`，严格验证 `memo_id`、`chunk_id`、`chunk_index`、`index_version` 和 chunk source metadata；原文只保留在服务端 context。
+- 扩展 `scripts/smoke_qdrant.py --mode chunk`，验证 health、upsert/search、重新连接后的点数和检索持久性、内部 chunk contract、delete；临时 collection 自动清理。
+- 聚焦验证：AI Service 24 passed；保留既有 Starlette/httpx 弃用警告。真实 Qdrant smoke 已尝试但因 `http://127.0.0.1:6333` `[WinError 10061]` 和 Docker Engine named pipe 缺失阻塞。
+- 下一阶段：Phase 5g Qdrant chunk rollout gate。
 
 ### 单 Agent 接管模式
 - 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。

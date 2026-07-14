@@ -8,6 +8,7 @@ from typing import Protocol
 
 from app.domain.embeddings import EmbeddingProvider, VectorStore
 from app.domain.memo_chunking import CHUNK_INDEX_MODE, CHUNK_INDEX_VERSION, chunk_memo
+from app.domain.retrieval import ChunkRetrievalResult
 from app.services.offline_chunk_index import OfflineChunkIndex
 
 
@@ -89,6 +90,12 @@ class ChunkLifecycleCoordinator:
             raise ValueError("chunk state store must be configured explicitly")
         self.state_store = state_store
         self.index = OfflineChunkIndex(provider=provider, store=self.store)
+        self.chunk_retrieval_service = self.index.chunk_retrieval_service
+
+    def retrieve(self, question: str, limit: int = 5) -> ChunkRetrievalResult:
+        """Retrieve from the isolated chunk store through the internal contract."""
+
+        return self.chunk_retrieval_service.retrieve(question, limit=limit)
 
     def upsert_memo(
         self,

@@ -216,7 +216,7 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 144 passed；前端、Go、Docker 和完整验证门禁沿用 Phase 5d 已验证结果，最终提交前重新执行。
 
-## Phase 5f：Qdrant chunk 持久化与显式 chunk 检索（进行中）
+## Phase 5f：Qdrant chunk 持久化与显式 chunk 检索（代码切片完成，真实 smoke 待环境）
 
 当前最小切片已完成：
 
@@ -225,5 +225,9 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 3. fake Qdrant contract 明确校验独立 collection 的维度和 Cosine distance；chunk 版本继续使用 `memo-chunk-v1`，完整 Memo 继续使用 `memo-v1`。
 4. 组合根已接入 chunk store 选择：仅 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 使用独立 Qdrant collection，其他路径继续使用独立 memory store。
 5. chunk coordinator 的 health 已自然读取所选 VectorStore；默认 deterministic + memory、Webhook 和 `/api/ai/chat` 不变。
+6. 新增 `ChunkRetrievalService`、`ChunkCitation` 和 `ChunkRetrievalResult`；严格校验 `memo_id`、`chunk_id`、`chunk_index`、`index_version` 与 chunk source metadata，原文只留在服务端 context。
+7. `ai-service/scripts/smoke_qdrant.py --mode chunk` 覆盖 Qdrant health、upsert/search、重新连接后的 point_count/检索持久性、chunk contract 和 delete；默认临时 collection 自动清理。
 
-下一小步：补充内部 chunk retrieval contract，并执行显式 Qdrant health/persistence smoke；不改变公共 `/api/ai/chat`。
+验证：AI Service 聚焦测试 24 passed；完整测试与仓库验证门禁待本轮最终执行。Docker/Qdrant 真实 smoke 需以本机 Docker Engine 可用性为准，不改变公共 `/api/ai/chat`。
+
+下一阶段：Phase 5g Qdrant chunk rollout gate，先重跑真实 `--mode chunk` smoke 和完整门禁，再评估是否继续保持内部检索边界；不直接替换公共 chat。

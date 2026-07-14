@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e 已完成。当前阶段为 Phase 5f：Qdrant chunk 持久化与显式 chunk 检索，collection/config 和 composition 已完成，retrieval/smoke 尚未完成。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e 已完成。当前 Phase 5f 的代码切片已完成：内部 chunk retrieval contract 和 Qdrant smoke 脚本已落地；真实 Qdrant smoke 仍待 Docker Engine 可用性确认。
 
 ## 当前事实
 
@@ -26,6 +26,8 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Chunk 生命周期：`AI_INDEX_MODE=chunk` 显式启用 `ChunkLifecycleCoordinator`；默认 `memo-v1` 不变，AI SQLite 只持久化 chunk ID 状态
 - Chunk store 隔离：chunk Webhook 使用独立 VectorStore；仅显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 选择 `QDRANT_CHUNK_COLLECTION`，默认仍为独立 InMemoryVectorStore
 - Phase 5f composition：完整 Memo 使用 `QDRANT_COLLECTION`/`memo-v1`，chunk 使用 `QDRANT_CHUNK_COLLECTION`/`memo-chunk-v1`，两者 collection、metadata 和检索源隔离
+- 内部 chunk retrieval：`ChunkRetrievalService` 返回独立 `ChunkRetrievalResult`；citation 显式携带 memo/chunk/version/index，原文只进入服务端 context，不进入公共响应
+- Qdrant chunk smoke：`python -m scripts.smoke_qdrant --provider deterministic --mode chunk` 验证 health、重新连接持久性、内部 contract 和 delete；临时 collection 自动清理
 - Chunk health：GET `/api/ai/index/chunk-health` 返回 `memo-chunk-v1`、点数、已登记 Memo/chunk 数量和 SQLite/memory 状态
 - Webhook 安全：可选 `AI_WEBHOOK_SECRET` + `X-DevMemo-Signature: sha256=<hex>` HMAC 校验
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
@@ -207,10 +209,10 @@ pnpm lint                          PASS
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- Phase 5e 已增加 chunk health/status；Phase 5f 已完成独立 collection/config/composition 与 fake contract，真实 Qdrant health/smoke 和内部 chunk retrieval 仍未完成，chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
+- Phase 5e 已增加 chunk health/status；Phase 5f 已完成独立 collection/config/composition、内部 chunk retrieval 和 smoke 脚本。真实 smoke 于本轮执行时因 `http://127.0.0.1:6333` 返回 `[WinError 10061]`、Docker Linux Engine named pipe 不存在而阻塞；chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
 - 当前 outbox 提供显式有限重试、基础状态计数、ops token、保留预览、告警轮询和显式清理审计；没有自动 worker、主动告警推送或定时清理。
 - 全量 pnpm lint 已在上一阶段通过；本阶段未修改前端源码。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 5f Qdrant chunk 持久化与显式 chunk 检索。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 5g Qdrant chunk rollout gate。

@@ -152,4 +152,10 @@ DevMemo AI 后续默认只使用 `H:\DevMemoAI` 主工作树和一个 Agent 推�
 
 完整 Memo 继续使用 `QDRANT_COLLECTION`/`memo-v1`。Phase 5f 的 chunk 路径预留 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并在配置边界拒绝空名称或与完整 Memo collection 重合；chunk metadata 继续使用 `memo-chunk-v1`/`index_mode=chunk`。Qdrant collection 使用当前 provider dimension 和 Cosine distance，避免 chunk 向量污染完整 Memo 检索。
 
-本决策已落地 collection/config contract、fake adapter 验证和 composition：只有显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 才选择独立 Qdrant chunk store，其他 chunk 路径使用独立 memory。真实 Qdrant health/persistence smoke 和显式 chunk retrieval 仍待后续验证；默认 deterministic + memory、Webhook `code=0`、完整 Memo `POST /api/ai/chat` 和既有 collection/volume 均保持不变。
+本决策已落地 collection/config contract、fake adapter 验证和 composition：只有显式 `AI_INDEX_MODE=chunk` + `AI_VECTOR_STORE=qdrant` 才选择独立 Qdrant chunk store，其他 chunk 路径使用独立 memory。真实 Qdrant health/persistence smoke 由显式 smoke 脚本验证；默认 deterministic + memory、Webhook `code=0`、完整 Memo `POST /api/ai/chat` 和既有 collection/volume 均保持不变。
+
+## ADR-032：内部 chunk retrieval 与公共 Memo citation 分离
+
+Phase 5f 增加独立的 `ChunkRetrievalService`，复用 query embedding 和 VectorStore search，但不复用公共 `Citation` 作为 chunk API。内部 `ChunkCitation` 固定携带 `memo_id`、稳定 `chunk_id`、`chunk_index` 和 `memo-chunk-v1`，并严格拒绝缺失、错误版本或混入完整 Memo 的 metadata。原文 `content` 仅用于服务端 context 组装，不出现在 citation metadata；公共 `POST /api/ai/chat` 继续检索完整 Memo。
+
+这样可以先验证 Qdrant chunk collection 的 health、重新连接持久性和删除生命周期，再决定是否扩大公共检索语义；错误不会静默回退到完整 Memo collection。
