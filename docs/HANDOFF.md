@@ -10,7 +10,7 @@
 - chunk health 读取所选 store；默认完整 Memo、Webhook `code=0` 和 `/api/ai/chat` 不变。
 - 新增内部 `ChunkRetrievalService`/`ChunkCitation`/`ChunkRetrievalResult`，严格校验 chunk metadata，原文不进入 citation metadata；公共 `/api/ai/chat` 未改变。
 - `scripts/smoke_qdrant.py --mode chunk` 已覆盖 health、重新连接 persistence、内部 retrieval contract 和 delete；显式 collection 默认不自动删除。
-- 聚焦测试：24 passed；真实 Qdrant smoke 已尝试但被阻塞：`http://127.0.0.1:6333` 返回 `[WinError 10061]`，`docker info` 报 Docker Desktop Linux Engine named pipe 不存在；Docker 恢复后重跑。
+- 聚焦测试：24 passed；Docker Desktop/Qdrant 恢复后真实 chunk smoke 已通过：`QDRANT_CHUNK_SMOKE_OK`，初始/重连 point_count=2，删除后 point_count=1，临时 collection 已清理。
 
 后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
 

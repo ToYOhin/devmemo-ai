@@ -9,7 +9,7 @@
 - chunk health 复用所选 VectorStore 的 provider/status/point_count，默认 deterministic + memory、Webhook `code=0` 和公共 chat 契约不变。
 - 新增内部 `ChunkRetrievalService`、`ChunkCitation`、`ChunkRetrievalResult`，严格验证 `memo_id`、`chunk_id`、`chunk_index`、`index_version` 和 chunk source metadata；原文只保留在服务端 context。
 - 扩展 `scripts/smoke_qdrant.py --mode chunk`，验证 health、upsert/search、重新连接后的点数和检索持久性、内部 chunk contract、delete；临时 collection 自动清理。
-- 聚焦验证：AI Service 24 passed；保留既有 Starlette/httpx 弃用警告。真实 Qdrant smoke 已尝试但因 `http://127.0.0.1:6333` `[WinError 10061]` 和 Docker Engine named pipe 缺失阻塞。
+- 聚焦验证：AI Service 24 passed；保留既有 Starlette/httpx 弃用警告。Docker Desktop/Qdrant 恢复后真实 chunk smoke 返回 `QDRANT_CHUNK_SMOKE_OK`，health、重连持久性、内部 contract 和 delete 均通过。
 - 下一阶段：Phase 5g Qdrant chunk rollout gate。
 
 ### 单 Agent 接管模式

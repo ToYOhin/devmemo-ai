@@ -21,7 +21,7 @@
 - smoke 命令：
   cd H:\DevMemoAI\ai-service
   .\.venv\Scripts\python.exe -m scripts.smoke_qdrant --provider deterministic --mode chunk
-- 当前真实 smoke 是否通过必须以 Docker Engine 现场结果为准。Docker 不可用时记录 docker info 的错误证据，不要虚报通过。
+- 当前真实 smoke 已通过：Docker Desktop/Qdrant 已恢复，`QDRANT_CHUNK_SMOKE_OK` 验证 health、重连持久性、内部 contract 和 delete；后续如环境重启再按同一命令复验。
 
 本阶段目标：
 1. Docker/Qdrant 可用时执行 deterministic chunk smoke，确认 health、point_count、重新连接后检索仍存在、内部 chunk contract 和 delete；临时 collection 自动清理，不删除 volume。

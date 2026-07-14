@@ -49,7 +49,7 @@ Phase 5f 代码切片已完成：
 - `ChunkRetrievalService`、`ChunkCitation`、`ChunkRetrievalResult` 已落地；严格校验 `memo-chunk-v1` metadata，原文仅用于服务端 context。
 - `scripts/smoke_qdrant.py --mode chunk` 已覆盖 health、重新连接后的 point_count/检索持久性、内部 retrieval contract 和 delete。
 
-1. 显式 Qdrant health/persistence smoke 已尝试但未通过：`http://127.0.0.1:6333` 返回 `[WinError 10061]`，Docker Desktop Linux Engine named pipe 不存在；等待 Docker Engine 可用后重跑。
+1. 显式 Qdrant health/persistence smoke 已通过：启动 Docker Desktop/Qdrant 后运行 deterministic chunk smoke，返回 `QDRANT_CHUNK_SMOKE_OK`；初始/重连 point_count=2，删除后为 1，临时 collection 已清理。
 2. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`，这是刻意保留的边界。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
