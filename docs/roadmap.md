@@ -230,4 +230,10 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 验证：AI Service 聚焦测试 24 passed；Docker/Qdrant deterministic chunk smoke 返回 `QDRANT_CHUNK_SMOKE_OK`，初始/重连 point_count=2，删除后为 1，临时 collection 已清理；不改变公共 `/api/ai/chat`。
 
-下一阶段：Phase 5g Qdrant chunk rollout gate，先重跑真实 `--mode chunk` smoke 和完整门禁，再评估是否继续保持内部检索边界；不直接替换公共 chat。
+## Phase 5g：Qdrant chunk rollout gate（已完成）
+
+1. Docker Desktop/Qdrant 恢复后，deterministic chunk smoke 返回 `QDRANT_CHUNK_SMOKE_OK`；health、upsert/search、重新连接后的 point_count/检索持久性、内部 contract 和 delete 均通过，临时 collection 已清理。
+2. 完整门禁通过：AI Service 153 passed；前端 131 passed；TypeScript、build、lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2。
+3. rollout 结论：chunk retrieval 保持内部边界，不接入公共 `/api/ai/chat`，不替换完整 Memo collection。
+
+下一阶段：Phase 6 public chunk retrieval compatibility decision；先评估公共响应、引用排序和迁移/回滚契约，再决定是否实现外部接入。

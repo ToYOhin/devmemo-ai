@@ -10,7 +10,9 @@
 - 新增内部 `ChunkRetrievalService`、`ChunkCitation`、`ChunkRetrievalResult`，严格验证 `memo_id`、`chunk_id`、`chunk_index`、`index_version` 和 chunk source metadata；原文只保留在服务端 context。
 - 扩展 `scripts/smoke_qdrant.py --mode chunk`，验证 health、upsert/search、重新连接后的点数和检索持久性、内部 chunk contract、delete；临时 collection 自动清理。
 - 聚焦验证：AI Service 24 passed；保留既有 Starlette/httpx 弃用警告。Docker Desktop/Qdrant 恢复后真实 chunk smoke 返回 `QDRANT_CHUNK_SMOKE_OK`，health、重连持久性、内部 contract 和 delete 均通过。
-- 下一阶段：Phase 5g Qdrant chunk rollout gate。
+- Phase 5g rollout gate：AI Service 153 passed；前端 131 passed；TypeScript/build/lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2。
+- rollout 结论：chunk retrieval 继续保持内部边界，不接入公共 `/api/ai/chat`，不修改完整 Memo collection。
+- 下一阶段：Phase 6 public chunk retrieval compatibility decision。
 
 ### 单 Agent 接管模式
 - 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。

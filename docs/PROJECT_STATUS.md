@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f 已完成。Phase 5f 的内部 chunk retrieval contract、独立 Qdrant composition 和真实 health/persistence smoke 均已通过。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g 已完成。Phase 5g rollout gate 已完成：完整验证门禁、真实 Qdrant chunk smoke 和边界复核均已通过。
 
 ## 当前事实
 
@@ -33,7 +33,8 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Webhook outbox：GET `/api/ai/ops/outbox` 读取状态，POST retry 显式有限重试，默认不启动 worker
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
 - Outbox 运维：retention preview 只读，alerts 提供失败/耗尽摘要；清理必须显式确认并写入审计，不自动删除或主动推送
-- 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；本次同时完成 Phase 5f collection/config/composition 与 Compose 透传
+- Phase 5g rollout gate：AI 153 passed；前端 131 passed；TypeScript、build、lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2 chunk smoke 通过
+- 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
 
@@ -177,15 +178,15 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             144 passed
+AI Service full pytest             153 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
 frontend full tests                131 passed
 frontend TypeScript/build          PASS
-Go full test -p 2 ./...            PASS
+Go full test -p 2 ./...            PASS (store/test 168.864s)
 verify-devmemo.ps1                 PASS / DEVMEMO_VERIFY_OK
 docker compose config              PASS
-Qdrant FastEmbed smoke             PASS / collection upsert search delete
+Qdrant chunk smoke                 PASS / QDRANT_CHUNK_SMOKE_OK
 Qdrant volume restart              PASS / collection and point recovered
 FastEmbed cache-dir smoke           PASS / offline 384-dim load
 Qdrant health smoke                PASS / green collection status
@@ -209,10 +210,10 @@ pnpm lint                          PASS
 - Webhook 默认不触发向量索引；开启 `AI_INDEX_ON_WEBHOOK=true` 后才会触发。
 - FastEmbed smoke：首次加载约 23.48 秒，单条 embedding 约 0.06 秒，返回 384 维；项目缓存目录约 64.07 MB。
 - 当前 RAG 只检索完整 Memo，默认 memory 为进程内存；服务重启后不保留索引。
-- Phase 5e 已增加 chunk health/status；Phase 5f 已完成独立 collection/config/composition、内部 chunk retrieval 和真实 Qdrant health/persistence smoke。chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
+- Phase 5e 已增加 chunk health/status；Phase 5f/5g 已完成独立 collection/config/composition、内部 chunk retrieval、真实 Qdrant health/persistence smoke 和完整 rollout gate。chunk 仍未替换公共 `POST /api/ai/chat` 的完整 Memo 检索。
 - 当前 outbox 提供显式有限重试、基础状态计数、ops token、保留预览、告警轮询和显式清理审计；没有自动 worker、主动告警推送或定时清理。
 - 全量 pnpm lint 已在上一阶段通过；本阶段未修改前端源码。
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 5g Qdrant chunk rollout gate。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 6 public chunk retrieval compatibility decision。
