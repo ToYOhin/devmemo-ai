@@ -237,3 +237,13 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 3. rollout 结论：chunk retrieval 保持内部边界，不接入公共 `/api/ai/chat`，不替换完整 Memo collection。
 
 下一阶段：Phase 6 public chunk retrieval compatibility decision；先评估公共响应、引用排序和迁移/回滚契约，再决定是否实现外部接入。
+
+## Phase 6：public chunk retrieval compatibility decision（已完成）
+
+1. 对比现有 `POST /api/ai/chat` 的完整 Memo `CitationResponse` 与内部 `ChunkCitation`，确认 `embedding_id`、`retrieved_count`、同 Memo 多结果、排序和上下文预算不能无版本替换。
+2. 决定不增加隐式 chunk mode、不修改公共 chat citation、不新增未定义的公共 chunk endpoint；继续保留内部 `ChunkRetrievalService` 和只读 chunk health。
+3. 未来公开 chunk retrieval 前必须先定义 versioned API、chunk citation schema、Memo 去重/排序、content 脱敏和迁移/回滚 contract tests。
+
+验证：现有 `test_chat_api_retrieves_memo_and_returns_citations` 保持公共完整 Memo citation 契约；AI Service 全量 153 passed，未修改运行时代码。
+
+下一阶段：Phase 7 public chunk API proposal；仅在获得明确版本化公共契约后实现，不自动扩大现有 chat。

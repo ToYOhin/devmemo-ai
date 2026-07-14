@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：`10010bb docs(ai): close qdrant chunk rollout gate`
+- 当前 HEAD：`8dd6b9f docs(ai): decide chunk retrieval compatibility boundary`
 - GitHub remote：`origin/codex/devmemo-ai-mvp` 尚未包含本地最新 commit；本轮未 push
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -42,7 +42,7 @@
 
 ## 当前已完成与未完成
 
-Phase 5f 代码切片和 Phase 5g rollout gate 已完成：
+Phase 5f 代码切片、Phase 5g rollout gate 和 Phase 6 compatibility decision 已完成：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
@@ -51,7 +51,7 @@ Phase 5f 代码切片和 Phase 5g rollout gate 已完成：
 
 1. 显式 Qdrant health/persistence smoke 已通过：启动 Docker Desktop/Qdrant 后运行 deterministic chunk smoke，返回 `QDRANT_CHUNK_SMOKE_OK`；初始/重连 point_count=2，删除后为 1，临时 collection 已清理。
 2. 完整门禁已通过：AI Service 153 passed；前端 131 passed；TypeScript/build/lint、Compose config 和 Go `go test -p 2 ./...` 通过，`store/test` 用时 168.864s。
-3. chunk-aware retrieval 尚未替换或修改公共 `POST /api/ai/chat`，这是 rollout gate 的结论和刻意保留的边界。
+3. Phase 6 决定 chunk-aware retrieval 继续保持内部 contract，未替换或修改公共 `POST /api/ai/chat`；未来公开接入必须先定义版本化 API 和迁移/回滚契约。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
@@ -81,4 +81,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口，或者执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 6 单 Agent Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口，或者执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 7 单 Agent Prompt。

@@ -2,7 +2,7 @@
 
 ## 2026-07-14 单 Agent 模式切换
 
-## 2026-07-14 Phase 5g rollout gate completed
+## 2026-07-14 Phase 6 compatibility decision completed
 
 - 新增 `QDRANT_CHUNK_COLLECTION`，默认 `devmemo_memo_chunks`，并由 Compose 透传。
 - 配置拒绝空 chunk collection 名称或与完整 Memo `QDRANT_COLLECTION` 重合；fake Qdrant contract 校验独立 collection 的维度和 Cosine distance。
@@ -13,12 +13,13 @@
 - 聚焦测试：24 passed；Docker Desktop/Qdrant 恢复后真实 chunk smoke 已通过：`QDRANT_CHUNK_SMOKE_OK`，初始/重连 point_count=2，删除后 point_count=1，临时 collection 已清理。
 - 完整门禁已通过：AI Service 153 passed；前端 131 passed；TypeScript/build/lint、Compose config 和 Go `go test -p 2 ./...` 通过，`store/test` 用时 168.864s；Qdrant Server 1.18.2。
 - rollout gate 结论：chunk retrieval 继续保持内部边界，不接入公共 `/api/ai/chat`，不修改完整 Memo collection。
+- Phase 6 决策：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint。未来公开 chunk retrieval 必须先有版本化 schema、Memo 去重/排序、content 脱敏和迁移/回滚测试。
 
 后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含本轮 isolated Qdrant chunk collection commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 5g rollout gate 事实，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 6 compatibility decision。
+下一窗口先读取该快照和本文件顶部 Phase 6 compatibility decision 事实，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 7 public chunk API proposal。
 
 ## 2026-07-14 Phase 5e
 

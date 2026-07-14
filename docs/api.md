@@ -147,6 +147,12 @@ The complete-Memo Qdrant collection remains `QDRANT_COLLECTION`/`memo-v1`. When 
 
 `ChunkRetrievalService` is an internal provider-neutral service and is not a public HTTP endpoint. It returns `ChunkRetrievalResult(context, citations)` where every `ChunkCitation` contains `memo_id`, stable `chunk_id`, non-negative `chunk_index`, `index_version=memo-chunk-v1`, score and sanitized metadata. It accepts only `source_type=memo_chunk` and `index_mode=chunk`; malformed or mixed-version metadata raises a retrieval-unavailable error. Chunk `content` is used only to assemble server-side context and is removed from citation metadata. Public `POST /api/ai/chat` continues to use the complete-Memo `Citation` contract.
 
+## Phase 6 public chunk retrieval compatibility decision
+
+Phase 6 keeps chunk retrieval internal. The existing `POST /api/ai/chat` response treats `embedding_id` as a complete-Memo identity and `retrieved_count` as the number of complete-Memo results. A direct switch to chunk IDs would create multiple citations for one Memo, change counts/order/context budgeting, and break clients that consume the current citation shape. There is no implicit chunk mode and no public chunk endpoint in this phase.
+
+Any future public chunk API must use an explicit versioned endpoint or response contract and define chunk citation fields, same-Memo deduplication, ordering, context limits, content redaction, migration and rollback before implementation. `ChunkRetrievalService` and `/api/ai/index/chunk-health` remain the internal/operations boundary.
+
 ## GET /api/ai/ops/outbox
 
 读取 AI Service 自有 SQLite 中最近的 Webhook outbox 状态，不会启动重试 worker。

@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g 已完成。Phase 5g rollout gate 已完成：完整验证门禁、真实 Qdrant chunk smoke 和边界复核均已通过。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6 已完成。Phase 6 决定继续保持内部 chunk retrieval contract，不改变公共 chat。
 
 ## 当前事实
 
@@ -34,6 +34,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Ops 安全：可选 `AI_OPS_TOKEN` 保护运维 API；公开响应不返回原始 payload，错误摘要最多 240 字符
 - Outbox 运维：retention preview 只读，alerts 提供失败/耗尽摘要；清理必须显式确认并写入审计，不自动删除或主动推送
 - Phase 5g rollout gate：AI 153 passed；前端 131 passed；TypeScript、build、lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2 chunk smoke 通过
+- Phase 6 compatibility decision：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint，未来必须使用版本化 contract
 - 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
@@ -216,4 +217,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 6 public chunk retrieval compatibility decision。
+执行 docs/prompts/NEXT_STAGE_PROMPT.md，使用单 Agent 开始 Phase 7 public chunk API proposal。

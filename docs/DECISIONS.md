@@ -159,3 +159,11 @@ DevMemo AI 后续默认只使用 `H:\DevMemoAI` 主工作树和一个 Agent 推�
 Phase 5f 增加独立的 `ChunkRetrievalService`，复用 query embedding 和 VectorStore search，但不复用公共 `Citation` 作为 chunk API。内部 `ChunkCitation` 固定携带 `memo_id`、稳定 `chunk_id`、`chunk_index` 和 `memo-chunk-v1`，并严格拒绝缺失、错误版本或混入完整 Memo 的 metadata。原文 `content` 仅用于服务端 context 组装，不出现在 citation metadata；公共 `POST /api/ai/chat` 继续检索完整 Memo。
 
 这样可以先验证 Qdrant chunk collection 的 health、重新连接持久性和删除生命周期，再决定是否扩大公共检索语义；错误不会静默回退到完整 Memo collection。
+
+## ADR-033：Phase 6 保持 chunk retrieval 为内部 contract
+
+Phase 6 对比了现有公共 `POST /api/ai/chat` 与内部 `ChunkRetrievalService` 的语义。当前公共 `CitationResponse` 使用 `memo_id`、完整 Memo 的 `embedding_id`、score 和脱敏 metadata；`retrieved_count` 表示完整 Memo 检索结果数量。内部 chunk 结果使用稳定 `chunk_id`、`chunk_index` 和 `memo-chunk-v1`。把 chunk 结果直接塞入现有字段会让同一 Memo 产生多个 citation、改变计数和排序，并破坏现有客户端对 `embedding_id` 的假设。
+
+因此 Phase 6 决定：不增加 `POST /api/ai/chat` 的隐式 chunk mode，不把 `embedding_id` 改成 chunk ID，不新增未定义的公共 chunk endpoint。默认完整 Memo `memo-v1`、公共 citation schema、Webhook 默认行为和完整 Memo collection 继续保持不变；`ChunkRetrievalService` 与 `GET /api/ai/index/chunk-health` 作为内部/运维边界保留。
+
+未来若要公开 chunk retrieval，必须先单独定义 versioned endpoint 或明确的请求/响应版本，并补齐 chunk citation schema、同 Memo 去重规则、排序/上下文预算、content 脱敏、迁移/回滚和双路径 contract tests。没有这些兼容性证据，不扩大公共 API。
