@@ -168,6 +168,12 @@ The AI Inbox is an internal product-boundary API, not a public chunk retrieval A
 
 The summarization path persists deterministic candidates for an explicit `memo_id`. Upsert identity is `(memo_id, insight_type)`; unchanged candidates retain review status, while changed semantic fields reset to `pending` and increment `version`. These routes do not modify Memos storage, `/api/ai/chat`, complete-Memo citations, or either vector collection.
 
+## Phase 9b internal Context Pack contract
+
+Context Pack v1 is a pure provider-neutral builder and fixture, not an HTTP route. `ContextPackRequest` contains a non-empty `question`, explicit `memo_ids`, explicit `insight_ids`, `max_chars` (64–20,000) and `max_items` (1–50). An insight is eligible only when its status is `accepted` and its parent Memo ID is also explicitly selected. Unknown IDs, pending/rejected insights and implicit expansion are rejected.
+
+`build_context_pack(request, memos, insights)` returns `ContextPackResponse` with `pack_version=context-pack-v1`, bounded `markdown`, structured `items`, unique `sources`, `truncated` and `truncation_reason`. Memo title/summary and insight title/summary/source_refs are the only content inputs; raw Markdown, Webhook payloads, secrets and chunk content are not accepted by the contract. Items are deterministic: Memo IDs are sorted, then insights use confidence descending, updated_at descending and stable insight ID ascending. `max_chars` bounds the Markdown body without partial item blocks; JSON serialization uses the same items and sources through `to_json()`.
+
 ## Phase 7 public chunk API proposal（未实现）
 
 This is a reviewable proposal only. It does not add a route or change the existing chat API.

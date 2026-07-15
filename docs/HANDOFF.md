@@ -14,6 +14,14 @@
 - 该路线不依赖 Phase 8 public chunk API 批准；不修改公共 chat、完整 Memo collection、chunk collection 或默认 deterministic + memory。Context Pack 仍只定义 contract/fixture，不实现 agent、网页搜索或 MCP。
 - 下一阶段执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9b Context Pack contract。
 
+## Phase 9b Context Pack contract 已完成
+
+- 新增 provider-neutral `ContextPackRequest`、`ContextPackMemo`、`ContextPackItem`、`ContextPackSource` 和 `ContextPackResponse`，版本固定为 `context-pack-v1`。
+- `build_context_pack` 只消费显式 Memo IDs、显式 accepted insight IDs 和安全 title/summary；未知 ID、pending/rejected、insight 未显式选择其 Memo、空/超限预算都会被拒绝或显式截断。
+- 输出包含 bounded Markdown、稳定 JSON、去重 source 列表、confidence/updated_at/稳定 ID 排序和 `max_chars`/`max_items` 截断原因；未新增 HTTP、Qdrant 或公共 chat 行为。
+- 验证：Context Pack 定向 12 passed；AI Service 全量 `174 passed`，保留 1 个 Starlette/httpx 弃用警告；示例输出由 `context-pack-v1` fixture 覆盖。
+- 下一阶段执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9c Context Pack integration gate，先等待产品入口/权限边界决策。
+
 ## 2026-07-14 单 Agent 模式切换
 
 ## 2026-07-14 Phase 8 public chunk API implementation gate pending approval
@@ -33,9 +41,9 @@
 
 后续项目推进统一回到单 Agent：只使用 `H:\DevMemoAI` 主工作树，不启动 Terra/Luna 并行开发，不让多个 worktree 同时修改当前阶段。`project4` 下的多 Agent worktree 保留为历史/回滚参考，当前不作为开发入口。
 
-详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含本轮 isolated Qdrant chunk collection commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
+详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含 Phase 9a/9b 本地 commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 9a 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b contract slice。
+下一窗口先读取该快照和本文件顶部 Phase 9b 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c integration gate slice。
 
 ## 2026-07-14 Phase 5e
 

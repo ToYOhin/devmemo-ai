@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-07-14
+更新时间：2026-07-15
 
 ## 顶层目录
 
@@ -53,7 +53,8 @@ ai-service/
 │   │   ├── models.py                # CodeSnippet、BugReport、ParsedMemo
 │   │   ├── retrieval.py             # Citation、RetrievalResult 等 provider-neutral 类型
 │   │   ├── retrieval_evaluation.py  # 离线评估输入/结果类型
-│   │   └── memo_insight.py          # AI Inbox/Decision Ledger contract
+│   │   ├── memo_insight.py          # AI Inbox/Decision Ledger contract
+│   │   └── context_pack.py          # context-pack-v1 contract 与 JSON 输出
 │   ├── services/
 │   │   ├── content_parser.py        # Markdown 模板解析
 │   │   ├── embedding_service.py     # provider -> vector record -> store 编排
@@ -66,7 +67,8 @@ ai-service/
 │   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
 │   │   ├── ops_security.py          # ops token 与错误脱敏
-│   │   └── memo_insights.py         # deterministic insight 提取与稳定 ID
+│   │   ├── memo_insights.py         # deterministic insight 提取与稳定 ID
+│   │   └── context_pack.py          # 显式来源的 bounded pack builder
 │   └── adapters/
 │       ├── embedding.py             # deterministic embedding
 │       ├── fastembed_embedding.py   # 可选 FastEmbed，第三方类型只在此处

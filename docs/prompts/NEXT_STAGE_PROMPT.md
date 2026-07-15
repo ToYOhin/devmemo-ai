@@ -1,4 +1,4 @@
-# 下一阶段 Prompt：Phase 9b Context Pack contract
+# 下一阶段 Prompt：Phase 9c Context Pack integration gate
 
 ~~~text
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
@@ -10,40 +10,40 @@
 2. docs/PROJECT_STATUS.md
 3. docs/HANDOFF.md 顶部当前阶段
 4. docs/roadmap.md 的 Phase 8/9
-5. docs/DECISIONS.md 的 ADR-035/036/037
+5. docs/DECISIONS.md 的 ADR-035/036/037/038
 6. 本文件
 7. git status --short --branch 与 git log --oneline -8
 
 当前事实：
-- Phase 9a 已完成：`MemoInsight` contract、deterministic 候选提取、AI SQLite 幂等表、preview/查询/版本化 approve/reject API 和 Memo 详情页 AI Inbox 均已落地。
-- `MemoInsight` 只允许 `fact/decision/action/bug`；状态为 `pending/accepted/rejected`；稳定身份为 `insight_id` 与 `(memo_id, insight_type)`，过期状态写入返回 409。
+- Phase 9a 已完成 AI Inbox/Decision Ledger：`MemoInsight`、SQLite 幂等和版本化 approve/reject、详情页卡片均已落地。
+- Phase 9b 已完成 `context-pack-v1` provider-neutral contract/fixture 和纯函数 `build_context_pack`；只消费显式 Memo/accepted insight IDs，输出 bounded Markdown/JSON 与 sources。
 - Phase 8 public chunk API implementation gate 仍 pending approval；不实现 `POST /api/ai/v1/chunks/search`，不修改 `/api/ai/chat`、完整 Memo `memo-v1` 或 chunk collection。
-- 默认 deterministic + memory；AI 数据只在 AI Service 自有 SQLite；Memos 核心数据库不改；原始 content 不进入公共 citation 或 Context Pack 的来源字段。
+- 默认 deterministic + memory；不从 SQLite/Qdrant 自动发现 Context Pack 内容；Memos 核心数据库不改；不启动 Agent、worker、网页搜索或 MCP。
 
-本阶段目标：只完成 Context Pack 的 provider-neutral contract/fixture 和纯函数 builder，不接入公共 HTTP、Agent 或外部数据源：
-1. 定义 `ContextPackRequest`：`question`、显式 `memo_ids`、显式已确认 `insight_ids`、`max_chars`/`max_items`；拒绝未知 ID、rejected/pending insight 和超出预算的隐式扩展。
-2. 定义 `ContextPackResponse`：版本、question、bounded Markdown/JSON、按 Memo/insight 可追溯的 `sources`、截断原因和确定性排序；不带原始 Webhook、secret、chunk content 或未确认知识。
-3. 实现纯函数 `build_context_pack`/fixture：只消费传入的已确认 insight 与安全的 Memo 标题/摘要；同一来源去重，按 confidence/updated_at/稳定 ID 确定性排序；超预算显式截断而不是悄悄放宽。
-4. 增加 contract tests：空输入、未知 ID、pending/rejected、同 Memo 去重、字符预算、稳定输出、JSON/Markdown 一致性和 source_refs 可追溯。
-5. 不新增生产 HTTP 路由；如需要，提供内部样例 CLI/fixture 但默认不启用，不连接公共 chat，不读取 Qdrant。
-
-创新边界：Context Pack 是“可复制的开发上下文包”而不是自动 Agent。它必须解释为什么每条记忆进入包、可以回到原 Memo/insight、可被用户撤销；本阶段不做跨 Memo 自动发现、网页搜索、MCP、图数据库或后台 worker。
+本阶段目标：做 Context Pack 的产品集成闸门，不默认新增公共 HTTP 行为：
+1. 评审并记录唯一产品入口：Memo 详情页 AI Inbox 的“复制 Context Pack”、命令面板或独立内部页面；没有明确选择时停留在 ADR/fixture，不猜测 UI。
+2. 明确权限与撤销：只有当前用户可见 Memo、accepted insight 才能进入；rejected/pending、删除 Memo、过期版本和撤销后的 insight 必须被排除；原始 content、Webhook payload、secret 和 chunk content 不显示。
+3. 明确交互 contract：question 输入、Memo/insight 选择、max_chars/max_items、Markdown/JSON 复制、sources 展示、截断提示、失败/空态/窄屏行为。
+4. 若产品入口已获明确批准，只实现一个最小内部 preview/copy 垂直切片；优先复用 Phase 9b builder 和现有 AI Inbox，不新增公共 chunk API，不接 Qdrant，不做跨 Memo 自动发现。
+5. 若没有明确产品入口批准，只补 ADR/API proposal 和 contract tests，不修改运行时 UI/API；形成下一次可执行的批准条件。
 
 禁止：
-- 不实现 public chunk API，不修改 `/api/ai/chat`、CitationResponse、`retrieved_count`、完整 Memo collection 或 chunk collection。
-- 不修改 Memos server/store/proto/web 核心；优先只改 ai-service domain/services/tests 和 docs。
-- 不把 pending/rejected insight 混入 pack，不把原始 content 当作公共来源，不加入新默认依赖。
+- 不实现 public chunk API，不修改 `/api/ai/chat`、CitationResponse、`retrieved_count`、完整 Memo/chunk collection。
+- 不修改 Memos server/store/proto/web 核心，不新增 Redis/Celery/Neo4j/LangChain/LlamaIndex/Prometheus/常驻 worker。
+- 不把 Context Pack 变成自动 Agent；不读取外部网页、MCP 或未显式选择的 Memo/insight。
 
 验证顺序：
-- 先写 contract fixture/tests，再实现纯函数 builder。
-- cd ai-service; .\.venv\Scripts\python.exe -m pytest -q tests
-- powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-devmemo.ps1
-- docker compose config --quiet
+- 先读 ADR-038 和 Phase 9b tests；若只有文档变更，先跑相关 AI tests。
+- 如实现 UI，再先跑相关 web tests，再跑：
+  cd ai-service; .\.venv\Scripts\python.exe -m pytest -q tests
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-devmemo.ps1
+  docker compose config --quiet
+  cd web; pnpm test; pnpm exec tsc --noEmit --skipLibCheck; pnpm build; pnpm lint
 - git diff --check
 
 完成条件：
-- Context Pack contract/fixture、预算/排序/拒绝规则和 source traceability 有测试。
-- Phase 9a AI Inbox、公共 chat、默认配置、Phase 8 pending approval 事实无回归。
-- 更新 docs/PROJECT_STATUS.md、docs/CHANGELOG_AI.md、docs/HANDOFF.md、docs/roadmap.md、docs/api.md 和本 Prompt；形成清晰 commit，不自动 push。
-- 最终报告真实测试结果、Context Pack 示例、未验证项、边界和下一步产品决策。
+- 明确记录 Context Pack 的产品入口、权限、撤销、复制和失败边界；没有批准就保持 proposal-only。
+- 若实现内部 UI，必须有空/失败/窄屏、来源追溯和不暴露原文的测试；Phase 9a/9b、公共 chat 和 Phase 8 gate 无回归。
+- 更新 docs/PROJECT_STATUS.md、docs/CHANGELOG_AI.md、docs/HANDOFF.md、docs/roadmap.md、docs/api.md、docs/DECISIONS.md 和本 Prompt；形成清晰 commit，不自动 push。
+- 最终报告真实测试结果、产品入口决策、截图/手动路径、未验证项、边界和下一阶段批准条件。
 ~~~

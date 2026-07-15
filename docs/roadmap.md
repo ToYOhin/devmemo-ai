@@ -262,17 +262,19 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 当前只收到阶段名称，没有明确产品/兼容批准。根据 ADR-035，本阶段不实现 `POST /api/ai/v1/chunks/search`，不新增公共路由或运行时 feature flag，不启动灰度，不改变现有 chat、memo-v1 collection 或 chunk collection。收到明确批准并接受 ADR-034 的版本化字段、去重、脱敏、认证和回滚条件后，才进入实现切片。
 
-## Phase 9：DevMemory Loop / AI Inbox 与 Decision Ledger（9a 已完成）
+## Phase 9：DevMemory Loop / AI Inbox 与 Decision Ledger（9a/9b 已完成）
 
 Phase 9a 不依赖 Phase 8 public chunk API 的批准，已在现有 AI Service 边界内完成第一个可回滚垂直切片：
 
 1. `MemoInsight` contract 已固定：事实、决策、行动和 Bug 候选统一携带来源、置信度、版本和 pending/accepted/rejected 生命周期。
 2. 复用现有内容解析器和 deterministic 路径，新增 `memo_insights` SQLite 幂等表；语义变化会重置 pending，过期状态更新被拒绝；不写回 Memos 原文。
 3. 新增 preview/查询/状态变更内部 API 和 Memo 详情页 AI Inbox 卡片；用户可确认/拒绝 AI 派生内容，原始 content 不进入响应。
-4. Context Pack 暂只定义 contract/fixture，下一阶段消费已确认 Memo/insight 并限制来源、字数和输出格式；不做 agent、网页搜索或 MCP。
+4. Context Pack v1 已定义纯函数 builder/fixture：只消费显式已确认 Memo/insight，限制来源、字数和输出格式；不做 agent、网页搜索或 MCP。
 
-验证事实：AI Service 162 passed；前端 136 passed；TypeScript、build、lint 通过；真实 Compose API 已验证 Bug Report 的 bug/action 生成和版本化批准；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
+验证事实：AI Service 174 passed；Context Pack 定向 12 passed；Phase 9a 前端 136 passed、TypeScript/build/lint 和真实 Compose API smoke 已通过；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
+
+Phase 9b contract 事实：`context-pack-v1` 只接受显式 `memo_ids`/`insight_ids`；只允许 accepted insight；同 Memo/source 去重；insight 按 confidence 降序、updated_at 降序、稳定 ID 升序；Markdown 严格受 `max_chars` 约束，超限返回 `truncated` 与原因；JSON 与 Markdown 共享同一 items/sources。
 
 差异化判断：Memos 擅长快速捕获，Khoj 擅长个人 AI/语义搜索/自动化，AnythingLLM 擅长 workspace RAG/agents，AFFiNE 擅长文档-画布-表格工作区，Logseq 擅长本地知识图谱，Outline 擅长协作知识库。DevMemo AI 应聚焦“开发记忆的可审核生命周期”：把 Bug、决策、代码片段和上下文变成可撤销、可追溯的工程资产，而不是复制任一项目的完整平台。
 
-Phase 9 仍保持默认 deterministic + memory、公共 chat 完整 Memo 语义、Phase 8 pending approval 和所有第三方仅参考边界。下一切片为 Phase 9b Context Pack contract。
+Phase 9 仍保持默认 deterministic + memory、公共 chat 完整 Memo 语义、Phase 8 pending approval 和所有第三方仅参考边界。下一切片为 Phase 9c Context Pack integration gate：先评估内部入口、权限和撤销语义，不自动新增公共路由。

@@ -21,6 +21,14 @@
 - 验证：AI Service 162 passed；前端 136 passed；TypeScript/build/lint、Compose API smoke 和人工页面截图通过。
 - 下一阶段：Phase 9b 只定义已确认 insight 的 bounded Context Pack contract/fixture。
 
+### Phase 9b：Context Pack contract / fixture
+
+- 新增 `context-pack-v1` provider-neutral contract：显式 `question`、`memo_ids`、`insight_ids`、`max_chars` 和 `max_items`。
+- 新增纯函数 `build_context_pack`，拒绝未知 ID、pending/rejected insight 和隐式 Memo 扩展；只使用 Memo title/summary、已确认 insight 和 source_refs。
+- 输出提供可复制 Markdown、稳定 JSON、唯一 sources、confidence/updated_at/稳定 ID 排序以及明确截断原因；不新增 HTTP、Qdrant、公共 chat 或 Agent 行为。
+- Context Pack contract/fixture 定向 12 passed；AI Service 全量 174 passed，保留既有 Starlette/httpx 弃用警告。
+- 下一阶段：Phase 9c 只评估 Context Pack 的内部入口、权限和撤销边界。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

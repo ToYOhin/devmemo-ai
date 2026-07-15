@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-14（Phase 9a 完成后更新）
+更新时间：2026-07-15（Phase 9b 完成后更新）
 
 ## 当前工作模式
 
@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：Phase 9a implementation commit（以 `git log --oneline -8` 为准）
+- 当前 HEAD：Phase 9a/9b implementation commit（以 `git log --oneline -8` 为准）
 - GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -42,7 +42,7 @@
 
 ## 当前已完成与未完成
 
-Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal 和 Phase 9a AI Inbox 首个切片已完成；Phase 8 implementation gate 仍 pending approval：
+Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal、Phase 9a AI Inbox 和 Phase 9b Context Pack contract 已完成；Phase 8 implementation gate 仍 pending approval：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
@@ -59,12 +59,16 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 7. Memo 详情页已接入 AI Inbox 卡片；真实 Compose API Bug Report smoke 生成 bug/action 并完成批准；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
 8. Phase 9a 验证：AI Service 162 passed；前端 136 passed；TypeScript/build/lint 和 Compose API smoke 通过。下一阶段只做 bounded Context Pack contract/fixture，不实现 agent、网页搜索或 MCP。
 
+9. Phase 9b 已新增 `context-pack-v1` domain contract 和纯函数 `build_context_pack`；显式 Memo/insight 选择、accepted 状态、同 Memo/source 去重、确定性排序、Markdown 字符预算、JSON/Markdown 一致性均有测试。
+10. Phase 9b 验证：定向 Context Pack 12 passed；AI Service 全量 174 passed，保留 1 个 Starlette/httpx 弃用警告；未新增 HTTP、Qdrant 或公共 chat 行为。
+
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service focused pytest    24 passed
+AI Service full pytest      174 passed
+Context Pack focused pytest 12 passed
 Frontend full tests          131 passed
 pnpm lint                    PASS
 TypeScript/build             PASS
@@ -87,4 +91,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b Context Pack contract Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c Context Pack integration gate Prompt。

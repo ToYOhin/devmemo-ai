@@ -7,12 +7,13 @@
 - `POST /api/ai/summarize` 现在会为显式 Code Snippet/Bug Report 持久化详情页模板；Memo 保存后的自动处理仍需要配置 Memos Webhook。
 - Phase 9 首个垂直切片已完成：`MemoInsight` contract、AI Service SQLite 幂等状态、preview/查询/approve/reject 内部 API，以及 Memo 详情页 AI Inbox 卡片均已落地；当前仍不实现 Phase 8 public chunk API。
 - Phase 9 离线验证：AI Service `162 passed`；前端 `136 passed`，TypeScript、build、lint 通过；真实 Compose API 已验证 Bug Report 生成 bug/action、状态批准和版本递增；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
+- Phase 9b 已完成：Context Pack v1 contract、纯函数 builder、显式来源/状态校验、同 Memo 去重、确定性排序、Markdown 字符预算和 JSON/Markdown fixture 已落地；AI Service 全量 `174 passed`。
 
-更新时间：2026-07-14
+更新时间：2026-07-15
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9b Context Pack contract。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9c Context Pack integration gate。
 
 ## 当前事实
 
@@ -48,6 +49,8 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 9a DevMemory Loop：`MemoInsight` 统一包含 `insight_id`、`memo_id`、`insight_type`、`title`、`summary`、`confidence`、`status`、`source_refs`、版本和审计时间；deterministic parser 只为 Code/Bug/plain Memo 生成有限候选，不做自由发挥式知识图谱
 - Phase 9a SQLite：AI 自有 `memo_insights` 表按 `(memo_id, insight_type)` 幂等 upsert；语义变化会重置为 pending 并递增版本，approve/reject 必须携带当前版本，过期更新返回 409
 - Phase 9a API/UI：新增内部 preview、Memo insight 查询和显式状态变更 API；Memo 详情页 AI Inbox 支持空、失败、窄屏和 pending approve/reject；原文 content 不进入公共 citation 或卡片响应
+- Phase 9b Context Pack：`ContextPackRequest` 只接受显式 Memo/accepted insight IDs，拒绝未知、pending/rejected 和隐式 Memo 扩展；`build_context_pack` 只消费安全 title/summary 与 `source_refs`
+- Phase 9b bounded output：输出固定 `context-pack-v1`、可复制 Markdown、可序列化 JSON、唯一 source 列表和显式 `max_chars`/`max_items` 截断原因；不连接 HTTP、Qdrant、公共 chat 或外部数据源
 - 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
@@ -192,10 +195,10 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 ## 验证状态
 
 ~~~text
-AI Service full pytest             153 passed
+AI Service full pytest             174 passed
 FastEmbed fake/model tests          6 passed
 Provider/index targeted tests      13 passed
-frontend full tests                131 passed
+frontend full tests                136 passed
 frontend TypeScript/build          PASS
 Go full test -p 2 ./...            PASS (store/test 168.864s)
 verify-devmemo.ps1                 PASS / DEVMEMO_VERIFY_OK
@@ -230,4 +233,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-Phase 8 public chunk API 仍等待明确批准，不改变现有公共 chat。Phase 9a 已完成；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9b Context Pack contract/fixture，只消费已确认 insight，不实现跨 Memo agent、网页搜索或 MCP。
+Phase 8 public chunk API 仍等待明确批准，不改变现有公共 chat。Phase 9a/9b 已完成；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c Context Pack integration gate，先评估是否需要内部产品入口，不自动新增公共 HTTP 或 Agent。

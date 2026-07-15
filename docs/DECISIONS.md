@@ -201,3 +201,9 @@ Phase 9 的产品差异化目标是把 Memo 从一次性摘要升级为可审核
 Phase 9a 已按 ADR-036 实现首个垂直切片：`MemoInsight` 使用稳定的 `insight_id` 和 `(memo_id, insight_type)` 幂等身份；SQLite 保存版本和审计时间；preview 不落库；approve/reject 必须带当前版本，过期写入返回 409。deterministic 提取器只从现有 Code Snippet、Bug Report 和 plain Memo 生成有界候选，不做自由发挥式知识图谱。
 
 Memo 详情页 AI Inbox 是本地产品边界，展示候选的类型、置信度、状态和 `source_refs`，不暴露原始 content。该切片不修改 Memos 核心、公共 `POST /api/ai/chat`、完整 Memo/chunk collection 或默认 `deterministic + memory`。Phase 8 public chunk API 仍保持 pending approval；下一步只定义消费已确认 insight 的 bounded Context Pack contract/fixture。
+
+## ADR-038：Phase 9b Context Pack 先做纯 contract，不提前接入产品入口
+
+Phase 9b 固定 `context-pack-v1` 为纯函数输出边界：请求必须显式携带 Memo/insight IDs，只有 accepted insight 可以进入；父 Memo 必须同时显式选择。builder 只读取安全的 Memo title/summary、insight title/summary 和 `source_refs`，通过稳定排序、唯一 source 和 `max_chars`/`max_items` 形成可复制 Markdown/JSON。
+
+本阶段不新增 HTTP 路由、不从 SQLite 自动发现 ID、不读取 Qdrant、不连接公共 chat，也不实现 Agent。这样可以先评审 Context Pack 的产品入口、权限、撤销和用户确认体验，再决定 Phase 9c 是否接入内部 UI 或 CLI；Phase 8 public chunk API 继续 pending approval。
