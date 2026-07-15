@@ -62,6 +62,9 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 9. Phase 9b 已新增 `context-pack-v1` domain contract 和纯函数 `build_context_pack`；显式 Memo/insight 选择、accepted 状态、同 Memo/source 去重、确定性排序、Markdown 字符预算、JSON/Markdown 一致性均有测试。
 10. Phase 9b 验证：定向 Context Pack 12 passed；AI Service 全量 174 passed，保留 1 个 Starlette/httpx 弃用警告；未新增 HTTP、Qdrant 或公共 chat 行为。
 
+11. Phase 9c integration gate 已完成 proposal-only 评审：推荐 Memo 详情页 AI Inbox 的 `Copy Context Pack`，默认当前 Memo，跨 Memo 显式选择；当前未获批准，不修改 UI/API。
+12. Phase 9c 已明确当前用户可见 Memo、accepted insight、撤销/删除/过期排除、Markdown/JSON 复制、sources、截断/空/失败/窄屏边界；下一步为 Phase 9d internal preview/copy approval gate。
+
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
@@ -91,4 +94,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c Context Pack integration gate Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9d internal preview/copy approval gate Prompt。

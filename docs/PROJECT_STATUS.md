@@ -8,12 +8,13 @@
 - Phase 9 首个垂直切片已完成：`MemoInsight` contract、AI Service SQLite 幂等状态、preview/查询/approve/reject 内部 API，以及 Memo 详情页 AI Inbox 卡片均已落地；当前仍不实现 Phase 8 public chunk API。
 - Phase 9 离线验证：AI Service `162 passed`；前端 `136 passed`，TypeScript、build、lint 通过；真实 Compose API 已验证 Bug Report 生成 bug/action、状态批准和版本递增；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
 - Phase 9b 已完成：Context Pack v1 contract、纯函数 builder、显式来源/状态校验、同 Memo 去重、确定性排序、Markdown 字符预算和 JSON/Markdown fixture 已落地；AI Service 全量 `174 passed`。
+- Phase 9c integration gate 已完成 proposal-only 评审：推荐入口为 Memo 详情页 AI Inbox 内的“复制 Context Pack”；当前没有产品批准，因此未修改 UI/API，下一步等待内部 preview/copy 批准。
 
 更新时间：2026-07-15
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9c Context Pack integration gate。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b、Phase 9c 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9d internal preview/copy approval gate。
 
 ## 当前事实
 
@@ -51,6 +52,9 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 9a API/UI：新增内部 preview、Memo insight 查询和显式状态变更 API；Memo 详情页 AI Inbox 支持空、失败、窄屏和 pending approve/reject；原文 content 不进入公共 citation 或卡片响应
 - Phase 9b Context Pack：`ContextPackRequest` 只接受显式 Memo/accepted insight IDs，拒绝未知、pending/rejected 和隐式 Memo 扩展；`build_context_pack` 只消费安全 title/summary 与 `source_refs`
 - Phase 9b bounded output：输出固定 `context-pack-v1`、可复制 Markdown、可序列化 JSON、唯一 source 列表和显式 `max_chars`/`max_items` 截断原因；不连接 HTTP、Qdrant、公共 chat 或外部数据源
+- Phase 9c integration gate：推荐只在当前 Memo 详情页 AI Inbox 增加“复制 Context Pack”；默认当前 Memo，跨 Memo 必须显式选择；命令面板和独立页面暂不采用
+- Phase 9c permission/revocation：仅当前用户可见 Memo 与 accepted insight 可进入；pending/rejected、删除 Memo、撤销 insight、版本过期和不可见来源必须排除；Context Pack 不持久化
+- Phase 9c interaction proposal：Markdown 为主复制格式，JSON 为可选复制格式；展示 sources、截断提示、空态、失败态和窄屏行为；不显示 raw content/Webhook payload/secret/chunk content
 - 文档同步：2026-07-14 已按实际仓库目录刷新 README、架构、API、开发、OSS 采用和结构边界文档；Phase 5f/5g 事实已同步
 
 ## Phase 4 已完成
@@ -233,4 +237,4 @@ pnpm lint                          PASS
 
 ## 下一步
 
-Phase 8 public chunk API 仍等待明确批准，不改变现有公共 chat。Phase 9a/9b 已完成；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c Context Pack integration gate，先评估是否需要内部产品入口，不自动新增公共 HTTP 或 Agent。
+Phase 8 public chunk API 仍等待明确批准，不改变现有公共 chat。Phase 9a/9b/9c proposal-only 评审已完成；下一步执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9d internal preview/copy approval gate，只有收到产品入口批准才实现最小 UI 垂直切片。

@@ -207,3 +207,11 @@ Memo 详情页 AI Inbox 是本地产品边界，展示候选的类型、置信�
 Phase 9b 固定 `context-pack-v1` 为纯函数输出边界：请求必须显式携带 Memo/insight IDs，只有 accepted insight 可以进入；父 Memo 必须同时显式选择。builder 只读取安全的 Memo title/summary、insight title/summary 和 `source_refs`，通过稳定排序、唯一 source 和 `max_chars`/`max_items` 形成可复制 Markdown/JSON。
 
 本阶段不新增 HTTP 路由、不从 SQLite 自动发现 ID、不读取 Qdrant、不连接公共 chat，也不实现 Agent。这样可以先评审 Context Pack 的产品入口、权限、撤销和用户确认体验，再决定 Phase 9c 是否接入内部 UI 或 CLI；Phase 8 public chunk API 继续 pending approval。
+
+## ADR-039：Phase 9c Context Pack 入口保持 proposal-only，推荐 Memo 详情页复制
+
+本阶段没有收到明确的产品入口批准，因此不新增运行时 UI/API。评审结论是推荐在现有 Memo 详情页 AI Inbox 内增加 `Copy Context Pack`，默认只包含当前 Memo；跨 Memo 选择必须显式完成。命令面板和独立页面暂不采用，因为它们会扩大权限、来源选择和空/失败态的产品边界。
+
+未来内部入口必须满足：当前用户可见 Memo 权限、accepted insight 状态、显式 question/选择/预算、Markdown 主复制和 JSON 可选复制、sources/截断/空态/失败态/窄屏反馈。pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除；pack 不落库，不显示 raw content、Webhook payload、secret 或 chunk content。
+
+当前决策是 proposal-only，等待产品明确批准后再执行 Phase 9d 最小 preview/copy UI slice。批准前不新增 HTTP endpoint、feature flag、SQLite 自动发现、Qdrant 读取或公共 chat 行为；Phase 8 public chunk API 继续 pending approval。

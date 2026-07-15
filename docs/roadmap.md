@@ -277,4 +277,10 @@ Phase 9b contract 事实：`context-pack-v1` 只接受显式 `memo_ids`/`insight
 
 差异化判断：Memos 擅长快速捕获，Khoj 擅长个人 AI/语义搜索/自动化，AnythingLLM 擅长 workspace RAG/agents，AFFiNE 擅长文档-画布-表格工作区，Logseq 擅长本地知识图谱，Outline 擅长协作知识库。DevMemo AI 应聚焦“开发记忆的可审核生命周期”：把 Bug、决策、代码片段和上下文变成可撤销、可追溯的工程资产，而不是复制任一项目的完整平台。
 
-Phase 9 仍保持默认 deterministic + memory、公共 chat 完整 Memo 语义、Phase 8 pending approval 和所有第三方仅参考边界。下一切片为 Phase 9c Context Pack integration gate：先评估内部入口、权限和撤销语义，不自动新增公共路由。
+## Phase 9c：Context Pack integration gate（proposal-only 已完成）
+
+本阶段没有收到明确产品入口批准，因此只完成集成评审，不修改运行时 UI/API。推荐唯一入口为 Memo 详情页 AI Inbox 的“复制 Context Pack”：默认当前 Memo，跨 Memo 必须显式选择；命令面板和独立页面暂不采用。
+
+集成 contract：只有当前用户可见 Memo 与 accepted insight 可进入；pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除。Markdown 是主复制格式，JSON 可选；必须展示 question、sources、截断原因、空/失败/窄屏状态；不显示 raw content、Webhook payload、secret 或 chunk content，pack 不落库。
+
+Phase 8 public chunk API 继续 pending approval，默认 deterministic + memory、公共 chat 完整 Memo 语义、完整 Memo/chunk collection 和所有第三方参考边界均不变。下一切片为 Phase 9d internal preview/copy approval gate：只有入口批准后才实现最小 UI 垂直切片。

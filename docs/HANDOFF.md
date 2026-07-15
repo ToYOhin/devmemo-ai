@@ -22,6 +22,14 @@
 - 验证：Context Pack 定向 12 passed；AI Service 全量 `174 passed`，保留 1 个 Starlette/httpx 弃用警告；示例输出由 `context-pack-v1` fixture 覆盖。
 - 下一阶段执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9c Context Pack integration gate，先等待产品入口/权限边界决策。
 
+## Phase 9c Context Pack integration gate：proposal-only 已完成
+
+- 当前没有明确产品入口批准，因此不修改运行时 UI/API；Phase 9b builder、公共 chat、Qdrant 和 Memos 核心均保持不变。
+- 推荐入口：Memo 详情页 AI Inbox 内的“复制 Context Pack”，默认只带当前 Memo；跨 Memo 必须由用户显式选择。命令面板和独立页面暂不采用。
+- 权限/撤销边界：只允许当前用户可见 Memo 和 accepted insight；pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除；pack 不落库。
+- 交互提案：Markdown 主复制格式，JSON 可选；展示 question、Memo/insight 选择、`max_chars`/`max_items`、sources、截断提示、空态、失败态和窄屏行为；不展示原始 content、Webhook payload、secret 或 chunk content。
+- 下一阶段只有在产品批准入口后，才执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9d internal preview/copy slice。
+
 ## 2026-07-14 单 Agent 模式切换
 
 ## 2026-07-14 Phase 8 public chunk API implementation gate pending approval
@@ -43,7 +51,7 @@
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含 Phase 9a/9b 本地 commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 9b 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9c integration gate slice。
+下一窗口先读取该快照和本文件顶部 Phase 9c proposal-only 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9d approval gate slice。
 
 ## 2026-07-14 Phase 5e
 

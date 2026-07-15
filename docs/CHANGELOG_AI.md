@@ -29,6 +29,13 @@
 - Context Pack contract/fixture 定向 12 passed；AI Service 全量 174 passed，保留既有 Starlette/httpx 弃用警告。
 - 下一阶段：Phase 9c 只评估 Context Pack 的内部入口、权限和撤销边界。
 
+### Phase 9c：Context Pack integration gate（proposal-only）
+
+- 完成产品入口评审，推荐 Memo 详情页 AI Inbox 内的“复制 Context Pack”，默认当前 Memo，跨 Memo 必须显式选择；命令面板/独立页面暂不采用。
+- 明确权限与撤销：只允许当前用户可见 Memo 和 accepted insight；pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源排除，pack 不持久化。
+- 明确交互边界：Markdown 主复制格式、JSON 可选；question、选择、预算、sources、截断、空态、失败态和窄屏必须可见；不暴露 raw content、Webhook payload、secret 或 chunk content。
+- 当前没有产品批准，本阶段不修改运行时 UI/API；下一阶段为 Phase 9d internal preview/copy approval gate。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

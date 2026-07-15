@@ -174,6 +174,12 @@ Context Pack v1 is a pure provider-neutral builder and fixture, not an HTTP rout
 
 `build_context_pack(request, memos, insights)` returns `ContextPackResponse` with `pack_version=context-pack-v1`, bounded `markdown`, structured `items`, unique `sources`, `truncated` and `truncation_reason`. Memo title/summary and insight title/summary/source_refs are the only content inputs; raw Markdown, Webhook payloads, secrets and chunk content are not accepted by the contract. Items are deterministic: Memo IDs are sorted, then insights use confidence descending, updated_at descending and stable insight ID ascending. `max_chars` bounds the Markdown body without partial item blocks; JSON serialization uses the same items and sources through `to_json()`.
 
+## Phase 9c Context Pack integration proposal（未接入）
+
+The recommended product entry is a `Copy Context Pack` action inside the existing Memo detail AI Inbox. It keeps provenance next to the reviewed insight, defaults to the current Memo, and requires explicit user selection for any additional Memo. A command palette or standalone page is not selected for this gate. No UI control or HTTP route is added until product approval.
+
+The future internal interaction must accept a question, explicit Memo/insight selection, `max_chars`, and `max_items`; offer Markdown as the primary copy format and JSON as an optional format; and show sources, truncation reason, empty state, failure state, and narrow-screen behavior. Authorization must be based on the current user's Memo visibility at the product boundary. Pending/rejected insights, deleted Memos, revoked or stale insight versions, and inaccessible sources must be excluded. The pack is ephemeral and must never expose raw content, Webhook payloads, secrets, or chunk content.
+
 ## Phase 7 public chunk API proposal（未实现）
 
 This is a reviewable proposal only. It does not add a route or change the existing chat API.
