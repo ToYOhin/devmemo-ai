@@ -23,6 +23,7 @@
     "status-rejected": "已拒绝"
   },
   "ai-context-pack": {
+    "insights-unavailable": "部分已选 Memo 的 insight 当前不可用，已从上下文包排除。",
     "title": "开发上下文包",
     "description": "复制一个有边界、可追溯来源的开发上下文。",
     "loading": "正在加载已确认的 insight…",

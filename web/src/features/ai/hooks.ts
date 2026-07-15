@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAiMemoInsights,
   getAiMemoNote,
@@ -40,6 +40,18 @@ export function useAiMemoInsights(memoId: string, options?: { enabled?: boolean 
     enabled: (options?.enabled ?? true) && Boolean(memoId) && isAiServiceConfigured(),
     retry: false,
     staleTime: 1000 * 30,
+  });
+}
+
+export function useAiMemoInsightsForMemos(memoIds: string[]) {
+  return useQueries({
+    queries: memoIds.map((memoId) => ({
+      queryKey: aiInsightKeys.detail(memoId),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getAiMemoInsights(memoId, signal),
+      enabled: Boolean(memoId) && isAiServiceConfigured(),
+      retry: false,
+      staleTime: 1000 * 30,
+    })),
   });
 }
 

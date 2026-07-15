@@ -1,0 +1,56 @@
+{
+  "pack_version": "context-pack-v1",
+  "memos": {
+    "memo-bug": {
+      "memo_id": "memo-bug",
+      "title": "Port mapping failure",
+      "summary": "The service refused connections because the host port was wrong."
+    },
+    "memo-code": {
+      "memo_id": "memo-code",
+      "title": "Port helper",
+      "summary": "The helper validates the configured port before startup."
+    }
+  },
+  "insights": {
+    "insight-bug": {
+      "insight_id": "insight-bug",
+      "memo_id": "memo-bug",
+      "insight_type": "bug",
+      "title": "Wrong host port causes connection refusal",
+      "summary": "The host port mapping was wrong.",
+      "confidence": 0.96,
+      "status": "accepted",
+      "source_refs": ["template.root_cause"],
+      "version": 2,
+      "created_at": "2026-07-14T10:00:00+00:00",
+      "updated_at": "2026-07-14T11:00:00+00:00"
+    },
+    "insight-action": {
+      "insight_id": "insight-action",
+      "memo_id": "memo-code",
+      "insight_type": "action",
+      "title": "Validate the port before merge",
+      "summary": "Add a preflight check before merging the helper.",
+      "confidence": 0.82,
+      "status": "accepted",
+      "source_refs": ["template.description"],
+      "version": 1,
+      "created_at": "2026-07-14T09:00:00+00:00",
+      "updated_at": "2026-07-14T12:00:00+00:00"
+    },
+    "insight-pending": {
+      "insight_id": "insight-pending",
+      "memo_id": "memo-bug",
+      "insight_type": "fact",
+      "title": "Pending fact",
+      "summary": "This must not enter a pack.",
+      "confidence": 0.99,
+      "status": "pending",
+      "source_refs": ["template.title"],
+      "version": 1,
+      "created_at": "2026-07-14T10:00:00+00:00",
+      "updated_at": "2026-07-14T10:00:00+00:00"
+    }
+  }
+}

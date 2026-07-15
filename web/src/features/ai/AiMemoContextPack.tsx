@@ -1,46 +1,91 @@
 import { AlertCircleIcon, CheckIcon, ClipboardIcon, FileJsonIcon, PackageOpenIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
-import { isAiServiceConfigured } from "./api";
+import { type AiMemoInsight, isAiServiceConfigured } from "./api";
 import { type AiContextPackResponse, buildContextPack } from "./contextPack";
-import { useAiMemoInsights } from "./hooks";
+import { useAiMemoInsightsForMemos } from "./hooks";
 
 interface AiMemoContextPackProps {
   memoId: string;
   memoTitle: string;
 }
 
+interface AvailableMemo {
+  memoId: string;
+  title: string;
+}
+
 const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
   const t = useTranslate();
-  const { data: insights = [], isError, isLoading } = useAiMemoInsights(memoId);
-  const acceptedInsights = useMemo(() => insights.filter((insight) => insight.status === "accepted"), [insights]);
-  const acceptedInsightIds = acceptedInsights.map((insight) => insight.insight_id);
+  const aiConfigured = isAiServiceConfigured();
+  const visibleMemosQuery = useInfiniteMemos({ pageSize: 50 }, { enabled: aiConfigured });
+  const availableMemos = useMemo<AvailableMemo[]>(() => {
+    const listedMemos = visibleMemosQuery.data?.pages.flatMap((page) => page.memos) ?? [];
+    const listed = listedMemos
+      .map((memo) => ({ memoId: memo.name, title: memo.property?.title?.trim() || memo.name }))
+      .filter((memo) => memo.memoId !== memoId);
+    return [
+      { memoId, title: memoTitle },
+      ...listed.filter((memo, index) => listed.findIndex((item) => item.memoId === memo.memoId) === index),
+    ];
+  }, [memoId, memoTitle, visibleMemosQuery.data?.pages]);
+
+  const [selectedMemoIds, setSelectedMemoIds] = useState<string[]>([memoId]);
   const [question, setQuestion] = useState("");
   const [maxChars, setMaxChars] = useState(2000);
   const [maxItems, setMaxItems] = useState(8);
-  const [currentMemoSelected, setCurrentMemoSelected] = useState(true);
   const [selectedInsightIds, setSelectedInsightIds] = useState<string[]>([]);
   const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | null>(null);
   const [copyError, setCopyError] = useState(false);
 
   useEffect(() => {
-    setSelectedInsightIds(acceptedInsightIds);
+    setSelectedMemoIds((current) => {
+      const visibleIds = new Set(availableMemos.map((memo) => memo.memoId));
+      const retained = current.filter((id) => visibleIds.has(id));
+      return retained.includes(memoId) ? retained : [memoId, ...retained];
+    });
+  }, [availableMemos, memoId]);
+
+  const insightQueries = useAiMemoInsightsForMemos(selectedMemoIds);
+  const insightsByMemo = useMemo(() => {
+    const result = new Map<string, AiMemoInsight[]>();
+    selectedMemoIds.forEach((selectedId, index) => {
+      result.set(selectedId, insightQueries[index]?.data ?? []);
+    });
+    return result;
+  }, [insightQueries, selectedMemoIds]);
+  const selectedInsights = useMemo(
+    () => selectedMemoIds.flatMap((selectedId) => insightsByMemo.get(selectedId) ?? []),
+    [insightsByMemo, selectedMemoIds],
+  );
+  const acceptedInsights = useMemo(() => selectedInsights.filter((insight) => insight.status === "accepted"), [selectedInsights]);
+  const acceptedInsightIds = acceptedInsights.map((insight) => insight.insight_id);
+
+  useEffect(() => {
+    setSelectedInsightIds((current) => {
+      const eligible = new Set(acceptedInsightIds);
+      const retained = current.filter((id) => eligible.has(id));
+      return [...retained, ...acceptedInsightIds.filter((id) => !retained.includes(id))];
+    });
   }, [acceptedInsightIds.join(",")]);
 
+  const usableSelectedMemoIds = selectedMemoIds.filter((selectedId, index) => selectedId === memoId || !insightQueries[index]?.isError);
+  const usableSelectedMemos = availableMemos.filter((memo) => usableSelectedMemoIds.includes(memo.memoId));
   const packState = useMemo<{ response: AiContextPackResponse | null; error: boolean }>(() => {
     try {
       return {
         response: buildContextPack(
           {
             question: question || t("ai-context-pack.default-question"),
-            memoIds: currentMemoSelected ? [memoId] : [],
+            memoIds: usableSelectedMemoIds,
             insightIds: selectedInsightIds,
             maxChars,
             maxItems,
           },
-          { [memoId]: { memoId, title: memoTitle } },
+          Object.fromEntries(usableSelectedMemos.map((memo) => [memo.memoId, { memoId: memo.memoId, title: memo.title }])),
           Object.fromEntries(acceptedInsights.map((insight) => [insight.insight_id, insight])),
         ),
         error: false,
@@ -48,9 +93,26 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
     } catch {
       return { response: null, error: true };
     }
-  }, [acceptedInsights, currentMemoSelected, maxChars, maxItems, memoId, memoTitle, question, selectedInsightIds, t]);
+  }, [acceptedInsights, maxChars, maxItems, question, selectedInsightIds, t, usableSelectedMemoIds, usableSelectedMemos]);
 
-  if (!isAiServiceConfigured()) return null;
+  if (!aiConfigured) return null;
+
+  const currentQuery = insightQueries[selectedMemoIds.indexOf(memoId)];
+  const isLoading = insightQueries.some((query) => query.isLoading);
+  const isError = currentQuery?.isError ?? false;
+  const hasUnavailableAdditionalInsights = selectedMemoIds.some(
+    (selectedId, index) => selectedId !== memoId && insightQueries[index]?.isError,
+  );
+
+  const toggleMemo = (selected: boolean, selectedId: string) => {
+    if (selected) {
+      setSelectedMemoIds((current) => (current.includes(selectedId) ? current : [...current, selectedId]));
+      return;
+    }
+    setSelectedMemoIds((current) => current.filter((id) => id !== selectedId));
+    const removedInsightIds = new Set((insightsByMemo.get(selectedId) ?? []).map((insight) => insight.insight_id));
+    setSelectedInsightIds((current) => current.filter((id) => !removedInsightIds.has(id)));
+  };
 
   const handleCopy = async (format: "markdown" | "json") => {
     if (!packState.response || !navigator.clipboard?.writeText) {
@@ -86,10 +148,10 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
           <AlertCircleIcon className="h-3.5 w-3.5" />
           {t("ai-context-pack.load-failed")}
         </p>
-      ) : acceptedInsights.length === 0 || (!currentMemoSelected && selectedInsightIds.length === 0) ? (
+      ) : acceptedInsights.length === 0 && selectedMemoIds.length === 0 ? (
         <p data-testid="ai-context-pack-empty" className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <PackageOpenIcon className="h-3.5 w-3.5" />
-          {acceptedInsights.length === 0 ? t("ai-context-pack.empty") : t("ai-context-pack.no-selection")}
+          {t("ai-context-pack.empty")}
         </p>
       ) : (
         <div className="mt-4 grid gap-4">
@@ -134,45 +196,59 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
 
           <div className="grid gap-2">
             <p className="text-xs font-medium">{t("ai-context-pack.sources")}</p>
-            <label className="flex min-w-0 items-start gap-2 rounded-md border border-border p-2 text-xs">
-              <input
-                aria-label={`${t("ai-context-pack.memo-source")} ${memoTitle}`}
-                type="checkbox"
-                checked={currentMemoSelected}
-                onChange={(event) => {
-                  setCurrentMemoSelected(event.target.checked);
-                  if (!event.target.checked) setSelectedInsightIds([]);
-                }}
-                className="mt-0.5 shrink-0"
-              />
-              <span className="min-w-0 wrap-break-word">
-                {memoTitle} <span className="text-muted-foreground">({memoId})</span>
-              </span>
-            </label>
-            {acceptedInsights.map((insight) => (
-              <label key={insight.insight_id} className="flex min-w-0 items-start gap-2 rounded-md border border-border p-2 text-xs">
-                <input
-                  aria-label={`${t("ai-context-pack.insight-source")} ${insight.title}`}
-                  type="checkbox"
-                  checked={selectedInsightIds.includes(insight.insight_id)}
-                  onChange={(event) =>
-                    setSelectedInsightIds((current) =>
-                      event.target.checked
-                        ? [...current, insight.insight_id]
-                        : current.filter((insightId) => insightId !== insight.insight_id),
-                    )
-                  }
-                  className="mt-0.5 shrink-0"
-                />
-                <span className="min-w-0 wrap-break-word">
-                  {insight.title} <span className="text-muted-foreground">({insight.insight_id})</span>
-                </span>
-              </label>
+            {availableMemos.map((memo) => (
+              <div key={memo.memoId} className="grid gap-2 rounded-md border border-border p-2">
+                <label className="flex min-w-0 items-start gap-2 text-xs">
+                  <input
+                    aria-label={`${t("ai-context-pack.memo-source")} ${memo.title}`}
+                    type="checkbox"
+                    checked={selectedMemoIds.includes(memo.memoId)}
+                    onChange={(event) => toggleMemo(event.target.checked, memo.memoId)}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <span className="min-w-0 wrap-break-word">
+                    {memo.title} <span className="text-muted-foreground">({memo.memoId})</span>
+                  </span>
+                </label>
+                {selectedMemoIds.includes(memo.memoId) &&
+                  (insightsByMemo.get(memo.memoId) ?? [])
+                    .filter((insight) => insight.status === "accepted")
+                    .map((insight) => (
+                      <label key={insight.insight_id} className="ml-5 flex min-w-0 items-start gap-2 text-xs">
+                        <input
+                          aria-label={`${t("ai-context-pack.insight-source")} ${insight.title}`}
+                          type="checkbox"
+                          checked={selectedInsightIds.includes(insight.insight_id)}
+                          onChange={(event) =>
+                            setSelectedInsightIds((current) =>
+                              event.target.checked
+                                ? [...current, insight.insight_id]
+                                : current.filter((insightId) => insightId !== insight.insight_id),
+                            )
+                          }
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="min-w-0 wrap-break-word">
+                          {insight.title} <span className="text-muted-foreground">({insight.insight_id})</span>
+                        </span>
+                      </label>
+                    ))}
+              </div>
             ))}
+            {hasUnavailableAdditionalInsights && (
+              <p data-testid="ai-context-pack-unavailable" className="text-xs text-amber-600 dark:text-amber-400">
+                {t("ai-context-pack.insights-unavailable")}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">{t("ai-context-pack.explicit-selection")}</p>
           </div>
 
-          {packState.error || !packState.response ? (
+          {acceptedInsights.length === 0 ? (
+            <p data-testid="ai-context-pack-empty" className="flex items-center gap-2 text-xs text-muted-foreground">
+              <PackageOpenIcon className="h-3.5 w-3.5" />
+              {t("ai-context-pack.empty")}
+            </p>
+          ) : packState.error || !packState.response ? (
             <p data-testid="ai-context-pack-build-error" className="text-xs text-destructive">
               {t("ai-context-pack.build-failed")}
             </p>

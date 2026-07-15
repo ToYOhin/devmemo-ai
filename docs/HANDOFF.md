@@ -31,13 +31,27 @@
 - Playwright 手动路径：登录 -> 打开 `/memos/LFodC7kD9ydf36MPSxT4sN` -> AI Inbox 点击 Accept -> Context Pack 输入 question -> 调整预算 -> Copy Markdown/JSON；390x844 已验证窄屏换行。截图 artifact：`devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
 - AI Service 查询错误作为不可见/删除 Memo 的 failure 边界；pending/rejected/撤销或过期 insight 不进入 pack。当前没有跨 Memo picker、删除事件清理或 pack 审计持久化，这些留给下一阶段产品决策。
 
+## Phase 9e 共享 fixture、权限感知跨 Memo 选择、删除/撤销联动已完成
+
+- 新增根目录 [`contracts/context-pack-v1.json`](../contracts/context-pack-v1.json)，Python `ai-service/tests/context_pack_fixture.py` 与 Web contract test 共同读取，覆盖同一 Memo/insight、accepted/pending、source_refs 和安全摘要样例；生产 builder/adapter 不读取 fixture。
+- `AiMemoContextPack` 使用 Memos 当前用户可见的 `useInfiniteMemos({ pageSize: 50 })` 生成可选 Memo 列表；默认只勾选当前 Memo，跨 Memo 必须用户显式勾选，insight 通过同一 AI query key 读取并只纳入 accepted 状态。不可用的额外 insight 显示提示并被排除，当前 Memo 查询失败显示 failure。
+- Memos deleted Webhook 现在无论索引是否开启都会调用 `delete_memo_ai_state`，清理 AI Service 自有 `ai_notes`、`memo_templates`、`memo_insights`；chunk/vector 删除仍走原有显式索引路径，不删除 Memos 数据库、原文或 Qdrant volume。
+- reject 是当前撤销语义：状态更新递增版本并失效同一 `aiInsightKeys.detail(memo_id)`，Context Pack 下一次构建只保留 accepted；stale version 仍返回 409。
+- 本切片没有新增公共 HTTP、SQLite Context Pack 持久化、Qdrant 读取、Agent/worker 或 public chunk API；Phase 8 gate 继续 pending approval。
+
+### Phase 9e 验证
+
+- AI Service webhook 定向：8 passed；Context Pack 定向：12 passed。
+- Web 全量：33 files / 145 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
+- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。未新增本轮 Playwright 截图，沿用 Phase 9d desktop/mobile artifact；跨 Memo/删除联动已有 contract/unit 测试。
+
 ## 当前项目结构与问题
 
 - Memos Go (`server/store/proto/internal`) 仍是原始 Memo 与权限事实源；AI Service (`ai-service/app`) 只保存 AI 派生状态；Web (`web/src/features/ai`) 是现有产品边界。
-- AI Inbox 目前嵌入 Memo 详情页，不是全局收件箱；Context Pack 前端 adapter 与 Python builder 需共享 fixture，避免两种语言的排序/预算语义漂移。
+- AI Inbox 目前嵌入 Memo 详情页，不是全局收件箱；Context Pack 已有共享输入 fixture，但 Python builder 与 Web adapter 仍是两份实现，后续需继续用跨语言 contract 输出样例防止排序/预算语义漂移。
 - `graphify-out` 的旧图把 “Inbox” 指向 Memos `store/inbox.go`，没有反映 Phase 9a/9d 的 AI feature；后续应重建图或改用精确节点查询。
 
-验证与下一步：Phase 9e 评估是否增加权限感知的跨 Memo 显式选择、撤销/删除联动和 canonical fixture；Phase 8 public chunk API 继续 pending approval。
+验证与下一步：Phase 9f 评估 Context Pack/Insight 生命周期观测、用户反馈和跨语言输出 golden fixture；Phase 8 public chunk API 继续 pending approval。
 
 ## Phase 9c Context Pack integration gate：proposal-only 已完成
 

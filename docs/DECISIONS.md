@@ -223,3 +223,11 @@ Phase 9b 固定 `context-pack-v1` 为纯函数输出边界：请求必须显式�
 Web 端 `contextPack.ts` 镜像 Phase 9b Python `build_context_pack` 的 provider-neutral contract，在浏览器内生成 bounded Markdown/JSON。这样保留现有无 HTTP、无 Qdrant、无 worker 和不落 SQLite 的回滚边界；后续必须用共享 fixture 校验 Python/Web 的排序、预算和脱敏语义，避免双实现漂移。
 
 空 accepted insight、用户清空来源、AI Service 查询失败、clipboard 失败和窄屏均有明确 UI 状态。pending/rejected/revoked/stale insight、删除或不可见 Memo、raw content、Webhook payload、secret 和 chunk content 不进入 pack。Phase 8 public chunk API 仍 pending approval，公共 chat 和完整 Memo collection 不变。
+
+## ADR-041：Phase 9e 共享 Context Pack 输入并绑定 Memo 权限与派生状态生命周期
+
+Phase 9e 采用根目录 `contracts/context-pack-v1.json` 作为 Python/Web 测试共同输入 fixture。它只包含安全的 Memo title/summary 与 insight 派生字段，不包含原始 Markdown、Webhook payload、secret 或 chunk content；生产代码继续在 AI Service 与浏览器分别执行 provider-neutral builder/adapter，不把测试 fixture 当运行时数据源。
+
+Context Pack 的跨 Memo 选择必须来自 Memos 当前用户可见的 Memo 列表，并且每个额外 Memo 都需要用户显式勾选。默认仍只选择当前 Memo；额外 Memo 的 insight 通过同一 AI query key 查询，只有 accepted insight 可进入 pack，查询失败或 Memo 从可见列表消失时不得隐式扩展来源。这样把权限判断留在 Memos 产品边界，不在 AI Service 复制权限系统。
+
+当前 reject 即 insight revoke：状态变更必须带当前 version，成功后递增版本并失效该 Memo 的查询缓存；Context Pack 的 accepted-only 过滤保证撤销不会继续输出。Memo deleted Webhook 无论索引是否启用都会清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`，但不触碰 Memos 原文、Memos 数据库、公共 chat、完整/chunk collection 或 Qdrant volume。Context Pack 仍只在内存生成，不新增公共 HTTP、持久化审计、worker 或 Agent。

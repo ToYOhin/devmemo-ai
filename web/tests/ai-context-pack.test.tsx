@@ -1,10 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AiMemoContextPack from "@/features/ai/AiMemoContextPack";
-import { useAiMemoInsights } from "@/features/ai/hooks";
+import { useAiMemoInsightsForMemos } from "@/features/ai/hooks";
+import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 
 vi.mock("@/features/ai/hooks", () => ({
-  useAiMemoInsights: vi.fn(),
+  useAiMemoInsightsForMemos: vi.fn(),
+}));
+
+vi.mock("@/hooks/useMemoQueries", () => ({
+  useInfiniteMemos: vi.fn(),
 }));
 
 vi.mock("@/utils/i18n", () => ({
@@ -21,6 +26,9 @@ vi.mock("@/utils/i18n", () => ({
       "ai-context-pack.max-chars": "Maximum characters",
       "ai-context-pack.max-items": "Maximum items",
       "ai-context-pack.sources": "Explicit sources",
+      "ai-context-pack.memo-source": "Memo source",
+      "ai-context-pack.insight-source": "Insight source",
+      "ai-context-pack.insights-unavailable": "Some selected Memo insights are unavailable and were excluded.",
       "ai-context-pack.explicit-selection": "Only checked sources are included.",
       "ai-context-pack.source-trace": "Sources in this pack",
       "ai-context-pack.truncated": "Pack truncated",
@@ -32,7 +40,8 @@ vi.mock("@/utils/i18n", () => ({
     })[key] ?? key,
 }));
 
-const useInsightsMock = vi.mocked(useAiMemoInsights);
+const useInsightsMock = vi.mocked(useAiMemoInsightsForMemos);
+const useMemosMock = vi.mocked(useInfiniteMemos);
 const acceptedInsight = {
   insight_id: "insight-1",
   memo_id: "memo-1",
@@ -50,6 +59,8 @@ const acceptedInsight = {
 beforeEach(() => {
   vi.stubEnv("VITE_AI_SERVICE_URL", "http://localhost:8000");
   useInsightsMock.mockReset();
+  useMemosMock.mockReset();
+  useMemosMock.mockReturnValue({ data: { pages: [{ memos: [] }] }, isError: false, isLoading: false } as ReturnType<typeof useInfiniteMemos>);
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -58,15 +69,14 @@ beforeEach(() => {
 
 describe("AI Memo Context Pack", () => {
   it("previews explicit accepted sources and copies Markdown/JSON", async () => {
-    useInsightsMock.mockReturnValue({
-      data: [
+    useInsightsMock.mockReturnValue([{ data: [
         acceptedInsight,
         { ...acceptedInsight, insight_id: "pending-1", title: "Pending secret", status: "pending" },
         { ...acceptedInsight, insight_id: "rejected-1", title: "Rejected secret", status: "rejected" },
       ],
       isError: false,
       isLoading: false,
-    } as ReturnType<typeof useAiMemoInsights>);
+    }] as ReturnType<typeof useAiMemoInsightsForMemos>);
 
     render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
 
@@ -88,7 +98,7 @@ describe("AI Memo Context Pack", () => {
   });
 
   it("supports explicit deselection and shows the empty state", () => {
-    useInsightsMock.mockReturnValue({ data: [acceptedInsight], isError: false, isLoading: false } as ReturnType<typeof useAiMemoInsights>);
+    useInsightsMock.mockReturnValue([{ data: [acceptedInsight], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
     const { unmount } = render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
 
     const checkboxes = screen.getAllByRole("checkbox");
@@ -98,21 +108,76 @@ describe("AI Memo Context Pack", () => {
     expect(screen.getByTestId("ai-context-pack-empty")).toBeInTheDocument();
 
     unmount();
-    useInsightsMock.mockReturnValue({ data: [], isError: false, isLoading: false } as ReturnType<typeof useAiMemoInsights>);
+    useInsightsMock.mockReturnValue([{ data: [], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
     render(<AiMemoContextPack memoId="memo-empty" memoTitle="Empty memo" />);
     expect(screen.getByTestId("ai-context-pack-empty")).toBeInTheDocument();
   });
 
   it("shows failure and clipboard error states without exposing content", async () => {
-    useInsightsMock.mockReturnValue({ data: [], isError: true, isLoading: false } as ReturnType<typeof useAiMemoInsights>);
+    useInsightsMock.mockReturnValue([{ data: [], isError: true, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
     render(<AiMemoContextPack memoId="memo-failed" memoTitle="Failed memo" />);
     expect(screen.getByTestId("ai-context-pack-error")).toBeInTheDocument();
 
-    useInsightsMock.mockReturnValue({ data: [acceptedInsight], isError: false, isLoading: false } as ReturnType<typeof useAiMemoInsights>);
+    useInsightsMock.mockReturnValue([{ data: [acceptedInsight], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
     const writeText = vi.fn().mockRejectedValue(new Error("clipboard unavailable"));
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
     fireEvent.click(screen.getByRole("button", { name: "Copy Markdown" }));
     return waitFor(() => expect(screen.getByTestId("ai-context-pack-copy-error")).toBeInTheDocument());
+  });
+
+  it("allows only explicitly checked visible Memos and removes a revoked source", async () => {
+    const crossInsight = { ...acceptedInsight, insight_id: "insight-2", memo_id: "memo-2", title: "Cross Memo action" };
+    useMemosMock.mockReturnValue({
+      data: { pages: [{ memos: [{ name: "memo-1", property: { title: "Port mapping" } }, { name: "memo-2", property: { title: "Second memo" } }] }] },
+      isError: false,
+      isLoading: false,
+    } as ReturnType<typeof useInfiniteMemos>);
+    useInsightsMock.mockImplementation((memoIds) =>
+      memoIds.map((memoId) => ({
+        data: memoId === "memo-2" ? [crossInsight] : [acceptedInsight],
+        isError: false,
+        isLoading: false,
+      })) as ReturnType<typeof useAiMemoInsightsForMemos>,
+    );
+
+    render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
+
+    const crossMemoCheckbox = screen.getByRole("checkbox", { name: "Memo source Second memo" });
+    expect(crossMemoCheckbox).not.toBeChecked();
+    expect(screen.getByTestId("ai-context-pack-preview")).not.toHaveTextContent("Second memo");
+    fireEvent.click(crossMemoCheckbox);
+    await waitFor(() => expect(screen.getByTestId("ai-context-pack-preview")).toHaveTextContent("Second memo"));
+    expect(screen.getByTestId("ai-context-pack-preview")).toHaveTextContent("Cross Memo action");
+
+    fireEvent.click(crossMemoCheckbox);
+    await waitFor(() => expect(screen.getByTestId("ai-context-pack-preview")).not.toHaveTextContent("Cross Memo action"));
+  });
+
+  it("excludes an additional Memo when its permission-scoped insight query becomes unavailable", async () => {
+    let crossMemoAvailable = true;
+    const crossInsight = { ...acceptedInsight, insight_id: "insight-2", memo_id: "memo-2", title: "Private cross action" };
+    useMemosMock.mockReturnValue({
+      data: { pages: [{ memos: [{ name: "memo-2", property: { title: "Private memo" } }] }] },
+      isError: false,
+      isLoading: false,
+    } as ReturnType<typeof useInfiniteMemos>);
+    useInsightsMock.mockImplementation((memoIds) =>
+      memoIds.map((memoId) => ({
+        data: memoId === "memo-2" && crossMemoAvailable ? [crossInsight] : memoId === "memo-2" ? [] : [acceptedInsight],
+        isError: memoId === "memo-2" && !crossMemoAvailable,
+        isLoading: false,
+      })) as ReturnType<typeof useAiMemoInsightsForMemos>,
+    );
+
+    const { rerender } = render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Memo source Private memo" }));
+    await waitFor(() => expect(screen.getByTestId("ai-context-pack-preview")).toHaveTextContent("Private memo"));
+
+    crossMemoAvailable = false;
+    rerender(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
+    await waitFor(() => expect(screen.getByTestId("ai-context-pack-unavailable")).toBeInTheDocument());
+    expect(screen.getByTestId("ai-context-pack-preview")).not.toHaveTextContent("Private memo");
+    expect(screen.getByTestId("ai-context-pack-preview")).not.toHaveTextContent("Private cross action");
   });
 });

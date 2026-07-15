@@ -44,6 +44,15 @@
 - 验证：Web 定向 7 passed；全量 33 files / 143 passed；TypeScript/build/lint 通过；Playwright 手动验证登录、approve、复制、截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
 - 下一阶段：Phase 9e 评审共享 contract fixture、权限感知跨 Memo 显式选择和 Memo 删除/insight 撤销联动；Phase 8 public chunk API 继续 pending approval。
 
+### Phase 9e：共享 fixture、权限感知跨 Memo 选择、删除/撤销联动
+
+- 新增共享 `contracts/context-pack-v1.json`，Python Context Pack fixture 与 Web contract test 使用同一输入，减少排序、预算、accepted 状态和脱敏语义漂移。
+- Memo 详情页 Context Pack 从 Memos 当前用户可见列表提供跨 Memo 选项；默认只选当前 Memo，其他 Memo 必须显式勾选，跨 Memo insight 查询失败会提示并排除，不会读取 raw content。
+- Memos deleted Webhook 增加 AI 派生状态清理，删除 `ai_notes`、`memo_templates`、`memo_insights`；不触碰 Memos 数据库、原始 Markdown、公共 chat 或 Qdrant volume。
+- reject 继续作为 insight 撤销语义，状态版本递增、React Query 失效和 Context Pack accepted-only 过滤共同保证撤销来源不再进入 pack；过期版本仍返回 409。
+- 验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 145 passed；TypeScript、build、lint 与 `git diff --check` 通过。
+- 下一阶段：Phase 9f 评估 Context Pack/Insight 生命周期观测、用户反馈和跨语言 golden output；Phase 8 public chunk API 继续 pending approval。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

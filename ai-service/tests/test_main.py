@@ -331,7 +331,38 @@ def test_memos_webhook_deletes_index_without_blocking(monkeypatch, tmp_path):
 
     assert response.json()["code"] == 0
     assert response.json()["index_status"] == "deleted"
+    assert response.json()["derived_cleanup"]["ai_notes"] == 1
+    assert response.json()["derived_cleanup"]["memo_insights"] == 1
     assert store.search(DeterministicEmbeddingProvider().embed("content").values) == []
+
+
+def test_memos_webhook_deletes_derived_state_when_indexing_is_disabled(monkeypatch, tmp_path):
+    database = tmp_path / "derived-state-delete.db"
+    monkeypatch.setenv("AI_NOTES_DB", str(database))
+    client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.created",
+            "memo": {
+                "uid": "memo-derived-delete",
+                "content": "---\ntype: bug\ntitle: Port failure\n---\nRoot cause: wrong port\nSolution: fix mapping",
+            },
+        },
+    )
+
+    response = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.deleted",
+            "memo": {"uid": "memo-derived-delete"},
+        },
+    )
+
+    assert "index_status" not in response.json()
+    assert response.json()["derived_cleanup"] == {"ai_notes": 1, "memo_templates": 1, "memo_insights": 2}
+    assert client.get("/api/ai/notes/memo-derived-delete").status_code == 404
+    assert client.get("/api/ai/templates/memo-derived-delete").status_code == 404
+    assert client.get("/api/ai/insights/memo-derived-delete").json() == []
 
 
 def test_memos_webhook_index_failure_is_acknowledged(monkeypatch, tmp_path):

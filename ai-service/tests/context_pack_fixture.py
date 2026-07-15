@@ -1,59 +1,16 @@
+import json
+from pathlib import Path
+
 from app.domain.context_pack import ContextPackMemo
 from app.domain.memo_insight import MemoInsight
 
 
 def context_pack_inputs():
-    memos = {
-        "memo-bug": ContextPackMemo(
-            memo_id="memo-bug",
-            title="Port mapping failure",
-            summary="The service refused connections because the host port was wrong.",
-        ),
-        "memo-code": ContextPackMemo(
-            memo_id="memo-code",
-            title="Port helper",
-            summary="The helper validates the configured port before startup.",
-        ),
-    }
+    fixture_path = Path(__file__).resolve().parents[2] / "contracts" / "context-pack-v1.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    memos = {memo_id: ContextPackMemo(**memo) for memo_id, memo in fixture["memos"].items()}
     insights = {
-        "insight-bug": MemoInsight(
-            insight_id="insight-bug",
-            memo_id="memo-bug",
-            insight_type="bug",
-            title="Wrong host port causes connection refusal",
-            summary="The host port mapping was wrong.",
-            confidence=0.96,
-            status="accepted",
-            source_refs=("template.root_cause",),
-            version=2,
-            created_at="2026-07-14T10:00:00+00:00",
-            updated_at="2026-07-14T11:00:00+00:00",
-        ),
-        "insight-action": MemoInsight(
-            insight_id="insight-action",
-            memo_id="memo-code",
-            insight_type="action",
-            title="Validate the port before merge",
-            summary="Add a preflight check before merging the helper.",
-            confidence=0.82,
-            status="accepted",
-            source_refs=("template.description",),
-            version=1,
-            created_at="2026-07-14T09:00:00+00:00",
-            updated_at="2026-07-14T12:00:00+00:00",
-        ),
-        "insight-pending": MemoInsight(
-            insight_id="insight-pending",
-            memo_id="memo-bug",
-            insight_type="fact",
-            title="Pending fact",
-            summary="This must not enter a pack.",
-            confidence=0.99,
-            status="pending",
-            source_refs=("template.title",),
-            version=1,
-            created_at="2026-07-14T10:00:00+00:00",
-            updated_at="2026-07-14T10:00:00+00:00",
-        ),
+        insight_id: MemoInsight(**{**insight, "source_refs": tuple(insight["source_refs"])})
+        for insight_id, insight in fixture["insights"].items()
     }
     return memos, insights

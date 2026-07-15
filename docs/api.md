@@ -180,6 +180,12 @@ The approved product entry is a `Context Pack` panel inside the existing Memo de
 
 The implemented internal interaction accepts a question, current Memo/accepted insight selection, `max_chars`, and `max_items`; offers Markdown as the primary copy format and JSON as an optional format; and shows sources, truncation reason, empty state, AI query failure, clipboard failure, and narrow-screen behavior. Authorization remains at the Memos product boundary: deleted/inaccessible Memo requests surface failure, while pending/rejected/revoked/stale insights are excluded from the eligible list. The pack is ephemeral and never exposes raw content, Webhook payloads, secrets, or chunk content. The browser adapter mirrors the Phase 9b Python builder contract because no HTTP route is permitted in this slice.
 
+## Phase 9e Context Pack permission/deletion linkage
+
+The shared test input is `contracts/context-pack-v1.json`; it is not a runtime data source. The Memo detail panel obtains additional candidates only from the current user's visible Memos returned by the existing Memos API. The current Memo is selected by default; every additional Memo requires an explicit checkbox. No raw Memo `content` is passed to the builder. Additional insight queries reuse `aiInsightKeys.detail(memo_id)` and only `accepted` records are eligible. A deleted or inaccessible current Memo surfaces the existing failure state; a selected additional Memo that disappears or whose insight query fails is excluded and shown as unavailable.
+
+`rejected` is the current insight revoke state. `POST /api/ai/insights/{insight_id}/status` still requires the current `version`, increments it on success, and returns `409` for stale updates. React Query invalidation removes revoked insights from the Context Pack candidate set. Existing Memos deleted Webhook handling also deletes AI-owned `ai_notes`, `memo_templates`, and `memo_insights`; it does not delete Memos data, raw Markdown, public chat citations, or Qdrant volumes. Context Pack remains in-memory and adds no public route or persistence.
+
 ## Phase 7 public chunk API proposal（未实现）
 
 This is a reviewable proposal only. It does not add a route or change the existing chat API.

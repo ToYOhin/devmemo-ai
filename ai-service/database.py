@@ -196,6 +196,37 @@ def get_memo_template(memo_id: str | int) -> dict[str, Any] | None:
     return _template_row(row) if row else None
 
 
+def delete_memo_ai_state(memo_id: str | int) -> dict[str, int]:
+    """Delete AI-owned derived state after the source Memo is deleted."""
+
+    path = database_path()
+    if not path.exists():
+        return {"ai_notes": 0, "memo_templates": 0, "memo_insights": 0}
+
+    with sqlite3.connect(path) as connection:
+        _ensure_ai_notes_schema(connection)
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memo_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                memo_id TEXT NOT NULL UNIQUE,
+                kind TEXT NOT NULL CHECK (kind IN ('code', 'bug')),
+                payload TEXT NOT NULL,
+                raw_content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        _ensure_memo_insights_schema(connection)
+        stored_memo_id = str(memo_id)
+        counts: dict[str, int] = {}
+        for table in ("ai_notes", "memo_templates", "memo_insights"):
+            cursor = connection.execute(f"DELETE FROM {table} WHERE memo_id = ?", (stored_memo_id,))
+            counts[table] = cursor.rowcount
+    return counts
+
+
 def save_memo_insights(insights: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Idempotently upsert pending insight candidates for one or more Memos."""
 

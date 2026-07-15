@@ -14,6 +14,7 @@ H:\DevMemoAI/
 ├── web/                         # Memos React + TypeScript 前端
 │   └── src/features/ai/         # DevMemo AI 前端 feature：API、hooks、模板、摘要、Inbox、Context Pack
 ├── ai-service/                  # 独立 FastAPI AI 旁路服务
+├── contracts/                   # 跨语言 provider-neutral contract fixture（当前为 context-pack-v1）
 ├── integrations/                # 上游/部署集成脚本与配置
 ├── scripts/                     # Windows 验证、安装、Compose 辅助脚本
 ├── docs/                        # 架构、API、路线、决策、交接和下一阶段 Prompt
@@ -43,13 +44,13 @@ web/src/features/ai/
 ├── api.ts                 # AI Service URL、insight/template/summary 请求
 ├── hooks.ts               # React Query 读取与状态变更 hooks
 ├── AiMemoInsights.tsx     # Memo 详情页 AI Inbox：pending/accepted/rejected 审核
-├── AiMemoContextPack.tsx  # Phase 9d：内存 preview/copy、预算、来源和状态 UI
+├── AiMemoContextPack.tsx  # Phase 9d/9e：内存 preview/copy、权限感知显式跨 Memo 来源和状态 UI
 ├── contextPack.ts         # Phase 9b contract 的 Web provider-neutral adapter
 ├── AiMemoTemplate.tsx     # 结构化 Memo 模板展示
 └── AiMemoSummary.tsx      # bounded summary 展示
 ```
 
-当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 是两份实现，下一阶段应共享 contract fixture。`graphify-out` 的历史图还会把 “Inbox” 解析为 Memos `store/inbox.go`，查询时需使用 `AiMemoInsights`/`AiMemoContextPack` 精确名称。
+当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，当前通过 `contracts/context-pack-v1.json` 共享输入 fixture，后续应增加跨语言 golden output。`graphify-out` 的历史图还会把 “Inbox” 解析为 Memos `store/inbox.go`，查询时需使用 `AiMemoInsights`/`AiMemoContextPack` 精确名称。
 
 ## AI Service 目录
 

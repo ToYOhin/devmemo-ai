@@ -292,3 +292,12 @@ Phase 8 public chunk API 继续 pending approval，默认 deterministic + memory
 UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON 复制、sources、截断提示，以及 empty、AI 查询 failure、clipboard failure 和窄屏布局。只消费安全 title/summary/source_refs，不展示 raw content、Webhook payload、secret 或 chunk content；不写 SQLite，不新增公共 HTTP，不连接 Qdrant，不启动 worker/Agent。
 
 验证：Web 定向 7 passed；全量 33 files / 143 passed；TypeScript、build、lint 通过；Playwright 已完成登录、approve、复制、预算截断和 390px 窄屏手动路径。下一阶段处理 canonical fixture、权限感知的跨 Memo 显式选择、删除/撤销联动，不改变公共 chat 或 Phase 8 gate。
+
+## Phase 9e：共享 fixture、权限感知跨 Memo 选择、删除/撤销联动（已完成）
+
+1. 新增根目录 `contracts/context-pack-v1.json`，Python fixture 与 Web contract test 共同读取；fixture 只包含安全 title/summary、accepted/pending insight 和 source_refs，不包含原始 content。
+2. Memo 详情页 Context Pack 使用 Memos 当前用户可见列表作为跨 Memo 候选，默认只选择当前 Memo，用户显式勾选后才读取额外 Memo 的 insight；只有 accepted insight 进入 pack，额外查询失败显示提示并排除。
+3. Memos deleted Webhook 无论索引是否开启都清理 AI Service 自有 `ai_notes`、`memo_templates`、`memo_insights`；reject 作为 revoke 语义，版本递增和 query invalidation 使已撤销 insight 从 pack 移除。
+4. 保持 Context Pack 内存生成、不新增公共 HTTP、不连接 Qdrant、不写回 Memos、不启动 Agent/worker；Phase 8 public chunk API 继续 pending approval。
+
+验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 145 passed；TypeScript、build、lint、verify 脚本、Compose config 与 `git diff --check` 通过。下一阶段为 Phase 9f 生命周期观测、用户反馈和跨语言 golden output。

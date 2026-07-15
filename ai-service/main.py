@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from database import (
     begin_webhook_retry,
+    delete_memo_ai_state,
     get_ai_note,
     get_memo_insights,
     get_memo_template,
@@ -658,10 +659,11 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
     """Run the legacy Webhook business flow after idempotent enqueue."""
 
     if request.activity_type.endswith("deleted"):
+        memo_id = _memo_id_from_memo(request.memo)
+        if memo_id is None:
+            return {"code": 0, "message": "ignored deleted memo", "index_status": "skipped"}
+        derived_cleanup = delete_memo_ai_state(str(memo_id))
         if _webhook_index_enabled():
-            memo_id = _memo_id_from_memo(request.memo)
-            if memo_id is None:
-                return {"code": 0, "message": "ignored deleted memo", "index_status": "skipped"}
             try:
                 if _webhook_index_mode() == "chunk":
                     result = chunk_lifecycle_coordinator.delete_memo(str(memo_id))
@@ -671,16 +673,23 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
                         "index_status": "deleted" if result.deleted_count else "skipped",
                         "index_mode": result.index_mode,
                         "deleted_chunk_count": result.deleted_count,
+                        "derived_cleanup": derived_cleanup,
                     }
                 deleted = embedding_service.delete_memo(memo_id)
             except Exception:
-                return {"code": 0, "message": "ignored deleted memo", "index_status": "failed"}
+                return {
+                    "code": 0,
+                    "message": "ignored deleted memo",
+                    "index_status": "failed",
+                    "derived_cleanup": derived_cleanup,
+                }
             return {
                 "code": 0,
                 "message": "ignored deleted memo",
                 "index_status": "deleted" if deleted else "skipped",
+                "derived_cleanup": derived_cleanup,
             }
-        return {"code": 0, "message": "ignored deleted memo"}
+        return {"code": 0, "message": "ignored deleted memo", "derived_cleanup": derived_cleanup}
 
     memo = request.memo
     content = str(memo.get("content") or "")

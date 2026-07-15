@@ -48,6 +48,7 @@
     "status-rejected": "Rejected"
   },
   "ai-context-pack": {
+    "insights-unavailable": "Some selected Memo insights are unavailable and were excluded.",
     "title": "Context Pack",
     "description": "Copy a bounded, source-traceable development context.",
     "loading": "Loading confirmed insights...",

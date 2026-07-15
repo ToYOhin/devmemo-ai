@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-15（Phase 9d 完成后更新）
+更新时间：2026-07-15（Phase 9e 完成后更新）
 
 ## 当前工作模式
 
@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：Phase 9d UI implementation 待提交（以 `git log --oneline -8` 为准）
+- 当前 HEAD：Phase 9e 代码与文档待最终提交（以 `git log --oneline -8` 为准）
 - GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -65,16 +65,17 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 11. Phase 9c integration gate 已完成 proposal-only 评审：推荐 Memo 详情页 AI Inbox 的 `Copy Context Pack`，默认当前 Memo，跨 Memo 显式选择。
 12. Phase 9d 已实现 `AiMemoContextPack` 与 Web `contextPack` adapter：question、预算、accepted 来源勾选、Markdown/JSON copy、sources、截断、empty/failure/copy-error 和窄屏布局；pack 只在内存生成，不新增 HTTP/SQLite/Qdrant/worker。
 13. Phase 9d Web 定向 7 passed、全量 143 passed；TypeScript/build/lint 通过；Playwright 已登录并完成 approve insight、复制、`max_chars` 截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
-14. 当前没有跨 Memo picker、删除事件清理或 pack 审计持久化；Python builder 与 Web adapter 需要后续共享 fixture，Phase 9e 处理这些产品/contract 决策。
+14. Phase 9e 已新增共享 `contracts/context-pack-v1.json`，Web 使用当前用户可见 Memo 列表提供显式跨 Memo 选择；默认仍只选当前 Memo，只有 accepted insight 进入 pack，额外查询失败显示不可用提示。
+15. Phase 9e Memos deleted Webhook 已清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`；reject 是 revoke 语义，版本递增/查询失效后不会继续进入 pack；不触碰 Memos 原文、公共 chat、Qdrant volume。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service full pytest      174 passed
+AI Service full pytest      175 passed
 Context Pack focused pytest 12 passed
-Frontend full tests          143 passed
+Frontend full tests          145 passed
 pnpm lint                    PASS
 TypeScript/build             PASS
 Go full test -p 2 ./...      PASS
@@ -96,4 +97,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9e Context Pack product acceptance Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9f Context Pack lifecycle observation Prompt。
