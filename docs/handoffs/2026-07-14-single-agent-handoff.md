@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-15（Phase 9e 完成后更新）
+更新时间：2026-07-15（Phase 9e 人工验收与问题修复后更新）
 
 ## 当前工作模式
 
@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：Phase 9e 代码与文档待最终提交（以 `git log --oneline -8` 为准）
+- 当前 HEAD：以 `git log --oneline -8` 为准；本轮人工验收修复与文档已纳入当前交接，用户未提交的 Prompt 文件仍需保留
 - GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -66,7 +66,8 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 12. Phase 9d 已实现 `AiMemoContextPack` 与 Web `contextPack` adapter：question、预算、accepted 来源勾选、Markdown/JSON copy、sources、截断、empty/failure/copy-error 和窄屏布局；pack 只在内存生成，不新增 HTTP/SQLite/Qdrant/worker。
 13. Phase 9d Web 定向 7 passed、全量 143 passed；TypeScript/build/lint 通过；Playwright 已登录并完成 approve insight、复制、`max_chars` 截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
 14. Phase 9e 已新增共享 `contracts/context-pack-v1.json`，Web 使用当前用户可见 Memo 列表提供显式跨 Memo 选择；默认仍只选当前 Memo，只有 accepted insight 进入 pack，额外查询失败显示不可用提示。
-15. Phase 9e Memos deleted Webhook 已清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`；reject 是 revoke 语义，版本递增/查询失效后不会继续进入 pack；不触碰 Memos 原文、公共 chat、Qdrant volume。
+15. Phase 9e Memos deleted Webhook 已清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`、`memo_chunk_index_state`；reject 是 revoke 语义，版本递增/查询失效后不会继续进入 pack；不触碰 Memos 原文、公共 chat、Qdrant volume。
+16. 本轮人工验收修复了 canonical/raw Memo ID 重复来源、清空来源后无法重新勾选和删除联动遗漏；In-App Browser 禁用两种剪贴板 API，copy 仍需真实 Chrome 复验。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 

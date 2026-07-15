@@ -662,11 +662,11 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
         memo_id = _memo_id_from_memo(request.memo)
         if memo_id is None:
             return {"code": 0, "message": "ignored deleted memo", "index_status": "skipped"}
-        derived_cleanup = delete_memo_ai_state(str(memo_id))
         if _webhook_index_enabled():
             try:
                 if _webhook_index_mode() == "chunk":
                     result = chunk_lifecycle_coordinator.delete_memo(str(memo_id))
+                    derived_cleanup = delete_memo_ai_state(str(memo_id))
                     return {
                         "code": 0,
                         "message": "ignored deleted memo",
@@ -677,18 +677,21 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
                     }
                 deleted = embedding_service.delete_memo(memo_id)
             except Exception:
+                derived_cleanup = delete_memo_ai_state(str(memo_id))
                 return {
                     "code": 0,
                     "message": "ignored deleted memo",
                     "index_status": "failed",
                     "derived_cleanup": derived_cleanup,
                 }
+            derived_cleanup = delete_memo_ai_state(str(memo_id))
             return {
                 "code": 0,
                 "message": "ignored deleted memo",
                 "index_status": "deleted" if deleted else "skipped",
                 "derived_cleanup": derived_cleanup,
             }
+        derived_cleanup = delete_memo_ai_state(str(memo_id))
         return {"code": 0, "message": "ignored deleted memo", "derived_cleanup": derived_cleanup}
 
     memo = request.memo

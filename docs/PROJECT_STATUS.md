@@ -11,7 +11,14 @@
 - Phase 9d 已完成：Memo 详情页 AI Inbox 已增加内存 Context Pack preview/copy；复用 `context-pack-v1` 语义，默认当前 Memo + accepted insights，未新增 HTTP、SQLite、Qdrant 或后台 worker。
 - Phase 9d 验证：前端全量 `143 passed`；TypeScript、build、lint 通过；Playwright 已验证登录、详情页、approve insight、Markdown/JSON copy、`max_chars` 截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png` 与 `devmemo-phase9d-context-pack-mobile.png`。
 - Phase 9e 已完成：新增根目录共享 `contracts/context-pack-v1.json`，Python/Web 测试共同读取；Memo 详情页 Context Pack 只从当前用户可见的 Memos 列表提供显式跨 Memo 选择，默认不扩展来源；删除 Webhook 会清理 AI Service 自有的 note/template/insight 派生状态。
-- Phase 9e 验证：AI Service 全量 `175 passed`；前端全量 `145 passed`；TypeScript、build、lint、verify 脚本和 Compose config 通过。撤销联动：只有 accepted insight 进入 pack；reject 会因 React Query 失效自动移除，过期版本仍由 409 拒绝；跨 Memo 查询失败显示不可用提示，不显示原始内容、Webhook payload、secret 或 chunk content。
+- Phase 9e 验证：AI Service 全量 `175 passed`；前端全量 `146 passed`；TypeScript、build、lint、verify 脚本和 Compose config 通过。撤销联动：只有 accepted insight 进入 pack；reject 会因 React Query 失效自动移除，过期版本仍由 409 拒绝；跨 Memo 查询失败显示不可用提示，不显示原始内容、Webhook payload、secret 或 chunk content。
+
+## 人工验收与问题修复（2026-07-15）
+
+- 真实手动路径已跑通：创建两条 Memo -> 本地 AI webhook -> AI Inbox Accept/Reject -> Context Pack question/预算/来源选择；accepted insight 进入 pack，rejected insight 不进入 pack，跨 Memo 只有显式勾选才进入。
+- 修复 `memos/{uid}` 与详情路由 `{uid}` 混用导致的当前 Memo 重复来源；修复取消全部来源后无法重新勾选的问题。
+- 修复删除联动遗漏：删除 Memo 的 AI 派生状态清理现在同时删除 SQLite `memo_chunk_index_state`；chunk mode 先删除向量/生命周期再清理 SQLite，避免返回错误的 `index_status=skipped`，并增加 webhook 回归测试。
+- 复制验收发现当前 In-App Browser 同时缺少 `navigator.clipboard` 与 `document.execCommand`，点击 Markdown/JSON copy 仍会显示 copy failure；已增加标准浏览器可用的 DOM fallback，真实 Chrome/用户浏览器仍需单独复验。页面截图已在本轮人工验收工具结果中展示；Statsig 外部请求超时与本地应用无关。
 
 更新时间：2026-07-15
 
@@ -51,7 +58,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 7 public API proposal：提出 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，默认关闭，固定 memo-chunk-v1，同 Memo 保留最高分 chunk，未新增 HTTP 行为
 - Phase 8 implementation gate：当前仅收到阶段名称，没有明确产品/兼容批准；保持 proposal、不新增路由、不改变公共 chat 或完整 Memo collection
 - Phase 9e shared fixture：`contracts/context-pack-v1.json` 是 Python/Web 测试的共同输入；生产代码仍保持 provider-neutral builder/adapter 双边界。
-- Phase 9e permission/deletion：跨 Memo 选项来自 Memos 当前用户可见的 `useInfiniteMemos` 结果，只有用户勾选才加入；删除 Webhook 调用 `delete_memo_ai_state` 清理 `ai_notes`、`memo_templates`、`memo_insights`，不触碰 Memos 原文或公共 chat。
+- Phase 9e permission/deletion：跨 Memo 选项来自 Memos 当前用户可见的 `useInfiniteMemos` 结果，只有用户勾选才加入；删除 Webhook 调用 `delete_memo_ai_state` 清理 `ai_notes`、`memo_templates`、`memo_insights` 和 `memo_chunk_index_state`，不触碰 Memos 原文或公共 chat。
 - Phase 9a DevMemory Loop：`MemoInsight` 统一包含 `insight_id`、`memo_id`、`insight_type`、`title`、`summary`、`confidence`、`status`、`source_refs`、版本和审计时间；deterministic parser 只为 Code/Bug/plain Memo 生成有限候选，不做自由发挥式知识图谱
 - Phase 9a SQLite：AI 自有 `memo_insights` 表按 `(memo_id, insight_type)` 幂等 upsert；语义变化会重置为 pending 并递增版本，approve/reject 必须携带当前版本，过期更新返回 409
 - Phase 9a API/UI：新增内部 preview、Memo insight 查询和显式状态变更 API；Memo 详情页 AI Inbox 支持空、失败、窄屏和 pending approve/reject；原文 content 不进入公共 citation 或卡片响应

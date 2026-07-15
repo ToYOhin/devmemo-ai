@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## 人工验收与问题修复（2026-07-15）
+
+- 已手动验证创建两条 Memo、AI Inbox Accept/Reject、Context Pack question/预算、accepted-only 和显式跨 Memo 选择；本轮稳定详情页截图已在工具结果中展示。
+- 修复 `memos/{uid}` 与详情路由 `{uid}` 混用导致的当前 Memo 重复来源；修复取消全部来源后无法重新勾选的问题。
+- 删除 Memo 的 AI 派生状态清理补齐 `memo_chunk_index_state`；chunk mode 先删除向量/生命周期再清理 SQLite，避免提前删状态导致 `index_status=skipped`，并增加 webhook 回归测试。
+- 复制验收发现当前 In-App Browser 禁用 `navigator.clipboard` 和 `document.execCommand`，因此 copy 仍会显示 failure；代码已增加标准浏览器 DOM fallback，需在真实 Chrome/用户浏览器复验。Statsig 外部请求超时与本地功能无关。
+
 ## 人工功能检查修复（2026-07-14）
 
 - 已修复本地回环地址 CORS 缺口：Compose 默认同时允许 `localhost:3001` 与 `127.0.0.1:3001`。
@@ -35,15 +42,15 @@
 
 - 新增根目录 [`contracts/context-pack-v1.json`](../contracts/context-pack-v1.json)，Python `ai-service/tests/context_pack_fixture.py` 与 Web contract test 共同读取，覆盖同一 Memo/insight、accepted/pending、source_refs 和安全摘要样例；生产 builder/adapter 不读取 fixture。
 - `AiMemoContextPack` 使用 Memos 当前用户可见的 `useInfiniteMemos({ pageSize: 50 })` 生成可选 Memo 列表；默认只勾选当前 Memo，跨 Memo 必须用户显式勾选，insight 通过同一 AI query key 读取并只纳入 accepted 状态。不可用的额外 insight 显示提示并被排除，当前 Memo 查询失败显示 failure。
-- Memos deleted Webhook 现在无论索引是否开启都会调用 `delete_memo_ai_state`，清理 AI Service 自有 `ai_notes`、`memo_templates`、`memo_insights`；chunk/vector 删除仍走原有显式索引路径，不删除 Memos 数据库、原文或 Qdrant volume。
+- Memos deleted Webhook 现在无论索引是否开启都会调用 `delete_memo_ai_state`，清理 AI Service 自有 `ai_notes`、`memo_templates`、`memo_insights`、`memo_chunk_index_state`；chunk/vector 删除仍走原有显式索引路径，不删除 Memos 数据库、原文或 Qdrant volume。
 - reject 是当前撤销语义：状态更新递增版本并失效同一 `aiInsightKeys.detail(memo_id)`，Context Pack 下一次构建只保留 accepted；stale version 仍返回 409。
 - 本切片没有新增公共 HTTP、SQLite Context Pack 持久化、Qdrant 读取、Agent/worker 或 public chunk API；Phase 8 gate 继续 pending approval。
 
 ### Phase 9e 验证
 
 - AI Service webhook 定向：8 passed；Context Pack 定向：12 passed。
-- Web 全量：33 files / 145 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
-- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。未新增本轮 Playwright 截图，沿用 Phase 9d desktop/mobile artifact；跨 Memo/删除联动已有 contract/unit 测试。
+- Web 全量：33 files / 146 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
+- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。本轮已完成本地浏览器人工验收并展示稳定详情页截图；跨 Memo/删除联动已有 contract/unit 测试。In-App Browser 的剪贴板能力被环境禁用，copy 的真实 Chrome 验收仍未完成。
 
 ## 当前项目结构与问题
 

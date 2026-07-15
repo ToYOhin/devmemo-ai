@@ -18,6 +18,32 @@ interface AvailableMemo {
   title: string;
 }
 
+const normalizeMemoId = (name: string) => (name.startsWith("memos/") ? name.slice("memos/".length) : name);
+
+const copyTextToClipboard = async (text: string) => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall through to the legacy DOM copy path for restricted browser contexts.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand?.("copy") ?? false;
+  textarea.remove();
+  if (!copied) {
+    throw new Error("clipboard unavailable");
+  }
+};
+
 const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
   const t = useTranslate();
   const aiConfigured = isAiServiceConfigured();
@@ -25,7 +51,7 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
   const availableMemos = useMemo<AvailableMemo[]>(() => {
     const listedMemos = visibleMemosQuery.data?.pages.flatMap((page) => page.memos) ?? [];
     const listed = listedMemos
-      .map((memo) => ({ memoId: memo.name, title: memo.property?.title?.trim() || memo.name }))
+      .map((memo) => ({ memoId: normalizeMemoId(memo.name), title: memo.property?.title?.trim() || normalizeMemoId(memo.name) }))
       .filter((memo) => memo.memoId !== memoId);
     return [
       { memoId, title: memoTitle },
@@ -115,12 +141,12 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
   };
 
   const handleCopy = async (format: "markdown" | "json") => {
-    if (!packState.response || !navigator.clipboard?.writeText) {
+    if (!packState.response) {
       setCopyError(true);
       return;
     }
     try {
-      await navigator.clipboard.writeText(format === "markdown" ? packState.response.markdown : packState.response.toJson());
+      await copyTextToClipboard(format === "markdown" ? packState.response.markdown : packState.response.toJson());
       setCopiedFormat(format);
       setCopyError(false);
     } catch {
@@ -147,11 +173,6 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
         <p data-testid="ai-context-pack-error" className="mt-3 flex items-center gap-2 text-xs text-destructive">
           <AlertCircleIcon className="h-3.5 w-3.5" />
           {t("ai-context-pack.load-failed")}
-        </p>
-      ) : acceptedInsights.length === 0 && selectedMemoIds.length === 0 ? (
-        <p data-testid="ai-context-pack-empty" className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <PackageOpenIcon className="h-3.5 w-3.5" />
-          {t("ai-context-pack.empty")}
         </p>
       ) : (
         <div className="mt-4 grid gap-4">

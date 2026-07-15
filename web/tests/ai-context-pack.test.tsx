@@ -106,6 +106,9 @@ describe("AI Memo Context Pack", () => {
     expect(screen.getByTestId("ai-context-pack-preview")).not.toHaveTextContent("Accepted port fact");
     fireEvent.click(checkboxes[0]);
     expect(screen.getByTestId("ai-context-pack-empty")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Memo source Port mapping" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Memo source Port mapping" }));
+    expect(screen.getByTestId("ai-context-pack-preview")).toHaveTextContent("Accepted port fact");
 
     unmount();
     useInsightsMock.mockReturnValue([{ data: [], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
@@ -126,10 +129,25 @@ describe("AI Memo Context Pack", () => {
     return waitFor(() => expect(screen.getByTestId("ai-context-pack-copy-error")).toBeInTheDocument());
   });
 
+  it("falls back to the legacy DOM copy path when clipboard permission is unavailable", async () => {
+    useInsightsMock.mockReturnValue([{ data: [acceptedInsight], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard permission denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, "execCommand", { configurable: true, value: execCommand });
+
+    render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy Markdown" }));
+
+    await waitFor(() => expect(execCommand).toHaveBeenCalledWith("copy"));
+    expect(screen.queryByTestId("ai-context-pack-copy-error")).not.toBeInTheDocument();
+    delete (document as Document & { execCommand?: unknown }).execCommand;
+  });
+
   it("allows only explicitly checked visible Memos and removes a revoked source", async () => {
     const crossInsight = { ...acceptedInsight, insight_id: "insight-2", memo_id: "memo-2", title: "Cross Memo action" };
     useMemosMock.mockReturnValue({
-      data: { pages: [{ memos: [{ name: "memo-1", property: { title: "Port mapping" } }, { name: "memo-2", property: { title: "Second memo" } }] }] },
+      data: { pages: [{ memos: [{ name: "memos/memo-1", property: { title: "Port mapping" } }, { name: "memos/memo-2", property: { title: "Second memo" } }] }] },
       isError: false,
       isLoading: false,
     } as ReturnType<typeof useInfiniteMemos>);

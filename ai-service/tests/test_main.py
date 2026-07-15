@@ -8,6 +8,7 @@ from app.adapters.embedding import DeterministicEmbeddingProvider
 from app.adapters.vector_store import InMemoryVectorStore
 from app.domain.embeddings import VectorStoreHealth
 from app.services.embedding_service import EmbeddingService
+from database import save_chunk_index_state
 from main import SummaryRequest, app, parse_llm_json
 
 
@@ -349,6 +350,7 @@ def test_memos_webhook_deletes_derived_state_when_indexing_is_disabled(monkeypat
             },
         },
     )
+    save_chunk_index_state("memo-derived-delete", "memo-chunk-v1", ("memo-derived-delete:0",))
 
     response = client.post(
         "/api/integrations/memos/webhook",
@@ -359,7 +361,12 @@ def test_memos_webhook_deletes_derived_state_when_indexing_is_disabled(monkeypat
     )
 
     assert "index_status" not in response.json()
-    assert response.json()["derived_cleanup"] == {"ai_notes": 1, "memo_templates": 1, "memo_insights": 2}
+    assert response.json()["derived_cleanup"] == {
+        "ai_notes": 1,
+        "memo_templates": 1,
+        "memo_insights": 2,
+        "chunk_index_state": 1,
+    }
     assert client.get("/api/ai/notes/memo-derived-delete").status_code == 404
     assert client.get("/api/ai/templates/memo-derived-delete").status_code == 404
     assert client.get("/api/ai/insights/memo-derived-delete").json() == []

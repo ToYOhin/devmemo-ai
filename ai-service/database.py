@@ -201,7 +201,7 @@ def delete_memo_ai_state(memo_id: str | int) -> dict[str, int]:
 
     path = database_path()
     if not path.exists():
-        return {"ai_notes": 0, "memo_templates": 0, "memo_insights": 0}
+        return {"ai_notes": 0, "memo_templates": 0, "memo_insights": 0, "chunk_index_state": 0}
 
     with sqlite3.connect(path) as connection:
         _ensure_ai_notes_schema(connection)
@@ -219,11 +219,12 @@ def delete_memo_ai_state(memo_id: str | int) -> dict[str, int]:
             """
         )
         _ensure_memo_insights_schema(connection)
+        _ensure_chunk_index_state_schema(connection)
         stored_memo_id = str(memo_id)
         counts: dict[str, int] = {}
-        for table in ("ai_notes", "memo_templates", "memo_insights"):
+        for table in ("ai_notes", "memo_templates", "memo_insights", "memo_chunk_index_state"):
             cursor = connection.execute(f"DELETE FROM {table} WHERE memo_id = ?", (stored_memo_id,))
-            counts[table] = cursor.rowcount
+            counts["chunk_index_state" if table == "memo_chunk_index_state" else table] = cursor.rowcount
     return counts
 
 
