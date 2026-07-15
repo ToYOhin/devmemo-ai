@@ -45,7 +45,8 @@
     "copy-markdown": "複製 Markdown",
     "copy-json": "複製 JSON",
     "copied": "已複製",
-    "copy-failed": "複製失敗"
+    "copy-failed": "複製失敗",
+    "copy-manual": "目前環境不支援自動複製，預覽內容已選取，請按 Ctrl+C。"
   },
   "auth": {
     "create-your-account": "建立您的帳號",

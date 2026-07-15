@@ -4,7 +4,7 @@
 
 - 修复 Context Pack 对 `memos/{uid}` 与 `{uid}` 混用导致的当前 Memo 重复来源；取消全部来源后仍保留来源选择器，可恢复空态。
 - 删除 Memo 的 AI 派生状态清理补齐 `memo_chunk_index_state`；同时修正 chunk 删除顺序，先清理向量/生命周期再清理 SQLite 状态，并增加 webhook 回归测试。
-- Context Pack copy 增加标准浏览器 DOM clipboard fallback；当前 In-App Browser 禁用 `navigator.clipboard` 与 `document.execCommand`，该环境仍会报告 copy failure，需在真实 Chrome 复验。
+- Context Pack copy 增加标准浏览器 DOM clipboard fallback；当浏览器同时禁用 `navigator.clipboard` 与 `document.execCommand` 时，现自动选中预览并提示用户按 `Ctrl+C`，不再误报 copy failure。真实 Chrome 自动复制仍需复验。
 - 人工验收覆盖两条 Memo、AI Inbox Accept/Reject、accepted-only pack、显式跨 Memo 选择、预算截断和截图；Phase 8 public chunk API 及公共 chat 未改动。
 
 ## 2026-07-14 人工功能检查修复
@@ -57,7 +57,7 @@
 - Memo 详情页 Context Pack 从 Memos 当前用户可见列表提供跨 Memo 选项；默认只选当前 Memo，其他 Memo 必须显式勾选，跨 Memo insight 查询失败会提示并排除，不会读取 raw content。
 - Memos deleted Webhook 增加 AI 派生状态清理，删除 `ai_notes`、`memo_templates`、`memo_insights`；不触碰 Memos 数据库、原始 Markdown、公共 chat 或 Qdrant volume。
 - reject 继续作为 insight 撤销语义，状态版本递增、React Query 失效和 Context Pack accepted-only 过滤共同保证撤销来源不再进入 pack；过期版本仍返回 409。
-- 验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 146 passed；TypeScript、build、lint 与 `git diff --check` 通过。
+- 验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 147 passed；TypeScript、build、lint 与 `git diff --check` 通过。
 - 下一阶段：Phase 9f 评估 Context Pack/Insight 生命周期观测、用户反馈和跨语言 golden output；Phase 8 public chunk API 继续 pending approval。
 
 ## 2026-07-14

@@ -11,20 +11,20 @@
 - Phase 9d 已完成：Memo 详情页 AI Inbox 已增加内存 Context Pack preview/copy；复用 `context-pack-v1` 语义，默认当前 Memo + accepted insights，未新增 HTTP、SQLite、Qdrant 或后台 worker。
 - Phase 9d 验证：前端全量 `143 passed`；TypeScript、build、lint 通过；Playwright 已验证登录、详情页、approve insight、Markdown/JSON copy、`max_chars` 截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png` 与 `devmemo-phase9d-context-pack-mobile.png`。
 - Phase 9e 已完成：新增根目录共享 `contracts/context-pack-v1.json`，Python/Web 测试共同读取；Memo 详情页 Context Pack 只从当前用户可见的 Memos 列表提供显式跨 Memo 选择，默认不扩展来源；删除 Webhook 会清理 AI Service 自有的 note/template/insight 派生状态。
-- Phase 9e 验证：AI Service 全量 `175 passed`；前端全量 `146 passed`；TypeScript、build、lint、verify 脚本和 Compose config 通过。撤销联动：只有 accepted insight 进入 pack；reject 会因 React Query 失效自动移除，过期版本仍由 409 拒绝；跨 Memo 查询失败显示不可用提示，不显示原始内容、Webhook payload、secret 或 chunk content。
+- Phase 9e 验证：AI Service 全量 `175 passed`；前端全量 `147 passed`；TypeScript、build、lint、verify 脚本和 Compose config 通过。撤销联动：只有 accepted insight 进入 pack；reject 会因 React Query 失效自动移除，过期版本仍由 409 拒绝；跨 Memo 查询失败显示不可用提示，不显示原始内容、Webhook payload、secret 或 chunk content。
 
 ## 人工验收与问题修复（2026-07-15）
 
 - 真实手动路径已跑通：创建两条 Memo -> 本地 AI webhook -> AI Inbox Accept/Reject -> Context Pack question/预算/来源选择；accepted insight 进入 pack，rejected insight 不进入 pack，跨 Memo 只有显式勾选才进入。
 - 修复 `memos/{uid}` 与详情路由 `{uid}` 混用导致的当前 Memo 重复来源；修复取消全部来源后无法重新勾选的问题。
 - 修复删除联动遗漏：删除 Memo 的 AI 派生状态清理现在同时删除 SQLite `memo_chunk_index_state`；chunk mode 先删除向量/生命周期再清理 SQLite，避免返回错误的 `index_status=skipped`，并增加 webhook 回归测试。
-- 复制验收发现当前 In-App Browser 同时缺少 `navigator.clipboard` 与 `document.execCommand`，点击 Markdown/JSON copy 仍会显示 copy failure；已增加标准浏览器可用的 DOM fallback，真实 Chrome/用户浏览器仍需单独复验。页面截图已在本轮人工验收工具结果中展示；Statsig 外部请求超时与本地应用无关。
+- 复制验收发现当前 In-App Browser 同时缺少 `navigator.clipboard` 与 `document.execCommand`；现已改为自动选中预览并显示 `Ctrl+C` 手动复制提示，不再把受限环境误报为 copy failure。刷新最新前端后的详情页 DOM 验收已确认提示可见；真实 Chrome 的系统剪贴板仍需单独复验。本轮 CDP 截图调用超时，既有详情页截图 artifact 仍保留；Statsig 外部请求超时与本地应用无关。
 
 更新时间：2026-07-15
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；下一步为 Phase 9f Context Pack 用户反馈与 Context Pack/Insight 生命周期观测。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；本轮补齐受限剪贴板手动降级，下一步为 Phase 9f Context Pack 用户反馈与 Context Pack/Insight 生命周期观测。
 
 ## 当前事实
 

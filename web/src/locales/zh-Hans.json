@@ -44,7 +44,8 @@
     "copy-markdown": "复制 Markdown",
     "copy-json": "复制 JSON",
     "copied": "已复制",
-    "copy-failed": "复制失败"
+    "copy-failed": "复制失败",
+    "copy-manual": "当前环境不支持自动复制，预览内容已选中，请按 Ctrl+C。"
   },
   "auth": {
     "create-your-account": "创建您的账户",

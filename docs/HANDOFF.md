@@ -5,7 +5,7 @@
 - 已手动验证创建两条 Memo、AI Inbox Accept/Reject、Context Pack question/预算、accepted-only 和显式跨 Memo 选择；本轮稳定详情页截图已在工具结果中展示。
 - 修复 `memos/{uid}` 与详情路由 `{uid}` 混用导致的当前 Memo 重复来源；修复取消全部来源后无法重新勾选的问题。
 - 删除 Memo 的 AI 派生状态清理补齐 `memo_chunk_index_state`；chunk mode 先删除向量/生命周期再清理 SQLite，避免提前删状态导致 `index_status=skipped`，并增加 webhook 回归测试。
-- 复制验收发现当前 In-App Browser 禁用 `navigator.clipboard` 和 `document.execCommand`，因此 copy 仍会显示 failure；代码已增加标准浏览器 DOM fallback，需在真实 Chrome/用户浏览器复验。Statsig 外部请求超时与本地功能无关。
+- 复制验收发现当前 In-App Browser 禁用 `navigator.clipboard` 和 `document.execCommand`；现已改为选中预览并显示 `Ctrl+C` 手动复制提示，不再显示误导性的 copy failure。刷新最新前端后的详情页 DOM 已确认提示可见；真实 Chrome/用户浏览器的系统剪贴板仍需单独复验。本轮 CDP 截图调用超时，既有稳定详情页截图仍有效。Statsig 外部请求超时与本地功能无关。
 
 ## 人工功能检查修复（2026-07-14）
 
@@ -49,8 +49,8 @@
 ### Phase 9e 验证
 
 - AI Service webhook 定向：8 passed；Context Pack 定向：12 passed。
-- Web 全量：33 files / 146 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
-- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。本轮已完成本地浏览器人工验收并展示稳定详情页截图；跨 Memo/删除联动已有 contract/unit 测试。In-App Browser 的剪贴板能力被环境禁用，copy 的真实 Chrome 验收仍未完成。
+- Web 全量：33 files / 147 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
+- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；前端全量 147 passed；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。本轮已完成本地浏览器人工验收：刷新最新前端后点击 Markdown copy 显示手动复制提示，pack 只显示安全摘要和 source refs；跨 Memo/删除联动已有 contract/unit 测试。In-App Browser 的系统剪贴板能力仍被环境禁用，真实 Chrome 自动复制仍未完成。
 
 ## 当前项目结构与问题
 

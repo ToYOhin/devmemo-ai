@@ -37,6 +37,7 @@ vi.mock("@/utils/i18n", () => ({
       "ai-context-pack.copy-json": "Copy JSON",
       "ai-context-pack.copied": "Copied",
       "ai-context-pack.copy-failed": "Copy failed",
+      "ai-context-pack.copy-manual": "Clipboard unavailable. The preview is selected; press Ctrl+C to copy.",
     })[key] ?? key,
 }));
 
@@ -116,7 +117,7 @@ describe("AI Memo Context Pack", () => {
     expect(screen.getByTestId("ai-context-pack-empty")).toBeInTheDocument();
   });
 
-  it("shows failure and clipboard error states without exposing content", async () => {
+  it("shows failure and manual clipboard guidance without exposing content", async () => {
     useInsightsMock.mockReturnValue([{ data: [], isError: true, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
     render(<AiMemoContextPack memoId="memo-failed" memoTitle="Failed memo" />);
     expect(screen.getByTestId("ai-context-pack-error")).toBeInTheDocument();
@@ -126,7 +127,7 @@ describe("AI Memo Context Pack", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
     fireEvent.click(screen.getByRole("button", { name: "Copy Markdown" }));
-    return waitFor(() => expect(screen.getByTestId("ai-context-pack-copy-error")).toBeInTheDocument());
+    return waitFor(() => expect(screen.getByTestId("ai-context-pack-copy-manual")).toBeInTheDocument());
   });
 
   it("falls back to the legacy DOM copy path when clipboard permission is unavailable", async () => {
@@ -142,6 +143,18 @@ describe("AI Memo Context Pack", () => {
     await waitFor(() => expect(execCommand).toHaveBeenCalledWith("copy"));
     expect(screen.queryByTestId("ai-context-pack-copy-error")).not.toBeInTheDocument();
     delete (document as Document & { execCommand?: unknown }).execCommand;
+  });
+
+  it("selects the preview and explains manual copy when browser clipboard APIs are unavailable", async () => {
+    useInsightsMock.mockReturnValue([{ data: [acceptedInsight], isError: false, isLoading: false }] as ReturnType<typeof useAiMemoInsightsForMemos>);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    delete (document as Document & { execCommand?: unknown }).execCommand;
+
+    render(<AiMemoContextPack memoId="memo-1" memoTitle="Port mapping" />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy Markdown" }));
+
+    await waitFor(() => expect(screen.getByTestId("ai-context-pack-copy-manual")).toBeInTheDocument());
+    expect(screen.queryByTestId("ai-context-pack-copy-error")).not.toBeInTheDocument();
   });
 
   it("allows only explicitly checked visible Memos and removes a revoked source", async () => {

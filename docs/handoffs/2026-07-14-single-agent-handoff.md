@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-15（Phase 9e 人工验收与问题修复后更新）
+更新时间：2026-07-15（Phase 9e 人工验收与受限剪贴板修复后更新）
 
 ## 当前工作模式
 
@@ -13,7 +13,7 @@
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
 - 当前 HEAD：以 `git log --oneline -8` 为准；本轮人工验收修复与文档已纳入当前交接，用户未提交的 Prompt 文件仍需保留
-- GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
+- GitHub remote：本轮完成后由当前 Agent 推送本次修复；以远端分支和提交校验为准
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
 - Go：`G:\Go`；工作区/缓存：`G:\GoWorkspace`

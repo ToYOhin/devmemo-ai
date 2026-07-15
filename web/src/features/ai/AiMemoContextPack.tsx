@@ -1,5 +1,5 @@
 import { AlertCircleIcon, CheckIcon, ClipboardIcon, FileJsonIcon, PackageOpenIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
 import { cn } from "@/lib/utils";
@@ -20,11 +20,13 @@ interface AvailableMemo {
 
 const normalizeMemoId = (name: string) => (name.startsWith("memos/") ? name.slice("memos/".length) : name);
 
-const copyTextToClipboard = async (text: string) => {
+type CopyResult = "copied" | "manual";
+
+const copyTextToClipboard = async (text: string): Promise<CopyResult> => {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
-      return;
+      return "copied";
     }
   } catch {
     // Fall through to the legacy DOM copy path for restricted browser contexts.
@@ -37,11 +39,14 @@ const copyTextToClipboard = async (text: string) => {
   textarea.style.opacity = "0";
   document.body.appendChild(textarea);
   textarea.select();
-  const copied = document.execCommand?.("copy") ?? false;
-  textarea.remove();
-  if (!copied) {
-    throw new Error("clipboard unavailable");
+  let copied = false;
+  try {
+    copied = document.execCommand?.("copy") ?? false;
+  } catch {
+    // Some embedded browsers expose neither a usable clipboard API nor execCommand.
   }
+  textarea.remove();
+  return copied ? "copied" : "manual";
 };
 
 const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
@@ -65,7 +70,9 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
   const [maxItems, setMaxItems] = useState(8);
   const [selectedInsightIds, setSelectedInsightIds] = useState<string[]>([]);
   const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | null>(null);
+  const [copyManualFallback, setCopyManualFallback] = useState(false);
   const [copyError, setCopyError] = useState(false);
+  const previewRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
     setSelectedMemoIds((current) => {
@@ -146,10 +153,23 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
       return;
     }
     try {
-      await copyTextToClipboard(format === "markdown" ? packState.response.markdown : packState.response.toJson());
-      setCopiedFormat(format);
+      const result = await copyTextToClipboard(format === "markdown" ? packState.response.markdown : packState.response.toJson());
+      setCopiedFormat(result === "copied" ? format : null);
+      setCopyManualFallback(result === "manual");
       setCopyError(false);
+      if (result === "manual") {
+        const preview = previewRef.current;
+        const selection = window.getSelection();
+        if (preview && selection) {
+          const range = document.createRange();
+          range.selectNodeContents(preview);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          preview.focus();
+        }
+      }
     } catch {
+      setCopyManualFallback(false);
       setCopyError(true);
     }
   };
@@ -281,7 +301,9 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
                 </p>
               )}
               <pre
+                ref={previewRef}
                 data-testid="ai-context-pack-preview"
+                tabIndex={0}
                 className="max-h-72 overflow-auto whitespace-pre-wrap wrap-break-word rounded-md border border-border bg-muted/20 p-3 text-xs"
               >
                 {packState.response.markdown}
@@ -298,6 +320,11 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
                 {copyError && (
                   <span data-testid="ai-context-pack-copy-error" className="self-center text-xs text-destructive">
                     {t("ai-context-pack.copy-failed")}
+                  </span>
+                )}
+                {copyManualFallback && (
+                  <span data-testid="ai-context-pack-copy-manual" className="self-center text-xs text-muted-foreground">
+                    {t("ai-context-pack.copy-manual")}
                   </span>
                 )}
               </div>

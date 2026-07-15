@@ -69,7 +69,8 @@
     "copy-markdown": "Copy Markdown",
     "copy-json": "Copy JSON",
     "copied": "Copied",
-    "copy-failed": "Copy failed"
+    "copy-failed": "Copy failed",
+    "copy-manual": "Clipboard unavailable. The preview is selected; press Ctrl+C to copy."
   },
   "auth": {
     "create-your-account": "Create your account",
