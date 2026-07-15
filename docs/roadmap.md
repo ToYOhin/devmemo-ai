@@ -284,3 +284,11 @@ Phase 9b contract 事实：`context-pack-v1` 只接受显式 `memo_ids`/`insight
 集成 contract：只有当前用户可见 Memo 与 accepted insight 可进入；pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除。Markdown 是主复制格式，JSON 可选；必须展示 question、sources、截断原因、空/失败/窄屏状态；不显示 raw content、Webhook payload、secret 或 chunk content，pack 不落库。
 
 Phase 8 public chunk API 继续 pending approval，默认 deterministic + memory、公共 chat 完整 Memo 语义、完整 Memo/chunk collection 和所有第三方参考边界均不变。下一切片为 Phase 9d internal preview/copy approval gate：只有入口批准后才实现最小 UI 垂直切片。
+
+## Phase 9d：Context Pack internal preview/copy 已完成
+
+用户已明确批准 Memo 详情页 AI Inbox 的内部入口。本切片复用 `context-pack-v1` 的显式来源与 bounded 输出语义，在 `web/src/features/ai/` 内生成临时 pack：默认当前 Memo + accepted insights，来源可取消选择，其他 Memo 不自动发现。
+
+UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON 复制、sources、截断提示，以及 empty、AI 查询 failure、clipboard failure 和窄屏布局。只消费安全 title/summary/source_refs，不展示 raw content、Webhook payload、secret 或 chunk content；不写 SQLite，不新增公共 HTTP，不连接 Qdrant，不启动 worker/Agent。
+
+验证：Web 定向 7 passed；全量 33 files / 143 passed；TypeScript、build、lint 通过；Playwright 已完成登录、approve、复制、预算截断和 390px 窄屏手动路径。下一阶段处理 canonical fixture、权限感知的跨 Memo 显式选择、删除/撤销联动，不改变公共 chat 或 Phase 8 gate。

@@ -215,3 +215,11 @@ Phase 9b 固定 `context-pack-v1` 为纯函数输出边界：请求必须显式�
 未来内部入口必须满足：当前用户可见 Memo 权限、accepted insight 状态、显式 question/选择/预算、Markdown 主复制和 JSON 可选复制、sources/截断/空态/失败态/窄屏反馈。pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除；pack 不落库，不显示 raw content、Webhook payload、secret 或 chunk content。
 
 当前决策是 proposal-only，等待产品明确批准后再执行 Phase 9d 最小 preview/copy UI slice。批准前不新增 HTTP endpoint、feature flag、SQLite 自动发现、Qdrant 读取或公共 chat 行为；Phase 8 public chunk API 继续 pending approval。
+
+## ADR-040：Phase 9d 只在 Memo 详情页提供内存 Context Pack preview/copy
+
+用户已明确批准 Memo 详情页 AI Inbox 作为唯一内部入口。实现默认选中当前 Memo 与 accepted insights，允许逐项取消 insight；当前 slice 不读取 Memo 列表，因此不提供跨 Memo 自动发现，未来跨 Memo 必须显式选择并通过当前用户可见性校验。
+
+Web 端 `contextPack.ts` 镜像 Phase 9b Python `build_context_pack` 的 provider-neutral contract，在浏览器内生成 bounded Markdown/JSON。这样保留现有无 HTTP、无 Qdrant、无 worker 和不落 SQLite 的回滚边界；后续必须用共享 fixture 校验 Python/Web 的排序、预算和脱敏语义，避免双实现漂移。
+
+空 accepted insight、用户清空来源、AI Service 查询失败、clipboard 失败和窄屏均有明确 UI 状态。pending/rejected/revoked/stale insight、删除或不可见 Memo、raw content、Webhook payload、secret 和 chunk content 不进入 pack。Phase 8 public chunk API 仍 pending approval，公共 chat 和完整 Memo collection 不变。

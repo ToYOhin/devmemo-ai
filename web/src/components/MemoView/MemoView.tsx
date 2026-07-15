@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useInstance } from "@/contexts/InstanceContext";
+import AiMemoContextPack from "@/features/ai/AiMemoContextPack";
 import AiMemoInsights from "@/features/ai/AiMemoInsights";
 import AiMemoSummary from "@/features/ai/AiMemoSummary";
 import AiMemoTemplate from "@/features/ai/AiMemoTemplate";
@@ -133,6 +134,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
         <>
           <AiMemoTemplate memoId={memoId} />
           <AiMemoInsights memoId={memoId} />
+          <AiMemoContextPack memoId={memoId} memoTitle={memoData.property?.title || memoId} />
           <AiMemoSummary memoId={memoId} title={memoData.property?.title ?? ""} content={memoData.content} tags={memoData.tags ?? []} />
         </>
       )}

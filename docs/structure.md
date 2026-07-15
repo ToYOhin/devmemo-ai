@@ -12,7 +12,7 @@ H:\DevMemoAI/
 ├── internal/                    # Memos 内部服务、Markdown、Webhook 等模块
 ├── proto/                       # Memos API/Store Proto 与生成代码
 ├── web/                         # Memos React + TypeScript 前端
-│   └── src/features/ai/         # DevMemo AI 前端 feature：API、hooks、模板、摘要
+│   └── src/features/ai/         # DevMemo AI 前端 feature：API、hooks、模板、摘要、Inbox、Context Pack
 ├── ai-service/                  # 独立 FastAPI AI 旁路服务
 ├── integrations/                # 上游/部署集成脚本与配置
 ├── scripts/                     # Windows 验证、安装、Compose 辅助脚本
@@ -35,6 +35,21 @@ cmd/server/store/internal/proto
 ```
 
 Memos 仍是 Memo 原始内容、标签、搜索和用户权限的事实来源。本项目不把 AI 字段写入 Memos 数据库，也不修改 `server/`、`store/`、`proto/` 或通用前端数据层来承载 AI 派生状态。
+
+## Web AI feature 结构
+
+```text
+web/src/features/ai/
+├── api.ts                 # AI Service URL、insight/template/summary 请求
+├── hooks.ts               # React Query 读取与状态变更 hooks
+├── AiMemoInsights.tsx     # Memo 详情页 AI Inbox：pending/accepted/rejected 审核
+├── AiMemoContextPack.tsx  # Phase 9d：内存 preview/copy、预算、来源和状态 UI
+├── contextPack.ts         # Phase 9b contract 的 Web provider-neutral adapter
+├── AiMemoTemplate.tsx     # 结构化 Memo 模板展示
+└── AiMemoSummary.tsx      # bounded summary 展示
+```
+
+当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 是两份实现，下一阶段应共享 contract fixture。`graphify-out` 的历史图还会把 “Inbox” 解析为 Memos `store/inbox.go`，查询时需使用 `AiMemoInsights`/`AiMemoContextPack` 精确名称。
 
 ## AI Service 目录
 

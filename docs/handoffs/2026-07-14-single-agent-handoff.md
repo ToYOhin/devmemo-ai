@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-15（Phase 9b 完成后更新）
+更新时间：2026-07-15（Phase 9d 完成后更新）
 
 ## 当前工作模式
 
@@ -12,7 +12,7 @@
 
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
-- 当前 HEAD：Phase 9a/9b implementation commit（以 `git log --oneline -8` 为准）
+- 当前 HEAD：Phase 9d UI implementation 待提交（以 `git log --oneline -8` 为准）
 - GitHub remote：本轮不 push；远端仍保留上一阶段已推送的 Phase 8 gate
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
@@ -42,7 +42,7 @@
 
 ## 当前已完成与未完成
 
-Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal、Phase 9a AI Inbox 和 Phase 9b Context Pack contract 已完成；Phase 8 implementation gate 仍 pending approval：
+Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal、Phase 9a AI Inbox、Phase 9b Context Pack contract、Phase 9c integration gate 和 Phase 9d UI 已完成；Phase 8 implementation gate 仍 pending approval：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
@@ -62,8 +62,10 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 9. Phase 9b 已新增 `context-pack-v1` domain contract 和纯函数 `build_context_pack`；显式 Memo/insight 选择、accepted 状态、同 Memo/source 去重、确定性排序、Markdown 字符预算、JSON/Markdown 一致性均有测试。
 10. Phase 9b 验证：定向 Context Pack 12 passed；AI Service 全量 174 passed，保留 1 个 Starlette/httpx 弃用警告；未新增 HTTP、Qdrant 或公共 chat 行为。
 
-11. Phase 9c integration gate 已完成 proposal-only 评审：推荐 Memo 详情页 AI Inbox 的 `Copy Context Pack`，默认当前 Memo，跨 Memo 显式选择；当前未获批准，不修改 UI/API。
-12. Phase 9c 已明确当前用户可见 Memo、accepted insight、撤销/删除/过期排除、Markdown/JSON 复制、sources、截断/空/失败/窄屏边界；下一步为 Phase 9d internal preview/copy approval gate。
+11. Phase 9c integration gate 已完成 proposal-only 评审：推荐 Memo 详情页 AI Inbox 的 `Copy Context Pack`，默认当前 Memo，跨 Memo 显式选择。
+12. Phase 9d 已实现 `AiMemoContextPack` 与 Web `contextPack` adapter：question、预算、accepted 来源勾选、Markdown/JSON copy、sources、截断、empty/failure/copy-error 和窄屏布局；pack 只在内存生成，不新增 HTTP/SQLite/Qdrant/worker。
+13. Phase 9d Web 定向 7 passed、全量 143 passed；TypeScript/build/lint 通过；Playwright 已登录并完成 approve insight、复制、`max_chars` 截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
+14. 当前没有跨 Memo picker、删除事件清理或 pack 审计持久化；Python builder 与 Web adapter 需要后续共享 fixture，Phase 9e 处理这些产品/contract 决策。
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
@@ -72,7 +74,7 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 ```text
 AI Service full pytest      174 passed
 Context Pack focused pytest 12 passed
-Frontend full tests          131 passed
+Frontend full tests          143 passed
 pnpm lint                    PASS
 TypeScript/build             PASS
 Go full test -p 2 ./...      PASS
@@ -94,4 +96,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9d internal preview/copy approval gate Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9e Context Pack product acceptance Prompt。

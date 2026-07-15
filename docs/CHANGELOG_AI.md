@@ -36,6 +36,14 @@
 - 明确交互边界：Markdown 主复制格式、JSON 可选；question、选择、预算、sources、截断、空态、失败态和窄屏必须可见；不暴露 raw content、Webhook payload、secret 或 chunk content。
 - 当前没有产品批准，本阶段不修改运行时 UI/API；下一阶段为 Phase 9d internal preview/copy approval gate。
 
+### Phase 9d：Memo 详情页 Context Pack internal preview/copy
+
+- 用户明确批准后，在现有 Memo 详情页 AI Inbox 增加 Context Pack 面板；默认当前 Memo 与 accepted insights，来源可逐项取消，当前不自动发现跨 Memo 来源。
+- 新增 question、`max_chars`/`max_items`、bounded Markdown preview、Markdown/JSON copy、sources 和截断提示；empty、AI 查询失败、clipboard 失败和窄屏状态均有覆盖。
+- Web 端只镜像 Phase 9b `context-pack-v1` builder contract，在内存生成，不新增公共 HTTP、不写 SQLite、不连接 Qdrant、不启动 Agent/worker；raw content、Webhook payload、secret 和 chunk content 不进入 pack。
+- 验证：Web 定向 7 passed；全量 33 files / 143 passed；TypeScript/build/lint 通过；Playwright 手动验证登录、approve、复制、截断和 390px 窄屏，截图 artifact 为 `devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
+- 下一阶段：Phase 9e 评审共享 contract fixture、权限感知跨 Memo 显式选择和 Memo 删除/insight 撤销联动；Phase 8 public chunk API 继续 pending approval。
+
 ## 2026-07-14
 
 ### Phase 5f：Qdrant chunk collection/config/composition

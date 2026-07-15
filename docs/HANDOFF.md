@@ -22,13 +22,30 @@
 - 验证：Context Pack 定向 12 passed；AI Service 全量 `174 passed`，保留 1 个 Starlette/httpx 弃用警告；示例输出由 `context-pack-v1` fixture 覆盖。
 - 下一阶段执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9c Context Pack integration gate，先等待产品入口/权限边界决策。
 
+## Phase 9d Context Pack internal preview/copy 已完成
+
+- 用户已明确批准 Memo 详情页 AI Inbox 内部 preview/copy 入口。
+- 新增 `web/src/features/ai/AiMemoContextPack.tsx` 与 `web/src/features/ai/contextPack.ts`：默认选择当前 Memo 与所有 accepted insights；来源可逐项取消；当前 slice 不加载其他 Memo，因此不存在隐式跨 Memo 扩展。
+- question、`max_chars`、`max_items`、Markdown preview、Markdown 主复制、JSON 可选复制、sources、截断原因、empty/error/copy-error 状态均已接入；pack 只存在 React 内存，不写 SQLite、不新增 HTTP、不读 Qdrant。
+- `web/tests/ai-context-pack.test.ts` 与 `web/tests/ai-context-pack.test.tsx` 覆盖 contract、accepted-only、显式选择、预算截断、空/失败/复制失败和不暴露原文；全前端 `143 passed`。
+- Playwright 手动路径：登录 -> 打开 `/memos/LFodC7kD9ydf36MPSxT4sN` -> AI Inbox 点击 Accept -> Context Pack 输入 question -> 调整预算 -> Copy Markdown/JSON；390x844 已验证窄屏换行。截图 artifact：`devmemo-phase9d-context-pack-desktop.png`、`devmemo-phase9d-context-pack-mobile.png`。
+- AI Service 查询错误作为不可见/删除 Memo 的 failure 边界；pending/rejected/撤销或过期 insight 不进入 pack。当前没有跨 Memo picker、删除事件清理或 pack 审计持久化，这些留给下一阶段产品决策。
+
+## 当前项目结构与问题
+
+- Memos Go (`server/store/proto/internal`) 仍是原始 Memo 与权限事实源；AI Service (`ai-service/app`) 只保存 AI 派生状态；Web (`web/src/features/ai`) 是现有产品边界。
+- AI Inbox 目前嵌入 Memo 详情页，不是全局收件箱；Context Pack 前端 adapter 与 Python builder 需共享 fixture，避免两种语言的排序/预算语义漂移。
+- `graphify-out` 的旧图把 “Inbox” 指向 Memos `store/inbox.go`，没有反映 Phase 9a/9d 的 AI feature；后续应重建图或改用精确节点查询。
+
+验证与下一步：Phase 9e 评估是否增加权限感知的跨 Memo 显式选择、撤销/删除联动和 canonical fixture；Phase 8 public chunk API 继续 pending approval。
+
 ## Phase 9c Context Pack integration gate：proposal-only 已完成
 
 - 当前没有明确产品入口批准，因此不修改运行时 UI/API；Phase 9b builder、公共 chat、Qdrant 和 Memos 核心均保持不变。
 - 推荐入口：Memo 详情页 AI Inbox 内的“复制 Context Pack”，默认只带当前 Memo；跨 Memo 必须由用户显式选择。命令面板和独立页面暂不采用。
 - 权限/撤销边界：只允许当前用户可见 Memo 和 accepted insight；pending/rejected、删除 Memo、撤销 insight、过期版本和不可见来源必须排除；pack 不落库。
 - 交互提案：Markdown 主复制格式，JSON 可选；展示 question、Memo/insight 选择、`max_chars`/`max_items`、sources、截断提示、空态、失败态和窄屏行为；不展示原始 content、Webhook payload、secret 或 chunk content。
-- 下一阶段只有在产品批准入口后，才执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9d internal preview/copy slice。
+- 以上是 Phase 9c 的历史 proposal-only 记录；入口现已获批准并由 Phase 9d 完成。下一步执行 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 的 Phase 9e product acceptance slice。
 
 ## 2026-07-14 单 Agent 模式切换
 
@@ -51,7 +68,7 @@
 
 详细接管快照见 [`docs/handoffs/2026-07-14-single-agent-handoff.md`](handoffs/2026-07-14-single-agent-handoff.md)。当前 HEAD 已包含 Phase 9a/9b 本地 commit，本轮尚未 push；工作区仍保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改。
 
-下一窗口先读取该快照和本文件顶部 Phase 9c proposal-only 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9d approval gate slice。
+下一窗口先读取该快照和本文件顶部 Phase 9d 完成事实；继续保持 Phase 8 gate pending approval，执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9e product acceptance slice。
 
 ## 2026-07-14 Phase 5e
 
