@@ -1,9 +1,10 @@
 # DevMemo AI 变更记录
 
-## 2026-07-20：Phase 10 route B Context Pack 浏览器验收恢复
+## 2026-07-20：Phase 10 route B Context Pack Chrome/Windows 复制复核
 
-- 通过同一 Chrome profile 的新标签恢复详情页验收，避免 Vite 重启后接管长期用户标签的超时；确认 accepted Insight、显式来源和 `max_chars=64` 的可见预算截断，页面无 console error。
-- 两个复制按钮都由 UI 触发，但自动化表面没有改写 Windows 系统剪贴板，故不将其写为本轮复制通过或产品回归。历史 Phase 9f 的真实 Chrome/Windows 剪贴板证据仍独立有效。
+- 通过同一 Chrome profile 的新标签恢复详情页验收，避免 Vite 重启后接管长期用户标签的超时；确认 accepted Insight、显式来源和 `max_chars=64` 的可见预算截断。
+- 用真实 Chrome 指针点击逐一复核 `Copy Markdown`、`Copy JSON` 后，Windows `Get-Clipboard` 分别确认安全 Markdown 标题和可解析的 `context-pack-v1` JSON；未记录 raw clipboard 内容，且没有 raw payload/secret 标记或 console/React error boundary。
+- 早先自动化桥接点击未改写 clipboard 的结果保留为工具路径限制，不再作为产品复制状态的结论。
 - 未创建/删除 Memo，未再次改变 Insight 状态，未修改 public chunk、公共 chat、Memos 核心、SQLite schema、collection 或 volume。
 
 ## 2026-07-20：Phase 10 route B 本地 Webhook → Insight → Review
@@ -13,7 +14,7 @@
 - 一个持久化 Insight 按已授权的一次操作变为 `accepted`，版本为 `2`。未创建第二条 Memo，未删除数据，未 seed SQLite、绕过认证或修改公共 chat/collection/volume。
 - 纠正此前 host-default lifecycle 误读：运行中 Compose 必须在 AI Service 容器执行只读 aggregate CLI。新增本地 Vite `.env.example`，并让 `DEV_PROXY_SERVER` 可从忽略的 `.env.local` 读取，以便重启后稳定指向本机 Compose。
 - 验证：新增回归 `1 passed`；AI Service 全量与串行 `verify-devmemo.ps1` 均 `188 passed`（1 条既有弃用警告）；Compose config、串行 Web `33 files / 149 passed`、build、项目 lint 通过。独立 strict TypeScript 仍是 13 条既有依赖/声明错误。
-- 仍未验证：本轮新鲜的认证浏览器 Context Pack 预算/Markdown/JSON 复制、delete/revoke 和四项人工反馈。浏览器控制在 Vite 重启后不可用，不能把历史 Phase 9f 剪贴板验收改写为本次人工反馈通过。
+- 仍未验证：delete/revoke 和四项真实参与者反馈。浏览器预算与 Markdown/JSON 系统复制已有本轮技术复核，但不能把它们改写为人工主观反馈通过。
 
 ## 2026-07-20：Phase 10 route B 真实 Capture 阻塞
 

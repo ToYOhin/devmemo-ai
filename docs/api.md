@@ -16,9 +16,9 @@ No new HTTP contract was added. The current authenticated Memos user uses the ex
 
 Memos sends the current Memo identifier as `memos/<uid>` in this webhook shape, while the detail UI queries the terminal UID. AI Service now normalizes that resource name before reading or writing its derived SQLite state. A focused API regression verifies that the terminal UID reads the persisted Insight and the resource-name form is not exposed as a second identity.
 
-For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review evidence, but fresh Context Pack budget/copy and human-feedback results remain unverified. No raw Memo data, webhook payload, secret, or chunk content is exposed.
+For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review, bounded Context Pack, and Chrome/Windows Markdown/JSON system-copy evidence; human-feedback results remain unverified. No raw Memo data, webhook payload, secret, or chunk content is exposed.
 
-The subsequent same-profile Chrome check confirmed the existing UI's accepted Insight and a visible `max_chars` budget truncation. It did not add an API route or request. Automated copy clicks did not update the Windows clipboard, so current API/product evidence continues to distinguish a browser-automation bridge limitation from a fresh real-Chrome clipboard pass.
+The subsequent same-profile Chrome check confirmed the existing UI's accepted Insight and a visible `max_chars` budget truncation. It did not add an API route or request. Real pointer clicks on each copy control updated Windows clipboard with safe Markdown and parseable `context-pack-v1` JSON; the earlier automated-click mismatch remains a browser-automation bridge limitation.
 
 ## Manual UI integration notes (2026-07-14)
 
