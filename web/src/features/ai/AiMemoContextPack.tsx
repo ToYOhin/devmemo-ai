@@ -1,4 +1,4 @@
-import { AlertCircleIcon, CheckIcon, ClipboardIcon, FileJsonIcon, PackageOpenIcon } from "lucide-react";
+import { AlertCircleIcon, ClipboardIcon, FileJsonIcon, PackageOpenIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useInfiniteMemos } from "@/hooks/useMemoQueries";
@@ -23,30 +23,36 @@ const normalizeMemoId = (name: string) => (name.startsWith("memos/") ? name.slic
 type CopyResult = "copied" | "manual";
 
 const copyTextToClipboard = async (text: string): Promise<CopyResult> => {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return "copied";
-    }
-  } catch {
-    // Fall through to the legacy DOM copy path for restricted browser contexts.
-  }
-
+  // Prefer the DOM command while it is still available. In some browser surfaces
+  // `navigator.clipboard.writeText` resolves against an isolated clipboard rather
+  // than the Windows clipboard exposed to the user.
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.setAttribute("readonly", "true");
   textarea.style.position = "fixed";
   textarea.style.opacity = "0";
   document.body.appendChild(textarea);
+  textarea.focus();
   textarea.select();
-  let copied = false;
+  textarea.setSelectionRange(0, textarea.value.length);
   try {
-    copied = document.execCommand?.("copy") ?? false;
+    if (document.execCommand?.("copy")) return "copied";
   } catch {
-    // Some embedded browsers expose neither a usable clipboard API nor execCommand.
+    // Continue to the asynchronous API when the legacy command is unavailable.
+  } finally {
+    textarea.remove();
   }
-  textarea.remove();
-  return copied ? "copied" : "manual";
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return "copied";
+    }
+  } catch {
+    // The asynchronous clipboard API is unavailable in this browser context.
+  }
+
+  return "manual";
 };
 
 const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
@@ -310,7 +316,7 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
               </pre>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="secondary" onClick={() => void handleCopy("markdown")}>
-                  {copiedFormat === "markdown" ? <CheckIcon className="h-3.5 w-3.5" /> : <ClipboardIcon className="h-3.5 w-3.5" />}
+                  <ClipboardIcon className="h-3.5 w-3.5" />
                   {copiedFormat === "markdown" ? t("ai-context-pack.copied") : t("ai-context-pack.copy-markdown")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void handleCopy("json")}>
