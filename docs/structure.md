@@ -183,7 +183,7 @@ docker compose up -d
   └── ollama      -> ollama-data
 ```
 
-默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。Qdrant 配置同时保留完整 Memo collection 和独立 chunk collection 名称。
+默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。默认 Compose 只启动 Memos (`0.75` CPU) 和 AI Service (`0.25` CPU)，Qdrant/Ollama 必须通过 profile 显式启动；应用后的配额证据在 `docs/handoffs/2026-07-20-low-cpu-baseline.md`。Qdrant 配置同时保留完整 Memo collection 和独立 chunk collection 名称。
 
 ## 迁移与升级规则
 

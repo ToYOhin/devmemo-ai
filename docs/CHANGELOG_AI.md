@@ -1,5 +1,12 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：低 CPU 默认运行与验证
+
+- 默认 Compose 的 Memos/AI Service CPU 上限调整为 `0.75`/`0.25`，Memos 使用 `GOMAXPROCS=1`；AI 数值线程环境变量固定为 `1`。
+- Qdrant 与 Ollama 改为显式 `qdrant`/`ollama` Compose profile，普通 deterministic + memory 启动不再拉起可选向量库或模型服务。
+- `scripts/verify-devmemo.ps1` 的 Go 环境和可选 FullBackend 测试改为单处理器、`go test -p 1`；功能契约未改变。
+- 验证：Compose/profile config、运行中 Docker 配额/线程检查、AI health 均通过；串行 `verify-devmemo.ps1` 为 `187 passed`（保留既有 Starlette/httpx 弃用警告）。
+
 ## 2026-07-20：Phase 10 route B real-feedback plan
 
 - 新增 [`docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`](handoffs/2026-07-20-devmemory-real-feedback-plan.md)，把下一步限定为一位在场且同意的真实参与者完成一次 Bug Report `Capture -> Insight -> Review -> Context Pack`。

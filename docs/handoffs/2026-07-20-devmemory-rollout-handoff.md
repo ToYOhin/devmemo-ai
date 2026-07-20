@@ -32,6 +32,7 @@ git log --oneline -8
 
 ## 最近验证
 
+- Low-CPU baseline: Memos/AI Service default caps are `0.75`/`0.25` CPU, Go/Memos and AI numerical threads use one processor, and Qdrant/Ollama are explicit profiles. Docker inspection, Compose config, AI health, and serial verify (`187 passed`) confirmed the applied settings; see `docs/handoffs/2026-07-20-low-cpu-baseline.md`. `verify-devmemo.ps1 -FullBackend` now uses `go test -p 1`.
 - Phase 10 route B feedback observation: authenticated Chrome exposed an existing local Bug Report capture; Memos unauthenticated `auth/me` returned `401`; Compose/AI health were up. The configured read-only lifecycle report had `memo_insights=0` and one processed webhook event. A second read-only Chrome check rendered the expected empty `/inbox`; the old Memo body was transient. No human feedback or full review/copy lifecycle is claimed; see `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
 - Focused DevMemory regression: MemoInsight, Context Pack builder/golden, and lifecycle-report tests: `15 passed`. No Memo/Insight mutation, delete/revoke, budget action, copy action, or feature-flag change was made.
 - AI Service full suite and `scripts/verify-devmemo.ps1`: `187 passed` with one existing deprecation warning; Compose config passed. At the user's CPU-conservation request, fresh Web test/build/lint were not rerun after this documentation-only slice; strict TypeScript still has the known 13 baseline declaration errors.

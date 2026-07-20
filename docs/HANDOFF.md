@@ -1,5 +1,11 @@
 # DevMemo AI 当前交接
 
+## Low-CPU baseline (2026-07-20)
+
+- Default Compose is Memos `0.75` CPU + AI Service `0.25` CPU, with Memos/Go at one processor and AI numeric threads set to one. Qdrant/Ollama are now opt-in `qdrant`/`ollama` profiles.
+- `scripts/verify-devmemo.ps1` retains its test contract but caps Go to `GOMAXPROCS=1` and `go test -p 1` for `-FullBackend`. Use targeted tests first; do not run parallel high-load Web commands under the current CPU constraint.
+- Applied evidence: Docker inspection confirmed `750000000`/`250000000` NanoCPUs and one-thread variables; Compose config, AI health, and serial verify (`187 passed`) passed. See [`docs/handoffs/2026-07-20-low-cpu-baseline.md`](handoffs/2026-07-20-low-cpu-baseline.md).
+
 ## Phase 10 DevMemory feedback observation boundary (2026-07-20)
 
 - Route B did not create synthetic feedback. An authenticated Chrome session showed one existing local Bug Report capture, while the configured read-only AI SQLite lifecycle report had `memo_insights=0`. A second read-only check rendered the expected empty `/inbox` page, so the earlier retained Memo body is not treated as a product defect.

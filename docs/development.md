@@ -8,8 +8,13 @@ $env:Path = "G:\Go\bin;$env:Path"
 .\scripts\verify-devmemo.ps1
 ai-service/.venv/Scripts/python.exe -m pytest -q ai-service/tests
 docker compose config
+docker compose up -d memos ai-service
+docker compose --profile qdrant up -d qdrant
+docker compose --profile ollama up -d ollama
 ai-service/.venv/Scripts/python.exe -m uvicorn main:app --app-dir ai-service --port 8000
 ```
+
+The default Compose path starts only Memos and AI Service, capped at `0.75` and `0.25` CPU respectively. Qdrant and Ollama are explicit profiles so their resource costs are never part of ordinary deterministic + memory development. `verify-devmemo.ps1` also limits Go verification to one processor and `go test -p 1`; pass `-FullBackend` only when that slower low-CPU check is required.
 
 The reproducible local Go installation is `G:\Go` with `GOPATH=G:\GoWorkspace`. Open a new PowerShell window after changing the user PATH, or set the variables shown above for the current session.
 

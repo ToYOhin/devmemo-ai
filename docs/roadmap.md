@@ -314,6 +314,8 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 
 ## Phase 10：受控 gateway rollout 与 DevMemory 产品反馈（进行中）
 
+Before any route-A or route-B work, default local resource use is constrained: Memos `0.75` CPU, AI Service `0.25` CPU, one Go processor, and explicit Qdrant/Ollama profiles. Runtime inspection, health, Compose config, and serial verification (`187 passed`) confirm the limits; details are in `docs/handoffs/2026-07-20-low-cpu-baseline.md`. This changes only local scheduling/default startup; deterministic + memory, public chat, and all Phase 10 gates remain unchanged.
+
 1. 只在受信任网关一侧完成 raw-body HMAC、唯一 `visible_memo_ids` 传递和可审计的 disabled/401/422/503 smoke；不把签名 secret 或可见范围交给浏览器客户端，也不改 Memos 核心权限模型。
 2. 用一个真实开发场景收集 `Capture → Insight → Review → Context Pack` 的人工反馈，重点验证来源、撤销、删除与预算截断是否可理解；pack 继续仅在内存生成。
 3. 在收集到兼容性、权限与回滚证据前，不默认开启 `AI_PUBLIC_CHUNK_RETRIEVAL`，不修改 `/api/ai/chat`，不引入 Agent、网页搜索、MCP、图数据库或常驻 worker。
