@@ -10,6 +10,10 @@ Run locally from `ai-service`:
 
 Optional `--database <path>` selects an AI Service SQLite file. The command opens the file through SQLite `mode=ro` and returns only aggregate `ai_notes`, `memo_templates`, `memo_insights`, `memo_chunk_index_state`, insight status/version range, and webhook-event status counts. It does not create, migrate, or modify a database; it omits memo IDs, raw content, raw webhook payloads, chunk content, and secrets. This is a local development diagnostic, not a public HTTP endpoint.
 
+## Phase 10 feedback observation boundary (2026-07-20)
+
+No HTTP API was added or changed for route B. The local observation used only the existing authenticated product UI and `python -m scripts.devmemory_lifecycle_report`; the latter remains read-only and aggregate-only. Its current zero-insight aggregate and an `/inbox` view-refresh failure mean no accept/reject or Context Pack feedback lifecycle is asserted. See `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
+
 ## Manual UI integration notes (2026-07-14)
 
 - The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.

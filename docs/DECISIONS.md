@@ -255,3 +255,9 @@ Context Pack 复制继续是浏览器内存中的本地交互，不新增 HTTP�
 Phase 10 的第一个切片使用 `python -m scripts.public_chunk_gateway_contract_smoke` 在进程内模拟受信任网关。它通过 exact raw-body HMAC 绑定 question、limit 和唯一 `visible_memo_ids`，并验证 disabled、missing/tampered signature、ambiguous scope、degraded store、授权去重及 metadata 脱敏。临时 secret 不输出，也不进入浏览器或部署配置。
 
 该脚本使用 TestClient 和受控 fake chunk coordinator，不启动 HTTP 服务、不访问网络、不连接真实 Memos 权限层。因此它只能作为可重复的 contract/fake evidence，不能作为真实 gateway、用户可见范围映射、灰度流量或 flag rollback drill 的 pass。`AI_PUBLIC_CHUNK_RETRIEVAL=false` 继续是默认和唯一安全状态，直到真实受信任网关具有完整权限、兼容与回滚证据。
+
+## ADR-046：Phase 10 人工反馈必须区分真实 Capture 与完整可复核生命周期
+
+route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察，但不能因为页面曾显示派生摘要就推断 accepted/rejected 持久化、用户反馈或 Context Pack 复制成功。当前已配置 AI SQLite 的只读 aggregate、路由实际视图和浏览器可见状态必须能共同支持该结论；若 aggregate 为零或路由主体未刷新，只能记录未完成的观察与阻塞。
+
+这保持 Context Pack 的浏览器内存、accepted-only、脱敏来源与 Memos 权限权威边界不变。观察过程不允许绕过 Memos 登录、读取 raw content、修改 Memo/Insight 或把历史 Phase 9f 剪贴板验收重新表述为新的人工反馈；public chunk 继续默认关闭，直到 ADR-043 所需的真实网关证据存在。

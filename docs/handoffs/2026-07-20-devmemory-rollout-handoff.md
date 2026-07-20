@@ -32,6 +32,9 @@ git log --oneline -8
 
 ## 最近验证
 
+- Phase 10 route B feedback observation: authenticated Chrome exposed an existing local Bug Report capture; Memos unauthenticated `auth/me` returned `401`; Compose/AI health were up. The configured read-only lifecycle report had `memo_insights=0` and one processed webhook event, while `/inbox` retained the old Memo body. No human feedback or full review/copy lifecycle is claimed; see `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
+- Focused DevMemory regression: MemoInsight, Context Pack builder/golden, and lifecycle-report tests: `15 passed`. No Memo/Insight mutation, delete/revoke, budget action, copy action, or feature-flag change was made.
+- AI Service full suite and `scripts/verify-devmemo.ps1`: `187 passed` with one existing deprecation warning; Compose config passed. At the user's CPU-conservation request, fresh Web test/build/lint were not rerun after this documentation-only slice; strict TypeScript still has the known 13 baseline declaration errors.
 - Phase 10 gateway contract evidence: `python -m scripts.public_chunk_gateway_contract_smoke` passed with disabled `503`, missing/tampered signature `401`, ambiguous scope `422`, degraded `503`, and authorized/redacted/deduplicated `200`; related public-chunk tests: `8 passed` with one existing Starlette/httpx deprecation warning.
 - Full gate after this slice: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. Standalone strict `pnpm exec tsc --noEmit` is blocked by 13 existing dependency declaration and `src/types/view.d.ts` errors; this slice has no web/dependency changes and the project's `--skipLibCheck` lint type-check passed.
 - The script is in-process TestClient + fake coordinator only: it starts no server, makes no network call, and outputs no temporary secret. It is not trusted-gateway/deployment/canary proof; the default flag remains off and real permission mapping plus rollback drill are unverified.
@@ -43,7 +46,7 @@ git log --oneline -8
 ## 下一步只选一个切片
 
 1. Real controlled gateway rollout: only with an actual gateway, Memos visibility mapping, and rollback conditions, verify deployed raw-body HMAC, failures, dedupe, redaction, and flag rollback. The browser must never sign or hold the secret.
-2. DevMemory 人工反馈：从一个 Bug Report 经过 Insight 审核、Context Pack、撤销/删除与复制，记录用户可理解性和未验证边界。
+2. DevMemory 人工反馈：仅在稳定登录态和真实参与者可用时，从一个 Bug Report 经过 Insight 审核、Context Pack、撤销/删除与复制，记录用户可理解性和未验证边界。当前 route B 仅有 Capture 观察，不能重复声称为完整反馈。
 
 不要同时推进两条；不增加 Agent、MCP、网页搜索、图数据库、Redis/Celery 或默认新依赖。
 

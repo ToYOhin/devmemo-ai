@@ -1,5 +1,13 @@
 # DevMemo AI 当前交接
 
+## Phase 10 DevMemory feedback observation boundary (2026-07-20)
+
+- Route B did not create synthetic feedback. An authenticated Chrome session showed one existing local Bug Report capture, while the configured read-only AI SQLite lifecycle report had `memo_insights=0` and the `/inbox` route body did not refresh from the prior Memo view.
+- Focused regression passed: MemoInsight, Context Pack builder/golden, and lifecycle-report tests (`15 passed`). Memos rejected unauthenticated `auth/me` with `401`; Compose and AI health were up.
+- AI Service full suite and `scripts/verify-devmemo.ps1` passed with `187 passed`; Compose config passed. Fresh Web test/build/lint were intentionally not rerun after this documentation-only slice at the user's CPU-conservation request; strict TypeScript still has the known 13 baseline declaration errors.
+- No accept/reject, delete/revoke, budget/copy action, human feedback, or persistent mutation was observed. Treat [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md) as the authority for this incomplete evidence, not as a product-feedback pass.
+- Next slice: exactly one of a real trusted gateway deployment with permission mapping/rollback, or a stable authenticated session with a real human participant. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` and do not alter public chat, Memos core, collections, or volumes.
+
 ## Phase 10 local gateway contract evidence (2026-07-20)
 
 - `ai-service/scripts/public_chunk_gateway_contract_smoke.py` uses an in-process TestClient as a trusted-gateway simulator. It covers exact raw-body HMAC, tampered-body `401`, duplicate scope `422`, disabled/degraded `503`, and authorized, deduplicated, redacted `200` responses.

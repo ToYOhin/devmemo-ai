@@ -1,5 +1,13 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 DevMemory feedback observation boundary
+
+- 选择 route B，仅以只读方式观察已登录本地 Memos 中的一个真实 Bug Report capture；新增 [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md) 记录可复核事实与未验证边界。
+- Compose/AI health 正常，匿名 Memos `auth/me` 为 `401`；只读 lifecycle report 的 AI SQLite aggregate 为 `memo_insights=0`、一个 processed webhook event。Chrome 的 `/inbox` 路由已切换但主体保留旧 Memo view，故不把页面历史展示写成 accepted/rejected 的持久化证据。
+- 定向回归：MemoInsight、Context Pack builder/golden 与 lifecycle report `15 passed`。没有执行 accept/reject、删除/撤销、预算截断、复制或任何持久化变更；无人工参与者反馈，不能视为完整 DevMemory feedback pass。
+- 完整 AI Service 与 `scripts/verify-devmemo.ps1` 均为 `187 passed`（保留既有 Starlette/httpx 弃用警告），Compose config 通过。文档切片后按用户 CPU 节制要求未重跑 Web test/build/lint；strict TypeScript 仍为既有 13 项依赖声明/`src/types/view.d.ts` 错误。
+- `AI_PUBLIC_CHUNK_RETRIEVAL=false`、公共 `/api/ai/chat`、Memos 核心、collection/volume 和浏览器 secret 边界均未改变。
+
 ## 2026-07-20：Phase 10 本地 gateway contract evidence
 
 - 新增 `ai-service/scripts/public_chunk_gateway_contract_smoke.py`，以进程内受信任网关模拟器对精确 raw-body HMAC 和签名绑定的 `visible_memo_ids` 进行本地 smoke；输出只含状态码证据，临时 secret 不写入输出。

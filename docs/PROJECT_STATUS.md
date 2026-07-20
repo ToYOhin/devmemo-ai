@@ -2,6 +2,10 @@
 
 ## 当前验证与下一入口（2026-07-20）
 
+- Phase 10 route B recorded a read-only local Bug Report observation in authenticated Chrome. The capture was visible, but current AI SQLite aggregates reported `memo_insights=0` and the `/inbox` route retained the prior Memo body. No human feedback or durable review lifecycle can therefore be claimed; see [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md).
+- Focused DevMemory regression passed: `test_memo_insights.py`, Context Pack builder/golden, and lifecycle-report tests: `15 passed`. Compose was healthy; unauthenticated Memos `auth/me` returned `401`; the read-only lifecycle report exposed aggregates only.
+- AI Service full suite and `scripts/verify-devmemo.ps1` passed with `187 passed` and one existing deprecation warning; `docker compose config --quiet` passed. Fresh Web test/build/lint were not rerun after this documentation-only slice at the user's CPU-conservation request. Strict `pnpm exec tsc --noEmit` still reports the known 13 dependency declaration/`src/types/view.d.ts` errors.
+- No Memo/Insight mutation, copy action, database write, API change, collection/volume change, or feature-flag change was made. Earlier Chrome clipboard acceptance remains historical evidence, not fresh human feedback.
 - Phase 10 的首个受控 gateway 证据切片已完成：`python -m scripts.public_chunk_gateway_contract_smoke` 在进程内模拟受信任网关，对精确 raw JSON HMAC、篡改拒绝、唯一可见范围、disabled/401/422/503、授权去重和脱敏逐项断言。它不启动服务、不访问网络、不输出临时 secret；这是本地 contract evidence，不是部署 gateway 或灰度 rollout 通过。
 - 本轮门禁：AI Service `187 passed`；Web `33 files / 149 passed`、build、项目 `pnpm lint` 通过。单独的 `pnpm exec tsc --noEmit` 未通过，阻塞于现有第三方声明/`src/types/view.d.ts` 的 13 个 strict type errors；项目 lint 的 `tsc --noEmit --skipLibCheck` 仍通过，本切片未修改前端或依赖。
 - 本地 Chrome 产品验收已通过：Memo 详情页 AI Inbox 的 Context Pack `Copy Markdown` 与 `Copy JSON` 均实际写入 Windows 系统剪贴板。Markdown 为 512 字符并包含标题与 Memo/Insight 来源；JSON 为 1,699 字符、可解析且含两条可追溯来源。浏览器页面未再进入错误边界。
@@ -47,7 +51,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 8、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e、Phase 9f 已完成；Phase 10 已完成本地 gateway contract evidence。Phase 8 的 public-chunk-v1 仍默认关闭；下一步仅可选择真实受信任网关部署验收，或一个受控 DevMemory Loop 人工反馈切片。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 8、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e、Phase 9f 已完成；Phase 10 已有本地 gateway contract evidence 和一条受限的真实 Capture 观察。public-chunk-v1 仍默认关闭；下一步仅可选择真实受信任网关部署验收，或在稳定登录态与真实参与者下完成 DevMemory Loop 人工反馈。
 
 ## 当前事实
 

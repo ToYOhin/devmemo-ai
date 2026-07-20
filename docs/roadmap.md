@@ -319,3 +319,5 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 3. 在收集到兼容性、权限与回滚证据前，不默认开启 `AI_PUBLIC_CHUNK_RETRIEVAL`，不修改 `/api/ai/chat`，不引入 Agent、网页搜索、MCP、图数据库或常驻 worker。
 
 已完成本地 contract evidence：`python -m scripts.public_chunk_gateway_contract_smoke` 使用进程内 TestClient 模拟可信网关，对 raw-body HMAC、篡改 401、重复 scope 422、disabled/degraded 503、可见范围强制、同 Memo 去重及 metadata 脱敏进行可重复断言。脚本不启动 HTTP 服务、不联网、不输出临时 secret；定向测试共 `8 passed`（保留既有 Starlette/httpx 弃用警告）。这只证明离线 contract，未验证真实网关、部署权限、灰度或回滚演练，故 public chunk 继续默认关闭。
+
+Route B evidence boundary: an authenticated local Chrome session exposed an existing Bug Report capture, but the configured AI SQLite read-only report had zero `memo_insights` and the `/inbox` route retained the previous Memo body. Focused MemoInsight/Context Pack/lifecycle tests passed (`15 passed`), and unauthenticated Memos access correctly returned `401`. No real human feedback, accepted/rejected persistence, deletion/revoke, budget truncation, or copy action was re-observed, so this is an incomplete feedback observation rather than a DevMemory Loop pass. Details live in `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
