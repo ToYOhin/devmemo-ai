@@ -196,24 +196,27 @@ The shared test input is `contracts/context-pack-v1.json`; it is not a runtime d
 
 `rejected` is the current insight revoke state. `POST /api/ai/insights/{insight_id}/status` still requires the current `version`, increments it on success, and returns `409` for stale updates. React Query invalidation removes revoked insights from the Context Pack candidate set. Existing Memos deleted Webhook handling also deletes AI-owned `ai_notes`, `memo_templates`, and `memo_insights`; it does not delete Memos data, raw Markdown, public chat citations, or Qdrant volumes. Context Pack remains in-memory and adds no public route or persistence.
 
-## Phase 7 public chunk API proposal（未实现）
+## Phase 8 public chunk API (`public-chunk-v1`)
 
-This is a reviewable proposal only. It does not add a route or change the existing chat API.
+Implemented as an independent, opt-in route. It never changes `POST /api/ai/chat` or its complete-Memo citation shape.
 
-Proposed endpoint: `POST /api/ai/v1/chunks/search` with `api_version=public-chunk-v1`.
+Endpoint: `POST /api/ai/v1/chunks/search` with `api_version=public-chunk-v1`.
 
 Request:
 
 ~~~json
 {
   "question": "Docker port mapping",
-  "limit": 5
+  "limit": 5,
+  "visible_memo_ids": ["memo-42", "memo-57"]
 }
 ~~~
 
-`question` is required and non-empty; `limit` is 1–10 and defaults to 5. The server always selects `index_version=memo-chunk-v1`; clients cannot select arbitrary index versions.
+`question` is required and non-empty; `limit` is 1–10 and defaults to 5. `visible_memo_ids` is required, unique, and is the Memo-level scope supplied by the trusted gateway. The server always selects `index_version=memo-chunk-v1`; clients cannot select arbitrary index versions.
 
-Proposed response:
+The feature is disabled by default: `AI_PUBLIC_CHUNK_RETRIEVAL=false`. To enable it, configure a non-empty `AI_PUBLIC_CHUNK_SECRET`; the trusted gateway must HMAC-SHA256-sign the exact raw JSON body and send `X-DevMemo-Chunk-Signature: sha256=<hex>`. The signature binds question, limit, and `visible_memo_ids` together. AI Service enforces that signed scope but does not duplicate or become the authority for Memos user authorization.
+
+Response:
 
 ~~~json
 {
@@ -233,9 +236,9 @@ Proposed response:
 }
 ~~~
 
-The default contract keeps only the highest-scoring chunk per Memo. Results sort by score descending, then `memo_id`, `chunk_index`, and `chunk_id` ascending. `retrieved_count` counts deduplicated chunks. Metadata is an allowlist and never contains `content`, raw Markdown, Webhook payloads, secrets, or internal storage fields.
+The contract keeps only the highest-scoring chunk per authorized Memo. Results sort by score descending, then `memo_id`, `chunk_index`, and `chunk_id` ascending. `retrieved_count` counts deduplicated chunks. Metadata is an allowlist (`source_type`, optional title bounded to 160 characters) and never contains `content`, raw Markdown, Webhook payloads, secrets, or internal storage fields.
 
-Proposed errors: invalid question/limit → 422; disabled, unavailable, or degraded chunk store → 503. Public exposure requires gateway authentication and Memo-level authorization; the current local-compatible AI Service auth boundary is not multi-tenant authorization. Default `AI_PUBLIC_CHUNK_RETRIEVAL=false`; the endpoint is not implemented until product/API compatibility approval. Migration requires offline dual-path evaluation and feature-flagged canary; rollback disables the flag/route without touching `memo-v1`, the chunk collection, or volumes.
+Errors: invalid question/limit/scope → 422; missing/invalid gateway signature → 401; disabled, missing secret, unavailable, or degraded chunk store → 503. Migration requires offline dual-path evaluation and feature-flagged canary; rollback disables the flag without touching `memo-v1`, the chunk collection, or volumes.
 
 ## GET /api/ai/ops/outbox
 

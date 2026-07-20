@@ -42,7 +42,7 @@
 
 ## 当前已完成与未完成
 
-Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal、Phase 9a AI Inbox、Phase 9b Context Pack contract、Phase 9c integration gate 和 Phase 9d UI 已完成；Phase 8 implementation gate 仍 pending approval：
+Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision、Phase 7 public API proposal、Phase 8 public-chunk-v1 controlled implementation、Phase 9a AI Inbox、Phase 9b Context Pack contract、Phase 9c integration gate 和 Phase 9d UI 已完成：
 
 - 已完成 collection/config 与 composition：`QDRANT_CHUNK_COLLECTION` 默认 `devmemo_memo_chunks`，仅 chunk + qdrant 显式组合时使用，其他路径仍是独立 memory。
 - fake composition/health contract 已覆盖独立 collection、provider/status 传播和默认不连接 Qdrant。
@@ -53,7 +53,7 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 2. 完整门禁已通过：AI Service 153 passed；前端 131 passed；TypeScript/build/lint、Compose config 和 Go `go test -p 2 ./...` 通过，`store/test` 用时 168.864s。
 3. Phase 6 决定 chunk-aware retrieval 继续保持内部 contract，未替换或修改公共 `POST /api/ai/chat`。
 4. Phase 7 只形成 `POST /api/ai/v1/chunks/search` / `public-chunk-v1` 提案，默认关闭、同 Memo 保留最高分 chunk、脱敏 metadata；未新增运行时代码或公共路由。
-5. 当前没有明确产品/兼容批准，Phase 8 不实现 endpoint；批准前保持 proposal、公共 chat 和完整 Memo collection 不变。
+5. Phase 8 已获明确批准并实现独立 endpoint：默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`，启用时需要 `AI_PUBLIC_CHUNK_SECRET` 与网关 HMAC 签名的 `visible_memo_ids`；回滚关闭 flag，不改 public chat 或完整 Memo collection。
 
 6. Phase 9a 已新增 `MemoInsight` contract、deterministic 提取器、AI SQLite `memo_insights` 幂等表，以及 preview/查询/版本化 approve/reject API；语义变化重置 pending，过期版本返回 409。
 7. Memo 详情页已接入 AI Inbox 卡片；真实 Compose API Bug Report smoke 生成 bug/action 并完成批准；Playwright 截图 artifact 为 `devmemo-phase9-ai-inbox.png`。
@@ -70,13 +70,14 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 16. 本轮人工验收修复了 canonical/raw Memo ID 重复来源、清空来源后无法重新勾选和删除联动遗漏；In-App Browser 禁用两种剪贴板 API，copy 仍需真实 Chrome 复验。
 17. Phase 9f minimum slice completed: the shared fixture now includes expected Markdown and canonical compact snake_case JSON golden cases. Python and Web assert byte-for-byte output parity; the tests caught and fixed one Web trailing-newline mismatch.
 18. `python -m scripts.devmemory_lifecycle_report` is a local read-only diagnostic over AI-owned SQLite aggregates. It uses SQLite `mode=ro`, creates no missing DB, has no HTTP/worker/telemetry behavior, and never prints IDs, raw content, webhook payloads, or secrets.
+19. `public-chunk-v1` enforces signed gateway visibility scope, redacts metadata to `source_type` plus optional bounded title, deduplicates to one highest-scoring chunk per Memo, and returns 503 on disabled/degraded configuration. Targeted API/contract/chat tests: 13 passed; full AI suite: 186 passed.
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service full pytest      179 passed
+AI Service full pytest      186 passed
 Context Pack focused pytest 12 passed
 Frontend full tests          149 passed
 pnpm lint                    PASS
@@ -100,4 +101,4 @@ Qdrant/FastEmbed smoke       PASS（历史显式 smoke）
 
 ## 下一入口
 
-直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；继续保持 Phase 8 gate pending approval，再执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 Phase 9f Context Pack lifecycle observation Prompt。
+直接复制 `docs/prompts/NEW_WINDOW_PROMPT.md` 到新窗口；执行 `docs/prompts/NEXT_STAGE_PROMPT.md` 的 public-chunk-v1 controlled rollout 与 Phase 9f evidence Prompt。Phase 8 默认仍关闭，只有完成网关签名/可见范围集成后才可灰度开启。

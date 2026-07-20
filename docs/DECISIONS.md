@@ -237,3 +237,9 @@ Context Pack 的跨 Memo 选择必须来自 Memos 当前用户可见的 Memo 列
 Python builder 与 Web adapter 继续独立，避免把浏览器 UI 与 AI Service 运行时耦合；根目录共享 fixture 因此从输入样例扩展为 expected Markdown 与 compact snake_case JSON golden output。两侧必须对同一 case 产生字节级一致结果，涵盖确定性排序、去重、accepted-only 过滤、预算截断与安全 source 输出。fixture 只用于测试，不作为生产运行时输入。
 
 生命周期观测采用 `python -m scripts.devmemory_lifecycle_report` 本地只读 CLI，而不是新增 HTTP/telemetry API。它通过 SQLite `mode=ro` 汇总 AI Service 自有表的安全计数，不创建、迁移或写入数据库，且不输出 Memo ID、原文、chunk、Webhook payload 或 secret。该决策不改变 Memos 的权限/删除权威边界，不引入 worker、Prometheus 或新默认依赖。
+
+## ADR-043：Phase 8 以网关签名可见范围实现受控 public-chunk-v1
+
+用户已明确批准 public-chunk-v1 的鉴权、脱敏、去重和回滚契约。AI Service 实现独立 `POST /api/ai/v1/chunks/search`，但默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`。只有 flag 为 true 且 `AI_PUBLIC_CHUNK_SECRET` 非空时才处理请求；受信任网关必须使用该 secret 对精确 raw JSON body HMAC-SHA256，并在 body 中携带唯一 `visible_memo_ids`。AI Service 验证签名并将该集合强制用于结果过滤，不自行复制 Memos 用户/权限模型。
+
+输出固定 `public-chunk-v1`、`memo-chunk-v1`，按 score desc、memo_id/chunk_index/chunk_id asc 排序，并只保留每个授权 Memo 的最高分 chunk。metadata 是 `source_type` 与可选 bounded title 的 allowlist，禁止 content、原始 Markdown、Webhook payload、secret 或内部字段。disabled/degraded 或缺 secret 返回 503，签名失败返回 401，scope/输入非法返回 422。回滚只关闭 flag，不迁移或删除 `memo-v1`、chunk collection/volume，也不修改 `/api/ai/chat`。

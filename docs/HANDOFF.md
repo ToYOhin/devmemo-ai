@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## Phase 8 public-chunk-v1 controlled implementation (2026-07-20)
+
+- Public `POST /api/ai/v1/chunks/search` now exists behind `AI_PUBLIC_CHUNK_RETRIEVAL=false`. It requires a non-empty `AI_PUBLIC_CHUNK_SECRET` and `X-DevMemo-Chunk-Signature` HMAC over the raw JSON body; the signed, unique `visible_memo_ids` are the gateway-provided authorization scope.
+- The response is an independent `public-chunk-v1` contract: fixed `memo-chunk-v1`, deterministic sort, highest score per authorized Memo, and redacted metadata allowlist only. It never returns content, raw webhook payloads, secrets, or unapproved internal metadata.
+- Rollback: disable the flag; do not delete collections/volumes or alter `/api/ai/chat`. Targeted public API/contract/chat tests passed 13; AI full suite passed 186; controlled delete/replay/reject/stale/accepted-only evidence passed 11.
+- Real Chrome clipboard proof remains blocked: the Chrome extension connection is unavailable, so no system-clipboard pass is claimed.
+
 ## Phase 9f minimum slice: golden parity and local diagnostic (2026-07-20)
 
 - `contracts/context-pack-v1.json` now supplies shared expected Markdown and canonical compact snake_case JSON golden output. Python and Web have independent implementations but exact output tests prevent contract drift; the test caught and fixed a Web trailing-newline mismatch.

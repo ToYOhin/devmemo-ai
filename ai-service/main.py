@@ -43,6 +43,7 @@ from app.services.embedding_factory import (
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.memo_insights import derive_memo_insights
 from app.services.ops_security import summarize_error, verify_ops_token
+from app.services.public_chunk_retrieval import build_public_chunk_response
 from app.services.retrieval_service import RetrievalService
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
@@ -72,6 +73,12 @@ class EmbedResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1)
     limit: int = Field(default=5, ge=1, le=10)
+
+
+class PublicChunkSearchRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=5, ge=1, le=10)
+    visible_memo_ids: list[str] = Field(min_length=1, max_length=100)
 
 
 class RetentionCleanupRequest(BaseModel):
@@ -250,6 +257,35 @@ async def chunk_index_health() -> dict[str, object]:
     """Report the explicit chunk index without changing complete-Memo chat."""
 
     return asdict(chunk_lifecycle_coordinator.health())
+
+
+@app.post("/api/ai/v1/chunks/search")
+async def search_public_chunks(
+    request: PublicChunkSearchRequest,
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Chunk-Signature"),
+) -> dict[str, object]:
+    """Return gateway-authorized, redacted chunk citations behind an opt-in flag."""
+
+    _require_public_chunk_access(await raw_request.body(), signature)
+    visible_memo_ids = _normalize_visible_memo_ids(request.visible_memo_ids)
+    health = chunk_lifecycle_coordinator.health()
+    if not health.available or health.status != "ready":
+        raise HTTPException(status_code=503, detail="public chunk retrieval is unavailable")
+    try:
+        # The internal retrieval contract caps candidates at ten; dedupe occurs after authorization.
+        result = chunk_lifecycle_coordinator.retrieve(request.question, limit=10)
+        response = build_public_chunk_response(
+            citations=result.citations,
+            provider=chunk_lifecycle_coordinator.provider.name,
+            visible_memo_ids=visible_memo_ids,
+            limit=request.limit,
+        )
+    except RetrievalInputError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RetrievalUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return response.to_dict()
 
 
 @app.post("/api/ai/summarize", response_model=SummaryResponse)
@@ -768,6 +804,23 @@ def _read_or_enqueue_webhook_event(
 def _require_ops_access(provided_token: str | None) -> None:
     if not verify_ops_token(provided_token, os.getenv("AI_OPS_TOKEN", "")):
         raise HTTPException(status_code=401, detail="invalid ops token")
+
+
+def _require_public_chunk_access(raw_body: bytes, signature: str | None) -> None:
+    if not parse_env_bool("AI_PUBLIC_CHUNK_RETRIEVAL", default=False):
+        raise HTTPException(status_code=503, detail="public chunk retrieval is disabled")
+    secret = os.getenv("AI_PUBLIC_CHUNK_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(status_code=503, detail="public chunk retrieval is unavailable")
+    if not verify_signature(raw_body, signature, secret):
+        raise HTTPException(status_code=401, detail="invalid public chunk signature")
+
+
+def _normalize_visible_memo_ids(raw_ids: list[str]) -> frozenset[str]:
+    normalized = frozenset(memo_id.strip() for memo_id in raw_ids if memo_id.strip())
+    if not normalized or len(normalized) != len(raw_ids):
+        raise HTTPException(status_code=422, detail="visible_memo_ids must contain unique non-empty values")
+    return normalized
 
 
 def _ops_actor_digest(provided_actor: str | None) -> str:

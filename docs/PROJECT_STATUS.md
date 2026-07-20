@@ -1,10 +1,17 @@
 # DevMemo AI 项目状态
 
+## Phase 8 public-chunk-v1 implementation (2026-07-20)
+
+- Product approval accepted for the independent `POST /api/ai/v1/chunks/search` contract. It is opt-in (`AI_PUBLIC_CHUNK_RETRIEVAL=false` by default) and rolls back by disabling that flag without touching `memo-v1`, the chunk collection, or any volume.
+- A trusted gateway must HMAC-sign the raw request body with `AI_PUBLIC_CHUNK_SECRET` in `X-DevMemo-Chunk-Signature`. Its signed `visible_memo_ids` are the enforced Memo-level visibility scope; AI Service does not invent a second Memos authorization system.
+- `public-chunk-v1` fixes `memo-chunk-v1`, keeps only the best score per authorized Memo, applies deterministic ordering, and returns a strict metadata allowlist (`source_type`, optional bounded `title`) with no content, webhook payload, secret, or internal fields.
+- Contract/API tests: `13 passed`; controlled lifecycle evidence: `11 passed` for delete, chunk replay/idempotence, reject/stale, and accepted-only filtering. AI Service full suite: `186 passed` (one existing deprecation warning). Real Chrome clipboard remains blocked because the Chrome extension connection is unavailable.
+
 ## Phase 9f minimum slice (2026-07-20)
 
 - Completed exact cross-language Context Pack golden output: Python and Web now consume the same fixture cases and produce byte-for-byte identical Markdown and canonical compact snake_case JSON.
 - Added a local-only lifecycle diagnostic command, `python -m scripts.devmemory_lifecycle_report`, which opens the AI SQLite database read-only and reports only aggregate derived-record/status/version counts.
-- Verification: AI Service `179 passed` (one existing Starlette/httpx deprecation warning); Web `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
+- Previous Phase 9f verification: AI Service `179 passed` (one existing Starlette/httpx deprecation warning); Web `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
 - Phase 9f remains in progress for manual Context Pack feedback and controlled lifecycle evidence. Phase 8 public chunk API remains pending approval.
 
 ## 人工功能检查修复（2026-07-14）
@@ -31,7 +38,7 @@
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e 已完成。Phase 8 public chunk API implementation gate 仍为 pending approval，未实现公共路由；本轮补齐受限剪贴板手动降级，下一步为 Phase 9f Context Pack 用户反馈与 Context Pack/Insight 生命周期观测。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 8、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e 已完成。Phase 8 的 public-chunk-v1 为默认关闭的受控实现；下一步为网关签名/可见范围灰度证据，以及 Phase 9f Context Pack 用户反馈与生命周期观测。
 
 ## 当前事实
 
@@ -63,7 +70,7 @@ Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 
 - Phase 5g rollout gate：AI 153 passed；前端 131 passed；TypeScript、build、lint、Compose config 和 Go `go test -p 2 ./...` 通过；Qdrant Server 1.18.2 chunk smoke 通过
 - Phase 6 compatibility decision：现有公共 `embedding_id`/`retrieved_count` 继续表示完整 Memo；不启用隐式 chunk mode，不新增未定义公共 chunk endpoint，未来必须使用版本化 contract
 - Phase 7 public API proposal：提出 `POST /api/ai/v1/chunks/search` / `public-chunk-v1`，默认关闭，固定 memo-chunk-v1，同 Memo 保留最高分 chunk，未新增 HTTP 行为
-- Phase 8 implementation gate：当前仅收到阶段名称，没有明确产品/兼容批准；保持 proposal、不新增路由、不改变公共 chat 或完整 Memo collection
+- Phase 8 implementation gate：已获明确批准并实现独立 `public-chunk-v1` 路由；默认关闭，要求受信任网关 HMAC 签名可见 Memo 范围，不改变公共 chat 或完整 Memo collection
 - Phase 9e shared fixture：`contracts/context-pack-v1.json` 是 Python/Web 测试的共同输入；生产代码仍保持 provider-neutral builder/adapter 双边界。
 - Phase 9e permission/deletion：跨 Memo 选项来自 Memos 当前用户可见的 `useInfiniteMemos` 结果，只有用户勾选才加入；删除 Webhook 调用 `delete_memo_ai_state` 清理 `ai_notes`、`memo_templates`、`memo_insights` 和 `memo_chunk_index_state`，不触碰 Memos 原文或公共 chat。
 - Phase 9a DevMemory Loop：`MemoInsight` 统一包含 `insight_id`、`memo_id`、`insight_type`、`title`、`summary`、`confidence`、`status`、`source_refs`、版本和审计时间；deterministic parser 只为 Code/Bug/plain Memo 生成有限候选，不做自由发挥式知识图谱

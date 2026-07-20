@@ -2,6 +2,16 @@
 
 ## 2026-07-20
 
+### Phase 8：public-chunk-v1 受控实现
+
+- 实现独立 `POST /api/ai/v1/chunks/search`，不修改 `/api/ai/chat`、完整 Memo citation 或 `memo-v1` collection。
+- 默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`；启用时必须配置 `AI_PUBLIC_CHUNK_SECRET`，由受信任网关在 `X-DevMemo-Chunk-Signature` 对完整 JSON body 签名。签名 body 中的 `visible_memo_ids` 是 AI Service 强制执行的可见范围，不把 Memos 权限复制进 AI Service。
+- 返回固定 `public-chunk-v1` / `memo-chunk-v1`，按 score、memo_id、chunk_index、chunk_id 稳定排序，同 Memo 只保留最高分；metadata 严格仅含 `source_type` 和可选 bounded `title`。
+- 回滚只需关闭 flag；不删除 Qdrant collection/volume，不迁移现有 chat。
+- 定向 public chunk/API/chat tests：13 passed；AI Service 全量 186 passed（保留 1 个既有 Starlette/httpx 弃用警告）；verify 脚本与 Compose config 通过。
+
+## 2026-07-20
+
 ### Phase 9f：Context Pack golden output 与本地生命周期诊断（最小切片）
 
 - Shared `contracts/context-pack-v1.json` now contains expected Markdown/JSON golden cases. Python and Web assert the same deterministic sort, dedupe, accepted-only filter, budget truncation, and deidentified source output.

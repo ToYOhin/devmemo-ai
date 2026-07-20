@@ -258,9 +258,11 @@ Memo webhook -> AI provider -> ai_notes SQLite upsert。已支持 deterministic/
 
 下一阶段：Phase 8 public chunk API implementation gate；只有获得明确产品/兼容批准后才实现提案 endpoint。
 
-## Phase 8：public chunk API implementation gate（pending approval）
+## Phase 8：public chunk API implementation gate（已完成受控实现）
 
-当前只收到阶段名称，没有明确产品/兼容批准。根据 ADR-035，本阶段不实现 `POST /api/ai/v1/chunks/search`，不新增公共路由或运行时 feature flag，不启动灰度，不改变现有 chat、memo-v1 collection 或 chunk collection。收到明确批准并接受 ADR-034 的版本化字段、去重、脱敏、认证和回滚条件后，才进入实现切片。
+已收到明确产品/兼容批准并实现 `POST /api/ai/v1/chunks/search`。端点默认关闭（`AI_PUBLIC_CHUNK_RETRIEVAL=false`）；启用时必须配置 `AI_PUBLIC_CHUNK_SECRET`，由受信任网关 HMAC 签名 raw JSON，且将唯一 `visible_memo_ids` 作为服务端强制执行的 Memo 可见范围。
+
+响应固定 `public-chunk-v1`/`memo-chunk-v1`，只保留每个授权 Memo 的最高分 chunk，按 score/memo/chunk 稳定排序，并严格脱敏至 `source_type` 与可选 bounded title。缺签名返回 401，disabled/degraded 返回 503。回滚关闭 flag，不改 `/api/ai/chat`、`memo-v1`、chunk collection 或 volume。定向 public API/contract/chat 测试 13 passed；AI 全量 186 passed；后续仅进行网关集成和灰度验收。
 
 ## Phase 9：DevMemory Loop / AI Inbox 与 Decision Ledger（9a/9b 已完成）
 
@@ -308,4 +310,4 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 2. 输出 JSON 固定为 compact snake_case canonical form；golden test 已发现并修复 Web Markdown 末尾换行漂移。
 3. 新增 `python -m scripts.devmemory_lifecycle_report [--database <path>]` 本地诊断。它以 SQLite `mode=ro` 只读 AI Service 自有数据库，仅输出派生表、insight 状态/版本和 outbox 状态的聚合计数；不创建数据库、不写入、不暴露 Memo ID/原文/payload/secret，也不新增 HTTP、worker 或 telemetry。
 
-验证：AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。后续仍需收集真实 Chrome 剪贴板反馈和受控生命周期证据；Phase 8 public chunk API 继续 pending approval。
+验证：Phase 9f 最小切片 AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。后续仍需收集真实 Chrome 剪贴板反馈和受控生命周期证据；Phase 8 public chunk API 已进入默认关闭的受控 rollout。
