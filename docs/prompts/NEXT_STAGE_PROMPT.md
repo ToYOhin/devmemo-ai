@@ -1,7 +1,7 @@
 # 下一阶段 Prompt：Phase 10 gateway rollout evidence + DevMemory feedback
 
 ~~~text
-Phase 10 update: the local `python -m scripts.public_chunk_gateway_contract_smoke` contract evidence is already complete. Do not repeat it as rollout proof. A route-B read-only Capture observation is also recorded, but it is incomplete: the configured AI SQLite aggregate had zero insights. A second read-only Chrome check rendered the empty `/inbox` correctly, so the earlier stale Memo body is not a product defect. No human feedback, accept/reject, delete/revoke, budget, or copy loop is proven. Choose exactly one next: (A) only with a real trusted deployed gateway, Memos visibility mapping, and rollback conditions, collect deployment evidence; or (B) only with a stable authenticated session and a real human participant, complete one Bug Report DevMemory feedback path. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` unless those real gateway conditions are met.
+Phase 10 next action is route B only. Follow `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md` exactly: with a present consenting participant, use a new non-sensitive Bug Report and the ordinary authenticated UI to complete the available `Capture -> Insight -> Review -> Context Pack` path. Record safe source/status evidence, bounded-pack behavior, copy outcome, and four concise feedback answers. If consent, login, an Insight, or consistent visible state is missing, stop and document the blocker; do not seed SQLite, bypass Memos authentication, or claim a pass. The local `python -m scripts.public_chunk_gateway_contract_smoke` is already complete and must not be repeated as rollout proof. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
@@ -22,16 +22,14 @@ Phase 10 update: the local `python -m scripts.public_chunk_gateway_contract_smok
 - Phase 8 public-chunk-v1 已实现，但 `AI_PUBLIC_CHUNK_RETRIEVAL=false` 是默认且必须保持；只有可信网关可使用 `AI_PUBLIC_CHUNK_SECRET` 对精确 raw body 签名并提供唯一 `visible_memo_ids`。
 - Memos Go 仍是原始 Memo/权限事实源。AI Service 不复制用户权限系统；公共 `/api/ai/chat` 继续完整 Memo citation 语义。
 
-本阶段唯一目标：选择下列一条路线并完成证据，不同时扩展两条。
-A. Gateway rollout evidence：在受控本地/部署网关中验证 raw-body HMAC、visible scope、401/422/503、同 Memo 去重、metadata 脱敏与关闭 flag 回滚。绝不让浏览器获得 signing secret，也不以客户端声明的 Memo IDs 代替网关授权。
-B. DevMemory feedback：用一个真实 Bug Report 跑 Capture -> Insight -> Review -> Context Pack，记录来源、accept/reject、删除/撤销、预算截断与复制的人工反馈；只使用安全摘要，pack 继续在内存生成。
+本阶段唯一目标：执行 route B 的一个真实参与者反馈路径；不推进 gateway rollout。用一个真实、非敏感 Bug Report 跑可用的 `Capture -> Insight -> Review -> Context Pack`，记录安全来源、accept/reject、经同意的删除/撤销、预算截断、复制和人工反馈。所有步骤与停止条件以 `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md` 为准。
 
 禁止：
 - 不默认开启 public chunk，不修改 `/api/ai/chat`、CitationResponse、memo-v1、chunk collection 或 Memos server/store/proto 核心。
 - 不引入 Redis、Celery、Neo4j、LangChain、LlamaIndex、Prometheus、常驻 worker、外部网页、MCP 或通用聊天 UI。
 - 不返回 raw content、Webhook payload、secret 或 chunk content；不删除 collection/volume。
 
-验证：先相关定向测试；然后按改动范围运行 ai-service pytest、scripts\verify-devmemo.ps1、docker compose config --quiet、web pnpm test/tsc/build/lint；最后 git diff --check。若无真实网关或用户反馈环境，保留 contract/fake evidence，明确写为未验证，不能把离线测试写成 rollout pass。
+验证：先记录健康/只读 lifecycle baseline 和相关定向测试；状态变更后复核可见 UI 与 Context Pack。仅当运行时代码改动时再按改动范围运行完整 AI/Web 门禁；遵守当前用户的 CPU 节制要求，不并行运行高负载 Web build/test。最后运行 `git diff --check`。若无真实参与者反馈环境，保留不完整 evidence，明确写为未验证，不能把离线测试写成产品反馈或 rollout pass。
 
 完成后更新 PROJECT_STATUS、CHANGELOG_AI、HANDOFF、roadmap、api、structure、DECISIONS、handoff 和本 Prompt；形成独立 commit，不自动 push。
 ~~~

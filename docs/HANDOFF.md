@@ -6,7 +6,7 @@
 - Focused regression passed: MemoInsight, Context Pack builder/golden, and lifecycle-report tests (`15 passed`). Memos rejected unauthenticated `auth/me` with `401`; Compose and AI health were up.
 - AI Service full suite and `scripts/verify-devmemo.ps1` passed with `187 passed`; Compose config passed. Fresh Web test/build/lint were intentionally not rerun after this documentation-only slice at the user's CPU-conservation request; strict TypeScript still has the known 13 baseline declaration errors.
 - No accept/reject, delete/revoke, budget/copy action, human feedback, or persistent mutation was observed. Treat [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md) as the authority for this incomplete evidence, not as a product-feedback pass.
-- Next slice: exactly one of a real trusted gateway deployment with permission mapping/rollback, or a stable authenticated session with a real human participant. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` and do not alter public chat, Memos core, collections, or volumes.
+- Route B next slice is now planned in [`docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`](handoffs/2026-07-20-devmemory-real-feedback-plan.md): one stable authenticated session and a real consenting participant, with safe-only evidence and explicit stop conditions. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` and do not alter public chat, Memos core, collections, or volumes.
 
 ## Phase 10 local gateway contract evidence (2026-07-20)
 

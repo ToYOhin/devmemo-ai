@@ -14,6 +14,8 @@ Optional `--database <path>` selects an AI Service SQLite file. The command open
 
 No HTTP API was added or changed for route B. The local observation used only the existing authenticated product UI and `python -m scripts.devmemory_lifecycle_report`; the latter remains read-only and aggregate-only. A later read-only check confirmed the empty `/inbox` route renders correctly, but the current zero-insight aggregate still means no accept/reject or Context Pack feedback lifecycle is asserted. See `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
 
+The next real-feedback procedure is documented in `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`. It reuses existing UI and API contracts only: no new route, no direct SQLite seeding, no authentication bypass, and no public output beyond existing safe Context Pack fields.
+
 ## Manual UI integration notes (2026-07-14)
 
 - The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.

@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B real-feedback plan
+
+- 新增 [`docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`](handoffs/2026-07-20-devmemory-real-feedback-plan.md)，把下一步限定为一位在场且同意的真实参与者完成一次 Bug Report `Capture -> Insight -> Review -> Context Pack`。
+- 计划明确登录态/SQLite 对齐、安全摘要、accept/reject、revoke/delete、预算截断、Chrome Markdown/JSON 复制、四项人工反馈问题和停止条件；无参与者、无 Insight、状态不一致或异常时只记录阻塞，不伪造闭环。
+- 没有运行时代码/API/配置变化，`AI_PUBLIC_CHUNK_RETRIEVAL=false`、公共 chat、Memos 核心和 collection/volume 不变。
+
 ## 2026-07-20：Phase 10 DevMemory feedback observation boundary
 
 - 选择 route B，仅以只读方式观察已登录本地 Memos 中的一个真实 Bug Report capture；新增 [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md) 记录可复核事实与未验证边界。
