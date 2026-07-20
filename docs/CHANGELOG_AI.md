@@ -1,5 +1,14 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B 本地 Webhook → Insight → Review
+
+- 在用户允许的本地 Compose 拓扑中，Memos 启用 `--allow-private-webhooks`，当前已认证用户创建一个指向 AI Service 的既有 Webhook；浏览器不持有 signing secret，`AI_PUBLIC_CHUNK_RETRIEVAL=false` 未改变。
+- 对既有非敏感测试 Bug Report 做普通认证 UI 更新后，真实事件被 Memos 投递并由 AI Service 处理。修复 Memos webhook `memos/<uid>` 与详情页终端 UID 不一致导致的派生状态孤岛；新增回归测试。
+- 一个持久化 Insight 按已授权的一次操作变为 `accepted`，版本为 `2`。未创建第二条 Memo，未删除数据，未 seed SQLite、绕过认证或修改公共 chat/collection/volume。
+- 纠正此前 host-default lifecycle 误读：运行中 Compose 必须在 AI Service 容器执行只读 aggregate CLI。新增本地 Vite `.env.example`，并让 `DEV_PROXY_SERVER` 可从忽略的 `.env.local` 读取，以便重启后稳定指向本机 Compose。
+- 验证：新增回归 `1 passed`；AI Service 全量与串行 `verify-devmemo.ps1` 均 `188 passed`（1 条既有弃用警告）；Compose config、串行 Web `33 files / 149 passed`、build、项目 lint 通过。独立 strict TypeScript 仍是 13 条既有依赖/声明错误。
+- 仍未验证：本轮新鲜的认证浏览器 Context Pack 预算/Markdown/JSON 复制、delete/revoke 和四项人工反馈。浏览器控制在 Vite 重启后不可用，不能把历史 Phase 9f 剪贴板验收改写为本次人工反馈通过。
+
 ## 2026-07-20：Phase 10 route B 真实 Capture 阻塞
 
 - 已在认证 Memos UI 保存一条非敏感测试 Bug Report，并在详情页确认 Context Pack 入口；不记录 Memo ID 或原文。

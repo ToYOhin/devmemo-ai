@@ -273,3 +273,11 @@ route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察
 Memos 与 AI Service 默认上限分别为 `0.75`/`0.25` CPU；Memos 的 `GOMAXPROCS`、验证脚本的 Go 并发及 AI 数值线程均固定为 `1`。这优先保证本地 capture/review/Context Pack 的响应，而不是最大吞吐量；如需更高性能，必须由使用者显式调整本地 Compose 配额。
 
 Qdrant 与 Ollama 的资源成本不再属于默认启动路径，分别只能通过 `qdrant`、`ollama` Compose profile 显式启用。该决策不改变 deterministic + memory 默认、AI index opt-in、public chat、collection/volume 或 Phase 10 gateway/feedback 证据边界。
+
+## ADR-048：本地私网 Memos Webhook 只用于真实集成证据，且规范化资源名
+
+本地 Compose 中，Memos 以 `--allow-private-webhooks` 运行，允许当前已认证用户把其既有 webhook 指向 Docker 网络内的 AI Service。该开关只解决本机服务名解析到私有地址的部署限制；它不向浏览器公开任何 AI secret、不把客户端声明的 Memo ID 当授权，也不改变 Memos 作为 Memo/权限事实源。由于该开关放宽 Memos 对私有目标的限制，只能用于受控本地开发拓扑，不能据此声称生产网关 rollout 已通过。
+
+Memos webhook 的当前 Memo 标识可为 `memos/<uid>`，而详情页 AI Inbox 使用终端 UID 查询。AI Service 在其派生状态边界将该单一资源名规范化为 UID，防止同一 Memo 形成两份 AI SQLite 状态；不读取或返回原文，且不改变 Memos 数据。该映射由 API 回归测试覆盖。
+
+生命周期 CLI 仍保持只读、聚合、无 HTTP；运行 Compose 时必须在 AI Service 容器中执行，或明确传入 Compose 挂载的数据库文件。主机默认路径的空/旧 SQLite 不得作为线上容器状态或产品阻塞证据。该 ADR 不改变 `AI_PUBLIC_CHUNK_RETRIEVAL=false`、公共 `/api/ai/chat`、`memo-v1`、collection/volume 或 Context Pack 内存边界。

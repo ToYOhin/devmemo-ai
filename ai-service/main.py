@@ -881,7 +881,21 @@ def _deterministic_rag_answer(context: str) -> str:
 
 
 def _memo_id_from_memo(memo: dict[str, object]) -> object:
-    return memo.get("uid") or memo.get("name") or memo.get("id")
+    uid = str(memo.get("uid") or "").strip()
+    if uid:
+        return uid
+
+    name = str(memo.get("name") or "").strip()
+    if name:
+        # Memos webhooks identify current Memos as `memos/<uid>`, while the
+        # detail UI queries AI state with that terminal uid.
+        if name.startswith("memos/"):
+            resource_uid = name.removeprefix("memos/").strip()
+            if resource_uid and "/" not in resource_uid:
+                return resource_uid
+        return name
+
+    return memo.get("id")
 
 
 def _index_webhook_memo(

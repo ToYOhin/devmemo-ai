@@ -22,7 +22,7 @@
 - Phase 9f 已完成 Python/Web golden parity、只读生命周期诊断、真实 Chrome/Windows 系统剪贴板验收。Markdown 与 JSON 复制均已通过，复制后无 React error boundary。
 - Phase 8 public-chunk-v1 已实现但默认 AI_PUBLIC_CHUNK_RETRIEVAL=false。启用只允许可信网关签名 raw body 并提供唯一 visible_memo_ids；不修改 /api/ai/chat、memo-v1 或任何 collection/volume。
 
-默认下一切片：执行 NEXT_STAGE_PROMPT 的 Phase 10，只做受控 gateway rollout evidence 或一个真实 DevMemory Loop 人工反馈路径。没有完整权限、回滚与兼容证据时，不开启 public-chunk，不扩展浏览器客户端签名，也不新增通用 RAG/Agent/MCP/图数据库。
+默认下一切片：执行 NEXT_STAGE_PROMPT 的 Phase 10 route B 收尾，只复用既有测试 Memo，在稳定登录态与真实参与者下补齐 Context Pack 预算/复制和简短反馈。Capture、Insight 与一次 accepted Review 已有本地 Webhook 证据；没有完整权限、回滚与兼容证据时，不开启 public-chunk，不扩展浏览器客户端签名，也不新增通用 RAG/Agent/MCP/图数据库。
 
 验证顺序：先运行相关定向测试；再按改动范围运行 ai-service pytest、scripts\verify-devmemo.ps1、docker compose config --quiet、web pnpm test/tsc/build/lint，最后 git diff --check。完成后更新状态、变更、交接、下一阶段 Prompt，提交；不自动 push。
 ~~~

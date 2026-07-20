@@ -33,12 +33,11 @@ git log --oneline -8
 ## 最近验证
 
 - Low-CPU baseline: Memos/AI Service default caps are `0.75`/`0.25` CPU, Go/Memos and AI numerical threads use one processor, and Qdrant/Ollama are explicit profiles. Docker inspection, Compose config, AI health, and serial verify (`187 passed`) confirmed the applied settings; see `docs/handoffs/2026-07-20-low-cpu-baseline.md`. `verify-devmemo.ps1 -FullBackend` now uses `go test -p 1`.
-- Phase 10 route B feedback observation: authenticated Chrome exposed an existing local Bug Report capture; Memos unauthenticated `auth/me` returned `401`; Compose/AI health were up. The configured read-only lifecycle report had `memo_insights=0` and one processed webhook event. A second read-only Chrome check rendered the expected empty `/inbox`; the old Memo body was transient. No human feedback or full review/copy lifecycle is claimed; see `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
-- Focused DevMemory regression: MemoInsight, Context Pack builder/golden, and lifecycle-report tests: `15 passed`. No Memo/Insight mutation, delete/revoke, budget action, copy action, or feature-flag change was made.
-- AI Service full suite and `scripts/verify-devmemo.ps1`: `187 passed` with one existing deprecation warning; Compose config passed. At the user's CPU-conservation request, fresh Web test/build/lint were not rerun after this documentation-only slice; strict TypeScript still has the known 13 baseline declaration errors.
-- Next route-B execution plan: `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`. It requires a real consenting participant and one non-sensitive Bug Report; missing consent/login/Insight is a documented stop, not an invitation to synthesize data.
-- Current participant authorization permits creation of one non-sensitive test Bug Report and one Insight accept/reject action only. Delete/revoke must be confirmed again immediately before the UI action.
-- That one real test Bug Report is now saved and its detail page exposes Context Pack, but the after-capture read-only aggregate remains `memo_insights=0` with one existing processed webhook event. Route B stops at Capture; see `docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`. Do not create another Memo or synthesize an Insight.
+- Phase 10 route B now has real local delivery evidence. The current authenticated Memos user created one Docker-network AI Service webhook after Compose enabled Memos' `--allow-private-webhooks`; an ordinary UI update to the existing non-sensitive test Memo resulted in a processed event, one persisted Insight, and the authorized accepted review at version `2`.
+- The earlier zero-Insight conclusion was a host-path diagnostic mistake: the host-default CLI did not inspect the Compose volume. Use `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report` for the live safe aggregate; after the run it reported eight processed events. The detailed evidence is `docs/handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md`.
+- AI Service normalizes Memos' `memos/<uid>` webhook resource name to the terminal detail-route UID, preventing an orphaned AI-derived state. Its focused regression passes; no Memos core, public chat, collection/volume, or public-chunk behavior changed.
+- This is a technical Capture → Insight → accepted Review result only. Browser control became unavailable after a Vite restart, so new Context Pack budget/copy proof, delete/revoke, and qualitative feedback remain unverified. Do not create another test Memo or fabricate those results.
+- Vite now accepts `DEV_PROXY_SERVER` from ignored `.env.local` using `loadEnv`; copy `web/.env.example` for the local Compose addresses. Keep credentials and secrets out of that file.
 - Phase 10 gateway contract evidence: `python -m scripts.public_chunk_gateway_contract_smoke` passed with disabled `503`, missing/tampered signature `401`, ambiguous scope `422`, degraded `503`, and authorized/redacted/deduplicated `200`; related public-chunk tests: `8 passed` with one existing Starlette/httpx deprecation warning.
 - Full gate after this slice: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. Standalone strict `pnpm exec tsc --noEmit` is blocked by 13 existing dependency declaration and `src/types/view.d.ts` errors; this slice has no web/dependency changes and the project's `--skipLibCheck` lint type-check passed.
 - The script is in-process TestClient + fake coordinator only: it starts no server, makes no network call, and outputs no temporary secret. It is not trusted-gateway/deployment/canary proof; the default flag remains off and real permission mapping plus rollback drill are unverified.
@@ -50,7 +49,7 @@ git log --oneline -8
 ## 下一步只选一个切片
 
 1. Real controlled gateway rollout: only with an actual gateway, Memos visibility mapping, and rollback conditions, verify deployed raw-body HMAC, failures, dedupe, redaction, and flag rollback. The browser must never sign or hold the secret.
-2. DevMemory 人工反馈：当前真实测试 Capture 已保存但没有 Insight。下一步只可低 CPU、只读诊断该现有 Memo 的常规集成，确认 Insight 出现前不能进行审核、Context Pack、撤销/删除、复制或声称完整反馈。
+2. DevMemory 人工反馈：复用既有测试 Memo，在稳定登录态与真实参与者下完成尚未验证的 Context Pack 预算、Markdown/JSON 复制和四项简短反馈。不得为了补证据删除/撤销，也不得创建第二条 Memo。
 
 不要同时推进两条；不增加 Agent、MCP、网页搜索、图数据库、Redis/Celery 或默认新依赖。
 

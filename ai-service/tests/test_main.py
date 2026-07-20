@@ -222,6 +222,26 @@ def test_memos_webhook_triggers_summary(monkeypatch, tmp_path):
     assert table is None
 
 
+def test_memos_webhook_normalizes_memos_resource_name_to_uid(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "resource-name.db"))
+
+    response = client.post(
+        "/api/integrations/memos/webhook",
+        json={
+            "activityType": "memos.memo.updated",
+            "memo": {
+                "name": "memos/memo-resource-name",
+                "content": "Bug report: webhook insight must use the detail memo uid.",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert client.get("/api/ai/insights/memo-resource-name").json()
+    assert client.get("/api/ai/insights/memos%2Fmemo-resource-name").status_code == 404
+
+
 def test_memos_webhook_returns_code_template(monkeypatch, tmp_path):
     monkeypatch.setenv("AI_NOTES_DB", str(tmp_path / "code.db"))
     response = client.post(

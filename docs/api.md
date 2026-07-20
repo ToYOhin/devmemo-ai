@@ -10,11 +10,13 @@ Run locally from `ai-service`:
 
 Optional `--database <path>` selects an AI Service SQLite file. The command opens the file through SQLite `mode=ro` and returns only aggregate `ai_notes`, `memo_templates`, `memo_insights`, `memo_chunk_index_state`, insight status/version range, and webhook-event status counts. It does not create, migrate, or modify a database; it omits memo IDs, raw content, raw webhook payloads, chunk content, and secrets. This is a local development diagnostic, not a public HTTP endpoint.
 
-## Phase 10 feedback observation boundary (2026-07-20)
+## Phase 10 local webhook evidence (2026-07-20)
 
-No HTTP API was added or changed for route B. One new non-sensitive Bug Report was saved through the existing authenticated product UI; its detail page exposed the existing Context Pack entry. The post-capture `python -m scripts.devmemory_lifecycle_report` remains read-only and aggregate-only and still reports zero Insights, so no accept/reject, Context Pack output, budget, copy, or feedback lifecycle is asserted. See `docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`.
+No new HTTP contract was added. The current authenticated Memos user uses the existing webhook endpoint against the local Docker-network AI Service; Memos requires `--allow-private-webhooks` in this local topology because the target resolves to a private address. This changes neither Memos' authorization authority nor any public API.
 
-The next route-B step is a read-only diagnosis of the ordinary integration for that existing capture. It reuses existing UI and API contracts only: no new route, no direct SQLite seeding, no authentication bypass, no second test Memo, and no public output beyond existing safe Context Pack fields.
+Memos sends the current Memo identifier as `memos/<uid>` in this webhook shape, while the detail UI queries the terminal UID. AI Service now normalizes that resource name before reading or writing its derived SQLite state. A focused API regression verifies that the terminal UID reads the persisted Insight and the resource-name form is not exposed as a second identity.
+
+For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review evidence, but fresh Context Pack budget/copy and human-feedback results remain unverified. No raw Memo data, webhook payload, secret, or chunk content is exposed.
 
 ## Manual UI integration notes (2026-07-14)
 

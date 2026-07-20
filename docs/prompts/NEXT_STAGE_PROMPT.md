@@ -1,7 +1,7 @@
 # 下一阶段 Prompt：Phase 10 gateway rollout evidence + DevMemory feedback
 
 ~~~text
-Phase 10 next action is route B only, but the one authorized non-sensitive test Bug Report has already been saved and is blocked before Insight: its detail page shows Context Pack while the after-capture read-only AI SQLite aggregate remains `memo_insights=0` with one existing processed webhook event. Do not create another Memo. First preserve the verified low-CPU baseline in `docs/handoffs/2026-07-20-low-cpu-baseline.md`, then perform only a read-only diagnosis of the ordinary Memos-to-AI integration for the existing Capture. Keep all evidence safe and aggregate-only. If a visible and persisted Insight cannot be established, update the blocker record and stop; do not seed SQLite, bypass Memos authentication, manufacture a review state, generate/copy a pack, or claim a pass. Only after an Insight exists may the already-authorized one-time accept/reject and the remaining feedback steps resume. The local `python -m scripts.public_chunk_gateway_contract_smoke` is already complete and must not be repeated as rollout proof. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
+Phase 10 next action is route B only. The existing non-sensitive test Bug Report has already completed local Capture -> persisted Insight -> one authorized accepted Review through an authenticated Memos UI update and a current-user private Docker-network webhook. The earlier host-side `memo_insights=0` observation was a wrong SQLite path; live Compose evidence must use `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`. Do not create another Memo, seed SQLite, bypass Memos authentication, or repeat an Insight status transition. First preserve the verified low-CPU baseline and copy `web/.env.example` to ignored `web/.env.local` if a local Vite restart is needed. With a stable authenticated session and real participant, complete only the remaining safe Context Pack path for the existing Memo: one bounded budget observation, Markdown/JSON copy outcome, and four concise feedback answers. Do not delete/revoke merely to manufacture evidence. If login, visible state, or browser control is unavailable, record that blocker and stop; do not claim a feedback pass. The local `python -m scripts.public_chunk_gateway_contract_smoke` is already complete and must not be repeated as rollout proof. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
@@ -12,7 +12,7 @@ Phase 10 next action is route B only, but the one authorized non-sensitive test 
 2. docs/PROJECT_STATUS.md 顶部
 3. docs/HANDOFF.md 顶部
 4. docs/roadmap.md 的 Phase 8/9/10
-5. docs/DECISIONS.md 的 ADR-036/041/042/043/044
+5. docs/DECISIONS.md 的 ADR-036/041/042/043/044/048
 6. 本文件
 7. git status --short --branch 与 git log --oneline -8
 
@@ -22,7 +22,7 @@ Phase 10 next action is route B only, but the one authorized non-sensitive test 
 - Phase 8 public-chunk-v1 已实现，但 `AI_PUBLIC_CHUNK_RETRIEVAL=false` 是默认且必须保持；只有可信网关可使用 `AI_PUBLIC_CHUNK_SECRET` 对精确 raw body 签名并提供唯一 `visible_memo_ids`。
 - Memos Go 仍是原始 Memo/权限事实源。AI Service 不复制用户权限系统；公共 `/api/ai/chat` 继续完整 Memo citation 语义。
 
-本阶段唯一目标：执行 route B 的一个真实参与者反馈路径；不推进 gateway rollout。用一个真实、非敏感 Bug Report 跑可用的 `Capture -> Insight -> Review -> Context Pack`，记录安全来源、accept/reject、经同意的删除/撤销、预算截断、复制和人工反馈。所有步骤与停止条件以 `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md` 为准。
+本阶段唯一目标：只完成 route B 剩余的真实参与者反馈，不推进 gateway rollout。现有非敏感 Bug Report 已有 Capture、Insight 与一次 accepted Review；在稳定登录态中只记录安全来源、Context Pack 预算截断、Markdown/JSON 复制和四项人工反馈。不要创建第二条 Memo，不要重复 accept/reject，也不要为了收集证据执行删除/撤销。所有步骤与停止条件以 `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md` 和最新 webhook evidence 为准。
 
 禁止：
 - 不默认开启 public chunk，不修改 `/api/ai/chat`、CitationResponse、memo-v1、chunk collection 或 Memos server/store/proto 核心。
