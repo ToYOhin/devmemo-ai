@@ -12,7 +12,8 @@ This is Phase 10 route B: a read-only observation of one existing local Bug Repo
 - The Memos API correctly rejected an unauthenticated `auth/me` request with `401`; no raw API bypass was used.
 - Compose was running and AI Service health returned the deterministic provider.
 - `python -m scripts.devmemory_lifecycle_report` opened the configured AI SQLite database read-only and reported zero `memo_insights` records and one processed webhook event. The report contains only aggregates.
-- The browser successfully changed to `/inbox`, but its body continued to display the prior Memo view. Therefore no durable accepted/rejected Insight state could be re-observed in the current session.
+- A subsequent read-only Chrome recheck rendered `/inbox` correctly with its expected empty Inbox state. The earlier retained Memo body was a transient/stale observation, not a reproducible route-rendering defect.
+- No durable accepted/rejected Insight state could be re-observed because the configured read-only AI SQLite aggregate still reported zero `memo_insights` records.
 
 ## Deliberately not claimed
 

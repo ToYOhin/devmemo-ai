@@ -1,7 +1,7 @@
 # 下一阶段 Prompt：Phase 10 gateway rollout evidence + DevMemory feedback
 
 ~~~text
-Phase 10 update: the local `python -m scripts.public_chunk_gateway_contract_smoke` contract evidence is already complete. Do not repeat it as rollout proof. A route-B read-only Capture observation is also recorded, but it is incomplete: the configured AI SQLite aggregate had zero insights and `/inbox` did not refresh its body, so no human feedback, accept/reject, delete/revoke, budget, or copy loop is proven. Choose exactly one next: (A) only with a real trusted deployed gateway, Memos visibility mapping, and rollback conditions, collect deployment evidence; or (B) only with a stable authenticated session and a real human participant, complete one Bug Report DevMemory feedback path. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` unless those real gateway conditions are met.
+Phase 10 update: the local `python -m scripts.public_chunk_gateway_contract_smoke` contract evidence is already complete. Do not repeat it as rollout proof. A route-B read-only Capture observation is also recorded, but it is incomplete: the configured AI SQLite aggregate had zero insights. A second read-only Chrome check rendered the empty `/inbox` correctly, so the earlier stale Memo body is not a product defect. No human feedback, accept/reject, delete/revoke, budget, or copy loop is proven. Choose exactly one next: (A) only with a real trusted deployed gateway, Memos visibility mapping, and rollback conditions, collect deployment evidence; or (B) only with a stable authenticated session and a real human participant, complete one Bug Report DevMemory feedback path. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` unless those real gateway conditions are met.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 

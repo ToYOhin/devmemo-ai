@@ -258,6 +258,6 @@ Phase 10 的第一个切片使用 `python -m scripts.public_chunk_gateway_contra
 
 ## ADR-046：Phase 10 人工反馈必须区分真实 Capture 与完整可复核生命周期
 
-route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察，但不能因为页面曾显示派生摘要就推断 accepted/rejected 持久化、用户反馈或 Context Pack 复制成功。当前已配置 AI SQLite 的只读 aggregate、路由实际视图和浏览器可见状态必须能共同支持该结论；若 aggregate 为零或路由主体未刷新，只能记录未完成的观察与阻塞。
+route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察，但不能因为页面曾显示派生摘要就推断 accepted/rejected 持久化、用户反馈或 Context Pack 复制成功。当前已配置 AI SQLite 的只读 aggregate、路由实际视图和浏览器可见状态必须能共同支持该结论；若 aggregate 为零，只能记录未完成的观察。单次路由主体未刷新必须先以新的只读快照复核，不能直接升级为产品缺陷或阻塞。
 
 这保持 Context Pack 的浏览器内存、accepted-only、脱敏来源与 Memos 权限权威边界不变。观察过程不允许绕过 Memos 登录、读取 raw content、修改 Memo/Insight 或把历史 Phase 9f 剪贴板验收重新表述为新的人工反馈；public chunk 继续默认关闭，直到 ADR-043 所需的真实网关证据存在。
