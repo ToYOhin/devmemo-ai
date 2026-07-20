@@ -13,8 +13,8 @@
 ## 证据边界
 
 - 早先 Playwright 式自动化点击没有改写 host clipboard；该结果是自动化桥接路径限制，不是产品失败或本次复制通过的证据。上述结论只基于真实 Chrome UI 的指针点击和随后 host Windows 系统剪贴板复核。
-- 没有新增人类主观反馈答案、没有 delete/revoke、没有新 Memo、没有新的 Insight 状态变更。
+- 随后的真实参与者反馈已单独记录为：来源清晰、accepted Review 可信、64 字符预算有用、Markdown/JSON 复制符合预期；见 `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`。没有 delete/revoke、没有新 Memo、没有新的 Insight 状态变更。
 
 ## 后续
 
-真实参与者现在只需回答四项简短反馈：来源是否易懂、accepted Review 是否可信、64 字符预算是否有用、复制行为是否符合预期。不要重复已完成的 Capture/Review，也不要为了收集证据删除或撤销。
+Phase 10 route B 已完成。不要重复已完成的 Capture/Review/Copy，也不要为了制造更多证据删除或撤销；任何后续 gateway rollout 都必须作为独立 route A，且仍需真实权限映射与回滚条件。

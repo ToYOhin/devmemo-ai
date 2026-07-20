@@ -32,8 +32,8 @@ This is not gateway rollout work. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` and do 
 
 ## 2026-07-20 execution result
 
-The later local-webhook correction completed the existing Memo's real Capture -> persisted Insight -> accepted Review path. A fresh same-profile Chrome tab then confirmed accepted-safe Context Pack content, `max_chars=64` truncation, and real Windows system-clipboard Markdown/JSON copy without console or React errors. The earlier `memo_insights=0` observation was a host-path mistake; use the Compose-mounted read-only lifecycle command described in the rollout handoff. Only the four participant answers remain; they have not yet been supplied and must not be invented.
+The later local-webhook correction completed the existing Memo's real Capture -> persisted Insight -> accepted Review path. A fresh same-profile Chrome tab then confirmed accepted-safe Context Pack content, `max_chars=64` truncation, and real Windows system-clipboard Markdown/JSON copy without console or React errors. The earlier `memo_insights=0` observation was a host-path mistake; use the Compose-mounted read-only lifecycle command described in the rollout handoff. The real participant then supplied all four concise feedback answers: sources were clear, the accepted review was trustworthy, the `64`-character budget was useful, and copy matched expectation.
 
 ## Evidence and acceptance
 
-Create a new dated handoff only after the real path. It must distinguish completed, failed, and untested steps; include test/health commands actually run; and state that this is product feedback rather than public-chunk rollout proof. The path passes only when a real participant completes the available steps and the recorded feedback is attributable to the visible safe UI state.
+The dated completion record is `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`. It distinguishes completed and intentionally untested steps, and states that this is product feedback rather than public-chunk rollout proof. The available route-B path now passes because a real participant completed the available steps and the feedback is attributable to the visible safe UI state.

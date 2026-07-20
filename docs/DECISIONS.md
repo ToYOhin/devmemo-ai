@@ -287,3 +287,5 @@ Memos webhook 的当前 Memo 标识可为 `memos/<uid>`，而详情页 AI Inbox 
 Vite 重启后，接管长期 Chrome 用户标签可能超时；同一 profile 的新标签可继续验证已登录详情页和浏览器内存中的 Context Pack 状态。该恢复方式不改变登录、Memos 数据或 AI 派生状态，适合作为 UI 可见性与预算截断的证据。
 
 自动化表面触发复制并不保证 Windows 系统剪贴板已被改写。若 host clipboard 未出现预期安全输出，必须记录为“自动化复制未验证”，不得把它当成产品回归，也不得把 UI 点击当成新的系统剪贴板 pass。Phase 10 已用真实 Chrome 指针点击及 host clipboard 复核确认 Markdown 与 JSON；此前自动化桥接不改写 clipboard 的观察仍只代表该工具路径。此决策不新增 Clipboard API、HTTP、SQLite 写入或外部依赖。
+
+Phase 10 route B 的真实参与者随后确认来源清晰、accepted Review 可信、`64` 字符预算有用且复制符合预期。该反馈只评价已验证的安全 UI，不授权额外的 review、delete/revoke 或 public-chunk rollout；完整安全记录见 `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`。

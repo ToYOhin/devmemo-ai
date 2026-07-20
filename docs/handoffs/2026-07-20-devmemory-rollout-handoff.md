@@ -36,7 +36,7 @@ git log --oneline -8
 - Phase 10 route B now has real local delivery evidence. The current authenticated Memos user created one Docker-network AI Service webhook after Compose enabled Memos' `--allow-private-webhooks`; an ordinary UI update to the existing non-sensitive test Memo resulted in a processed event, one persisted Insight, and the authorized accepted review at version `2`.
 - The earlier zero-Insight conclusion was a host-path diagnostic mistake: the host-default CLI did not inspect the Compose volume. Use `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report` for the live safe aggregate; after the run it reported eight processed events. The detailed evidence is `docs/handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md`.
 - AI Service normalizes Memos' `memos/<uid>` webhook resource name to the terminal detail-route UID, preventing an orphaned AI-derived state. Its focused regression passes; no Memos core, public chat, collection/volume, or public-chunk behavior changed.
-- This is a technical Capture → Insight → accepted Review result. A fresh same-profile Chrome tab after the Vite restart has now confirmed a bounded Context Pack and both Windows system-copy formats; delete/revoke and qualitative feedback remain unverified. Do not create another test Memo or fabricate those results.
+- Route B is complete: Capture → Insight → accepted Review → bounded Context Pack → both Windows system-copy formats → real participant feedback. The participant rated sources clear, accepted review trustworthy, the `64`-character budget useful, and copy as expected. Delete/revoke was intentionally not performed; do not create another test Memo or fabricate further results.
 - Vite now accepts `DEV_PROXY_SERVER` from ignored `.env.local` using `loadEnv`; copy `web/.env.example` for the local Compose addresses. Keep credentials and secrets out of that file.
 - Fresh same-profile Chrome tab recovery has since confirmed the accepted Insight and `max_chars=64` Context Pack truncation. Real Chrome pointer clicks then wrote Markdown and JSON to Windows clipboard; JSON parsed as `context-pack-v1`, Markdown had the expected heading, no payload/secret marker was detected, and no console/React error occurred. The earlier automation-click mismatch is a bridge limitation; see `docs/handoffs/2026-07-20-devmemory-context-pack-browser-evidence.md`.
 - Phase 10 gateway contract evidence: `python -m scripts.public_chunk_gateway_contract_smoke` passed with disabled `503`, missing/tampered signature `401`, ambiguous scope `422`, degraded `503`, and authorized/redacted/deduplicated `200`; related public-chunk tests: `8 passed` with one existing Starlette/httpx deprecation warning.
@@ -50,7 +50,7 @@ git log --oneline -8
 ## 下一步只选一个切片
 
 1. Real controlled gateway rollout: only with an actual gateway, Memos visibility mapping, and rollback conditions, verify deployed raw-body HMAC, failures, dedupe, redaction, and flag rollback. The browser must never sign or hold the secret.
-2. DevMemory 人工反馈：复用既有测试 Memo，在稳定登录态与真实参与者下只记录四项简短反馈。预算和 Markdown/JSON 复制已有技术证据；不得为了补证据删除/撤销，也不得创建第二条 Memo。
+2. DevMemory route B 已完成：证据见 `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`。除非有新的明确研究问题，不要重复该路径、删除/撤销或创建第二条 Memo。
 
 不要同时推进两条；不增加 Agent、MCP、网页搜索、图数据库、Redis/Celery 或默认新依赖。
 

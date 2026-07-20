@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B 真实参与者反馈完成
+
+- 记录既有非敏感 Bug Report 的四项真实参与者反馈：来源清晰、accepted Review 可信、`64` 字符预算有用、Markdown/JSON 复制符合预期。
+- 新增 [`docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`](handoffs/2026-07-20-devmemory-real-feedback-evidence.md)，将反馈与已验证的 webhook、Context Pack 和 Chrome/Windows 剪贴板证据关联；不记录原始 Memo、ID、payload、secret 或 chunk content。
+- route B 完成；没有创建/删除 Memo、没有再次改变 Insight 状态、没有执行 delete/revoke，也没有启用 public chunk 或修改公共 chat/Memos 核心。
+
 ## 2026-07-20：Phase 10 route B Context Pack Chrome/Windows 复制复核
 
 - 通过同一 Chrome profile 的新标签恢复详情页验收，避免 Vite 重启后接管长期用户标签的超时；确认 accepted Insight、显式来源和 `max_chars=64` 的可见预算截断。
@@ -14,7 +20,7 @@
 - 一个持久化 Insight 按已授权的一次操作变为 `accepted`，版本为 `2`。未创建第二条 Memo，未删除数据，未 seed SQLite、绕过认证或修改公共 chat/collection/volume。
 - 纠正此前 host-default lifecycle 误读：运行中 Compose 必须在 AI Service 容器执行只读 aggregate CLI。新增本地 Vite `.env.example`，并让 `DEV_PROXY_SERVER` 可从忽略的 `.env.local` 读取，以便重启后稳定指向本机 Compose。
 - 验证：新增回归 `1 passed`；AI Service 全量与串行 `verify-devmemo.ps1` 均 `188 passed`（1 条既有弃用警告）；Compose config、串行 Web `33 files / 149 passed`、build、项目 lint 通过。独立 strict TypeScript 仍是 13 条既有依赖/声明错误。
-- 仍未验证：delete/revoke 和四项真实参与者反馈。浏览器预算与 Markdown/JSON 系统复制已有本轮技术复核，但不能把它们改写为人工主观反馈通过。
+- 未执行：delete/revoke。浏览器预算与 Markdown/JSON 系统复制已有本轮技术复核，四项真实参与者反馈现已在独立安全 evidence 中记录。
 
 ## 2026-07-20：Phase 10 route B 真实 Capture 阻塞
 
