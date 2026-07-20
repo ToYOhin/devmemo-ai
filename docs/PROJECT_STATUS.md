@@ -1,18 +1,25 @@
 # DevMemo AI 项目状态
 
+## 当前验证与下一入口（2026-07-20）
+
+- 本地 Chrome 产品验收已通过：Memo 详情页 AI Inbox 的 Context Pack `Copy Markdown` 与 `Copy JSON` 均实际写入 Windows 系统剪贴板。Markdown 为 512 字符并包含标题与 Memo/Insight 来源；JSON 为 1,699 字符、可解析且含两条可追溯来源。浏览器页面未再进入错误边界。
+- 复制实现优先使用受用户手势触发的 DOM `execCommand("copy")`，再回退到异步 Clipboard API；复制反馈不再动态替换 SVG 图标，避免先前 Chrome 表面中的 `insertBefore` React 错误。前端回归：`33 files / 149 passed`、TypeScript 与 lint 通过。
+- Phase 9f 的 golden parity、只读生命周期诊断和 Context Pack Chrome 复制证据均已完成；Phase 8 `public-chunk-v1` 仍为默认关闭的受控实现，不应在没有可信网关 HMAC/可见范围集成证据时开启。
+- 下一窗口入口：[`docs/handoffs/2026-07-20-devmemory-rollout-handoff.md`](handoffs/2026-07-20-devmemory-rollout-handoff.md) 与 [`docs/prompts/NEW_WINDOW_PROMPT.md`](prompts/NEW_WINDOW_PROMPT.md)。
+
 ## Phase 8 public-chunk-v1 implementation (2026-07-20)
 
 - Product approval accepted for the independent `POST /api/ai/v1/chunks/search` contract. It is opt-in (`AI_PUBLIC_CHUNK_RETRIEVAL=false` by default) and rolls back by disabling that flag without touching `memo-v1`, the chunk collection, or any volume.
 - A trusted gateway must HMAC-sign the raw request body with `AI_PUBLIC_CHUNK_SECRET` in `X-DevMemo-Chunk-Signature`. Its signed `visible_memo_ids` are the enforced Memo-level visibility scope; AI Service does not invent a second Memos authorization system.
 - `public-chunk-v1` fixes `memo-chunk-v1`, keeps only the best score per authorized Memo, applies deterministic ordering, and returns a strict metadata allowlist (`source_type`, optional bounded `title`) with no content, webhook payload, secret, or internal fields.
-- Contract/API tests: `13 passed`; controlled lifecycle evidence: `11 passed` for delete, chunk replay/idempotence, reject/stale, and accepted-only filtering. AI Service full suite: `186 passed` (one existing deprecation warning). Real Chrome clipboard remains blocked because the Chrome extension connection is unavailable.
+- Contract/API tests: `13 passed`; controlled lifecycle evidence: `11 passed` for delete, chunk replay/idempotence, reject/stale, and accepted-only filtering. AI Service full suite: `186 passed` (one existing deprecation warning). Chrome clipboard acceptance is now separately verified as described above.
 
 ## Phase 9f minimum slice (2026-07-20)
 
 - Completed exact cross-language Context Pack golden output: Python and Web now consume the same fixture cases and produce byte-for-byte identical Markdown and canonical compact snake_case JSON.
 - Added a local-only lifecycle diagnostic command, `python -m scripts.devmemory_lifecycle_report`, which opens the AI SQLite database read-only and reports only aggregate derived-record/status/version counts.
 - Previous Phase 9f verification: AI Service `179 passed` (one existing Starlette/httpx deprecation warning); Web `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
-- Phase 9f remains in progress for manual Context Pack feedback and controlled lifecycle evidence. Phase 8 public chunk API remains pending approval.
+- Phase 9f remains in progress only for future product feedback; its cross-language parity, local diagnostic and Chrome clipboard acceptance are complete. Phase 8 public chunk API is implemented but remains disabled by default pending gateway rollout evidence.
 
 ## 人工功能检查修复（2026-07-14）
 
@@ -34,11 +41,11 @@
 - 修复删除联动遗漏：删除 Memo 的 AI 派生状态清理现在同时删除 SQLite `memo_chunk_index_state`；chunk mode 先删除向量/生命周期再清理 SQLite，避免返回错误的 `index_status=skipped`，并增加 webhook 回归测试。
 - 复制验收发现当前 In-App Browser 同时缺少 `navigator.clipboard` 与 `document.execCommand`；现已改为自动选中预览并显示 `Ctrl+C` 手动复制提示，不再把受限环境误报为 copy failure。刷新最新前端后的详情页 DOM 验收已确认提示可见；真实 Chrome 的系统剪贴板仍需单独复验。本轮 CDP 截图调用超时，既有详情页截图 artifact 仍保留；Statsig 外部请求超时与本地应用无关。
 
-更新时间：2026-07-15
+更新时间：2026-07-20
 
 ## 当前阶段
 
-Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 8、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e 已完成。Phase 8 的 public-chunk-v1 为默认关闭的受控实现；下一步为网关签名/可见范围灰度证据，以及 Phase 9f Context Pack 用户反馈与生命周期观测。
+Phase 0、Phase 1、Phase 2、Phase 2b、Phase 2c、Phase 2d、Phase 3a、Phase 3b、Phase 3c、Phase 3d、Phase 3e、Phase 3f、Phase 3g、Phase 4、Phase 4b、Phase 4c、Phase 4d、Phase 4e、Phase 4f、Phase 4g、Phase 5a、Phase 5b、Phase 5c、Phase 5d、Phase 5e、Phase 5f、Phase 5g、Phase 6、Phase 7、Phase 8、Phase 9a、Phase 9b、Phase 9c、Phase 9d、Phase 9e、Phase 9f 已完成。Phase 8 的 public-chunk-v1 为默认关闭的受控实现；下一步为 Phase 10 的网关签名/可见范围 rollout 证据，或一个受控 DevMemory Loop 人工反馈切片。
 
 ## 当前事实
 

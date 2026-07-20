@@ -243,3 +243,9 @@ Python builder 与 Web adapter 继续独立，避免把浏览器 UI 与 AI Servi
 用户已明确批准 public-chunk-v1 的鉴权、脱敏、去重和回滚契约。AI Service 实现独立 `POST /api/ai/v1/chunks/search`，但默认 `AI_PUBLIC_CHUNK_RETRIEVAL=false`。只有 flag 为 true 且 `AI_PUBLIC_CHUNK_SECRET` 非空时才处理请求；受信任网关必须使用该 secret 对精确 raw JSON body HMAC-SHA256，并在 body 中携带唯一 `visible_memo_ids`。AI Service 验证签名并将该集合强制用于结果过滤，不自行复制 Memos 用户/权限模型。
 
 输出固定 `public-chunk-v1`、`memo-chunk-v1`，按 score desc、memo_id/chunk_index/chunk_id asc 排序，并只保留每个授权 Memo 的最高分 chunk。metadata 是 `source_type` 与可选 bounded title 的 allowlist，禁止 content、原始 Markdown、Webhook payload、secret 或内部字段。disabled/degraded 或缺 secret 返回 503，签名失败返回 401，scope/输入非法返回 422。回滚只关闭 flag，不迁移或删除 `memo-v1`、chunk collection/volume，也不修改 `/api/ai/chat`。
+
+## ADR-044：Context Pack 复制优先保证系统剪贴板与 UI 稳定性
+
+Context Pack 复制继续是浏览器内存中的本地交互，不新增 HTTP、SQLite 写入或外部依赖。实现优先在用户手势下使用 DOM copy，并仅在不可用时回退异步 Clipboard API；当两个能力都不可用时仍保留现有手动复制引导。复制状态不得通过会改变图标节点类型的瞬时替换破坏 React DOM 一致性。
+
+该决策已由真实 Chrome/Windows 系统剪贴板验收覆盖 Markdown 与 JSON。它不改变 Context Pack 的脱敏来源、accepted-only、显式跨 Memo 选择、公共 chat、Memos 权限边界或 public-chunk-v1 rollout 条件。

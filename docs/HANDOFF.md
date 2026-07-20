@@ -1,18 +1,25 @@
 # DevMemo AI 当前交接
 
+## 当前权威快照（2026-07-20）
+
+- 先读取 [`docs/handoffs/2026-07-20-devmemory-rollout-handoff.md`](handoffs/2026-07-20-devmemory-rollout-handoff.md)；它取代下方历史阶段叙述作为新窗口入口。
+- Phase 9f 的跨语言 Context Pack golden、SQLite 只读生命周期诊断和真实 Chrome/Windows 系统剪贴板验收已完成。`Copy Markdown`、`Copy JSON` 都实际写入了系统剪贴板，且复制后无 React error boundary。
+- 当前分支仍只允许单 Agent 在 `H:\DevMemoAI` 主工作树推进。默认路径保持 deterministic + memory；`public-chunk-v1` 默认关闭，公共 chat 与 Memos 核心不改。
+- 结构检查结论：Memos Go 是原始 Memo/权限事实源，AI Service 只管理派生状态，Web 的 `AiMemoInsights`/`AiMemoContextPack` 是唯一当前产品入口；`graphify-out` 未覆盖近期 AI feature，不能单独作为当前结构事实源。
+
 ## Phase 8 public-chunk-v1 controlled implementation (2026-07-20)
 
 - Public `POST /api/ai/v1/chunks/search` now exists behind `AI_PUBLIC_CHUNK_RETRIEVAL=false`. It requires a non-empty `AI_PUBLIC_CHUNK_SECRET` and `X-DevMemo-Chunk-Signature` HMAC over the raw JSON body; the signed, unique `visible_memo_ids` are the gateway-provided authorization scope.
 - The response is an independent `public-chunk-v1` contract: fixed `memo-chunk-v1`, deterministic sort, highest score per authorized Memo, and redacted metadata allowlist only. It never returns content, raw webhook payloads, secrets, or unapproved internal metadata.
 - Rollback: disable the flag; do not delete collections/volumes or alter `/api/ai/chat`. Targeted public API/contract/chat tests passed 13; AI full suite passed 186; controlled delete/replay/reject/stale/accepted-only evidence passed 11.
-- Real Chrome clipboard proof remains blocked: the Chrome extension connection is unavailable, so no system-clipboard pass is claimed.
+- Real Chrome clipboard proof has since passed; see the current snapshot above.
 
 ## Phase 9f minimum slice: golden parity and local diagnostic (2026-07-20)
 
 - `contracts/context-pack-v1.json` now supplies shared expected Markdown and canonical compact snake_case JSON golden output. Python and Web have independent implementations but exact output tests prevent contract drift; the test caught and fixed a Web trailing-newline mismatch.
 - `ai-service/lifecycle_report.py` plus `python -m scripts.devmemory_lifecycle_report [--database <path>]` is a local read-only diagnostic. It opens SQLite with `mode=ro`, reports only aggregate AI-derived table/status/version counts, does not create/migrate/write a DB, and never emits memo IDs, content, raw webhook payloads, or secrets.
 - Current evidence: AI full `179 passed` with one existing Starlette/httpx deprecation warning; Web full `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
-- Still outstanding: a real Chrome system-clipboard acceptance remains unverified in the restricted in-app browser, and Phase 9f still needs controlled/manual lifecycle feedback evidence. Public chat, Qdrant collections, and Phase 8 public chunk API gate are unchanged.
+- The previously outstanding real Chrome system-clipboard acceptance is now complete. Public chat, Qdrant collections, and the default-disabled Phase 8 rollout boundary are unchanged.
 
 ## 人工验收与问题修复（2026-07-15）
 
@@ -64,7 +71,7 @@
 
 - AI Service webhook 定向：8 passed；Context Pack 定向：12 passed。
 - Web 全量：33 files / 147 passed；TypeScript、build、lint 通过；共享 fixture Web contract 已实际读取根目录 JSON，并覆盖不可访问跨 Memo 排除。
-- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；前端全量 147 passed；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。本轮已完成本地浏览器人工验收：刷新最新前端后点击 Markdown copy 显示手动复制提示，pack 只显示安全摘要和 source refs；跨 Memo/删除联动已有 contract/unit 测试。In-App Browser 的系统剪贴板能力仍被环境禁用，真实 Chrome 自动复制仍未完成。
+- AI Service 全量：175 passed，保留 1 个 Starlette/httpx 弃用警告；前端全量 147 passed；verify 脚本返回 `DEVMEMO_VERIFY_OK`；Compose config 与 `git diff --check` 通过。本段记录的是当时受限 In-App Browser 的手动复制结果；后续真实 Chrome/Windows 系统剪贴板验收已完成，以本文件顶部当前快照为准。
 
 ## 当前项目结构与问题
 
@@ -72,7 +79,7 @@
 - AI Inbox 目前嵌入 Memo 详情页，不是全局收件箱；Context Pack 已有共享输入 fixture，但 Python builder 与 Web adapter 仍是两份实现，后续需继续用跨语言 contract 输出样例防止排序/预算语义漂移。
 - `graphify-out` 的旧图把 “Inbox” 指向 Memos `store/inbox.go`，没有反映 Phase 9a/9d 的 AI feature；后续应重建图或改用精确节点查询。
 
-验证与下一步：Phase 9f 评估 Context Pack/Insight 生命周期观测、用户反馈和跨语言输出 golden fixture；Phase 8 public chunk API 继续 pending approval。
+验证与下一步：本段为 Phase 9e 历史记录；后续 Phase 9f golden、生命周期诊断和真实 Chrome 剪贴板验收已完成，Phase 8 也已实现默认关闭的受控路由。以本文件顶部当前快照为准。
 
 ## Phase 9c Context Pack integration gate：proposal-only 已完成
 

@@ -2,6 +2,14 @@
 
 ## 2026-07-20
 
+### Context Pack Chrome system-clipboard acceptance
+
+- 修复 Context Pack 复制后的 React error boundary：复制状态不再动态替换 SVG 图标，避免 Chrome 环境中的 DOM `insertBefore` 失败。
+- 复制流程优先使用 DOM copy，再回退至异步 Clipboard API；真实 Chrome 验收确认 Markdown 和 JSON 均写入 Windows 系统剪贴板，且来源可追溯、JSON 可解析。
+- 验证：Web `33 files / 149 passed`、TypeScript、lint、`git diff --check` 通过。没有修改 AI Service、Memos 核心、公共 chat 或 public-chunk 默认配置。
+
+## 2026-07-20
+
 ### Phase 8：public-chunk-v1 受控实现
 
 - 实现独立 `POST /api/ai/v1/chunks/search`，不修改 `/api/ai/chat`、完整 Memo citation 或 `memo-v1` collection。

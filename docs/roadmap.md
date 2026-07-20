@@ -310,4 +310,10 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 2. 输出 JSON 固定为 compact snake_case canonical form；golden test 已发现并修复 Web Markdown 末尾换行漂移。
 3. 新增 `python -m scripts.devmemory_lifecycle_report [--database <path>]` 本地诊断。它以 SQLite `mode=ro` 只读 AI Service 自有数据库，仅输出派生表、insight 状态/版本和 outbox 状态的聚合计数；不创建数据库、不写入、不暴露 Memo ID/原文/payload/secret，也不新增 HTTP、worker 或 telemetry。
 
-验证：Phase 9f 最小切片 AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。后续仍需收集真实 Chrome 剪贴板反馈和受控生命周期证据；Phase 8 public chunk API 已进入默认关闭的受控 rollout。
+验证：Phase 9f 最小切片 AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。真实 Chrome/Windows 系统剪贴板验收也已通过：Markdown 与 JSON 均写入系统剪贴板且页面无 error boundary。Phase 8 public chunk API 已进入默认关闭的受控 rollout。
+
+## Phase 10：受控 gateway rollout 与 DevMemory 产品反馈（待执行）
+
+1. 只在受信任网关一侧完成 raw-body HMAC、唯一 `visible_memo_ids` 传递和可审计的 disabled/401/422/503 smoke；不把签名 secret 或可见范围交给浏览器客户端，也不改 Memos 核心权限模型。
+2. 用一个真实开发场景收集 `Capture → Insight → Review → Context Pack` 的人工反馈，重点验证来源、撤销、删除与预算截断是否可理解；pack 继续仅在内存生成。
+3. 在收集到兼容性、权限与回滚证据前，不默认开启 `AI_PUBLIC_CHUNK_RETRIEVAL`，不修改 `/api/ai/chat`，不引入 Agent、网页搜索、MCP、图数据库或常驻 worker。

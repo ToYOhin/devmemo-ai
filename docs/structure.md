@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-07-15
+更新时间：2026-07-20
 
 ## 顶层目录
 
@@ -50,7 +50,7 @@ web/src/features/ai/
 └── AiMemoSummary.tsx      # bounded summary 展示
 ```
 
-当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，当前通过 `contracts/context-pack-v1.json` 共享输入 fixture，后续应增加跨语言 golden output。`graphify-out` 的历史图还会把 “Inbox” 解析为 Memos `store/inbox.go`，查询时需使用 `AiMemoInsights`/`AiMemoContextPack` 精确名称。
+当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，但已通过 `contracts/context-pack-v1.json` 的 Markdown/compact JSON golden 做字节级对齐，后续任何语义变更都必须扩展该 fixture。`graphify-out` 的历史图仍会把 “Inbox” 解析为 Memos `store/inbox.go`，且未收录近期 AI feature；结构判断应以源码与本文档为准，图谱重建是后续维护项。
 
 ## AI Service 目录
 
