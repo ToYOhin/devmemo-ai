@@ -266,6 +266,8 @@ route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察
 
 当前参与者授权只覆盖一个非敏感测试 Memo 的创建与一次 Insight accept/reject；删除/撤销属于独立的行动时确认，不能由先前 review 授权推断。
 
+该测试 Memo 已通过正常认证 UI 保存，但保存后的只读 aggregate 仍无 Insight，故本 ADR 的 stop condition 已触发：不从 Capture 推断 review、pack、copy 或用户反馈成功。后续只能先读取并诊断现有集成；不得创建第二条测试 Memo、seed SQLite 或绕过 Memos 权限来补齐状态。
+
 ## ADR-047：默认 Compose 路径以低 CPU 预算运行
 
 Memos 与 AI Service 默认上限分别为 `0.75`/`0.25` CPU；Memos 的 `GOMAXPROCS`、验证脚本的 Go 并发及 AI 数值线程均固定为 `1`。这优先保证本地 capture/review/Context Pack 的响应，而不是最大吞吐量；如需更高性能，必须由使用者显式调整本地 Compose 配额。

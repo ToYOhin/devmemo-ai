@@ -33,6 +33,10 @@ This is not gateway rollout work. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` and do 
 - No generated Insight or a database/session mismatch: record the observable blocker; do not seed SQLite or manufacture a review state.
 - A browser/API error, copy failure, or unexpected deletion behavior: stop at that point, retain only safe evidence, and do not call the overall path a pass.
 
+## 2026-07-20 execution result
+
+The authorized test Bug Report was created and saved through the authenticated UI, but the post-capture lifecycle aggregate remained `memo_insights=0` with only one pre-existing processed webhook event. The detail page showed the Context Pack entry, yet no Insight was visible or persisted. Per the stop condition, no review, pack generation/budget action, copy, delete/revoke, or feedback interview was performed. The safe evidence record is `docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`; do not retry by creating another Memo.
+
 ## Evidence and acceptance
 
 Create a new dated handoff only after the real path. It must distinguish completed, failed, and untested steps; include test/health commands actually run; and state that this is product feedback rather than public-chunk rollout proof. The path passes only when a real participant completes the available steps and the recorded feedback is attributable to the visible safe UI state.

@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B 真实 Capture 阻塞
+
+- 已在认证 Memos UI 保存一条非敏感测试 Bug Report，并在详情页确认 Context Pack 入口；不记录 Memo ID 或原文。
+- 保存后只读 lifecycle aggregate 仍为 `memo_insights=0` 和一个既有 `processed` webhook event，故严格停在 Capture。没有 accept/reject、pack 生成/预算截断、复制、删除/撤销或人工反馈 pass。
+- 新增 [`docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`](handoffs/2026-07-20-devmemory-feedback-capture-blocked.md)；下一步只能先低 CPU、只读诊断正常集成是否能为该现有测试 Memo 产生 Insight，不能再创建测试 Memo 或 seed SQLite。
+
 ## 2026-07-20：Phase 10 route B execution authorization
 
 - 已记录真实参与者对“一条非敏感测试 Bug Report + 一次 Insight accept/reject”的授权；删除/撤销仍必须在操作前单独确认。

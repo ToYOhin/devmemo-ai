@@ -8,6 +8,8 @@
 
 ## Phase 10 DevMemory feedback observation boundary (2026-07-20)
 
+- A new non-sensitive test Bug Report is now genuinely saved in the authenticated local Memos UI. Its detail page exposed the Context Pack entry, but the post-capture read-only AI SQLite aggregate remains `memo_insights=0` with only one pre-existing processed webhook event. This is a Capture blocker, not a review or feedback pass; see [`docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`](handoffs/2026-07-20-devmemory-feedback-capture-blocked.md).
+- Do not create a second test Memo. The next slice is a low-CPU, read-only integration diagnosis of why this existing Capture did not produce an Insight. No SQLite seed, auth bypass, public-chunk change, review, pack generation, copy, delete/revoke, or feedback claim is authorized by this blocker record.
 - Route B did not create synthetic feedback. An authenticated Chrome session showed one existing local Bug Report capture, while the configured read-only AI SQLite lifecycle report had `memo_insights=0`. A second read-only check rendered the expected empty `/inbox` page, so the earlier retained Memo body is not treated as a product defect.
 - Focused regression passed: MemoInsight, Context Pack builder/golden, and lifecycle-report tests (`15 passed`). Memos rejected unauthenticated `auth/me` with `401`; Compose and AI health were up.
 - AI Service full suite and `scripts/verify-devmemo.ps1` passed with `187 passed`; Compose config passed. Fresh Web test/build/lint were intentionally not rerun after this documentation-only slice at the user's CPU-conservation request; strict TypeScript still has the known 13 baseline declaration errors.

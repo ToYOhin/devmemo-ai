@@ -12,9 +12,9 @@ Optional `--database <path>` selects an AI Service SQLite file. The command open
 
 ## Phase 10 feedback observation boundary (2026-07-20)
 
-No HTTP API was added or changed for route B. The local observation used only the existing authenticated product UI and `python -m scripts.devmemory_lifecycle_report`; the latter remains read-only and aggregate-only. A later read-only check confirmed the empty `/inbox` route renders correctly, but the current zero-insight aggregate still means no accept/reject or Context Pack feedback lifecycle is asserted. See `docs/handoffs/2026-07-20-devmemory-feedback-observation.md`.
+No HTTP API was added or changed for route B. One new non-sensitive Bug Report was saved through the existing authenticated product UI; its detail page exposed the existing Context Pack entry. The post-capture `python -m scripts.devmemory_lifecycle_report` remains read-only and aggregate-only and still reports zero Insights, so no accept/reject, Context Pack output, budget, copy, or feedback lifecycle is asserted. See `docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`.
 
-The next real-feedback procedure is documented in `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`. It reuses existing UI and API contracts only: no new route, no direct SQLite seeding, no authentication bypass, and no public output beyond existing safe Context Pack fields.
+The next route-B step is a read-only diagnosis of the ordinary integration for that existing capture. It reuses existing UI and API contracts only: no new route, no direct SQLite seeding, no authentication bypass, no second test Memo, and no public output beyond existing safe Context Pack fields.
 
 ## Manual UI integration notes (2026-07-14)
 
