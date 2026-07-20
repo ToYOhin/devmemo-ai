@@ -1,5 +1,10 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B execution authorization
+
+- 已记录真实参与者对“一条非敏感测试 Bug Report + 一次 Insight accept/reject”的授权；删除/撤销仍必须在操作前单独确认。
+- `NEXT_STAGE_PROMPT.md` 与 real-feedback plan 已收紧到该范围，不授权 SQLite seed、Memos 登录绕过、第二次 review 状态变更或 public-chunk rollout。
+
 ## 2026-07-20：低 CPU 默认运行与验证
 
 - 默认 Compose 的 Memos/AI Service CPU 上限调整为 `0.75`/`0.25`，Memos 使用 `GOMAXPROCS=1`；AI 数值线程环境变量固定为 `1`。

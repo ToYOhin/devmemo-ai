@@ -264,6 +264,8 @@ route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察
 
 下一步真实反馈执行遵循 `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`：只有在场且同意的参与者可触发 review/revoke/delete/copy；无参与者或无 Insight 时停止并如实记录。该计划不创建新运行时契约，也不授权 API 绕过、SQLite seed 或浏览器 secret 暴露。
 
+当前参与者授权只覆盖一个非敏感测试 Memo 的创建与一次 Insight accept/reject；删除/撤销属于独立的行动时确认，不能由先前 review 授权推断。
+
 ## ADR-047：默认 Compose 路径以低 CPU 预算运行
 
 Memos 与 AI Service 默认上限分别为 `0.75`/`0.25` CPU；Memos 的 `GOMAXPROCS`、验证脚本的 Go 并发及 AI 数值线程均固定为 `1`。这优先保证本地 capture/review/Context Pack 的响应，而不是最大吞吐量；如需更高性能，必须由使用者显式调整本地 Compose 配额。
