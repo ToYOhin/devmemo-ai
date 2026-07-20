@@ -18,6 +18,8 @@ Memos sends the current Memo identifier as `memos/<uid>` in this webhook shape, 
 
 For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review evidence, but fresh Context Pack budget/copy and human-feedback results remain unverified. No raw Memo data, webhook payload, secret, or chunk content is exposed.
 
+The subsequent same-profile Chrome check confirmed the existing UI's accepted Insight and a visible `max_chars` budget truncation. It did not add an API route or request. Automated copy clicks did not update the Windows clipboard, so current API/product evidence continues to distinguish a browser-automation bridge limitation from a fresh real-Chrome clipboard pass.
+
 ## Manual UI integration notes (2026-07-14)
 
 - The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.

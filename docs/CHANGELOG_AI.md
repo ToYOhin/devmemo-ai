@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 route B Context Pack 浏览器验收恢复
+
+- 通过同一 Chrome profile 的新标签恢复详情页验收，避免 Vite 重启后接管长期用户标签的超时；确认 accepted Insight、显式来源和 `max_chars=64` 的可见预算截断，页面无 console error。
+- 两个复制按钮都由 UI 触发，但自动化表面没有改写 Windows 系统剪贴板，故不将其写为本轮复制通过或产品回归。历史 Phase 9f 的真实 Chrome/Windows 剪贴板证据仍独立有效。
+- 未创建/删除 Memo，未再次改变 Insight 状态，未修改 public chunk、公共 chat、Memos 核心、SQLite schema、collection 或 volume。
+
 ## 2026-07-20：Phase 10 route B 本地 Webhook → Insight → Review
 
 - 在用户允许的本地 Compose 拓扑中，Memos 启用 `--allow-private-webhooks`，当前已认证用户创建一个指向 AI Service 的既有 Webhook；浏览器不持有 signing secret，`AI_PUBLIC_CHUNK_RETRIEVAL=false` 未改变。

@@ -15,6 +15,7 @@
 - A fresh `.env.example` makes the local Vite AI URL and Memos proxy reproducible; the config now reads `.env.local` for `DEV_PROXY_SERVER` while preserving explicit process-environment precedence. This is local developer configuration only.
 - Verification for this slice is recorded in [`docs/handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md`](handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md). Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 - Current gates: focused webhook regression `1 passed`; AI Service full suite and serial `scripts/verify-devmemo.ps1` both `188 passed` (one existing deprecation warning); Compose config passed; serial Web tests `33 files / 149 passed`, build, and project lint passed. Standalone strict Web TypeScript still has the known 13 dependency declaration/type errors.
+- Fresh same-profile Chrome tab recovery now verifies accepted Insight and a `64`-character Context Pack `max_chars` truncation with no console errors. Long-lived tab claiming remains unreliable after Vite restart. UI copy was invoked, but Windows clipboard did not change in the automation surface; keep this as unverified rather than a new product failure or a new copy pass.
 
 ## Phase 10 local gateway contract evidence (2026-07-20)
 

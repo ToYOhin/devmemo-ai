@@ -281,3 +281,9 @@ Qdrant 与 Ollama 的资源成本不再属于默认启动路径，分别只能�
 Memos webhook 的当前 Memo 标识可为 `memos/<uid>`，而详情页 AI Inbox 使用终端 UID 查询。AI Service 在其派生状态边界将该单一资源名规范化为 UID，防止同一 Memo 形成两份 AI SQLite 状态；不读取或返回原文，且不改变 Memos 数据。该映射由 API 回归测试覆盖。
 
 生命周期 CLI 仍保持只读、聚合、无 HTTP；运行 Compose 时必须在 AI Service 容器中执行，或明确传入 Compose 挂载的数据库文件。主机默认路径的空/旧 SQLite 不得作为线上容器状态或产品阻塞证据。该 ADR 不改变 `AI_PUBLIC_CHUNK_RETRIEVAL=false`、公共 `/api/ai/chat`、`memo-v1`、collection/volume 或 Context Pack 内存边界。
+
+## ADR-049：Chrome 自动化证据与 Windows 剪贴板证据必须分层
+
+Vite 重启后，接管长期 Chrome 用户标签可能超时；同一 profile 的新标签可继续验证已登录详情页和浏览器内存中的 Context Pack 状态。该恢复方式不改变登录、Memos 数据或 AI 派生状态，适合作为 UI 可见性与预算截断的证据。
+
+自动化表面触发复制并不保证 Windows 系统剪贴板已被改写。若 host clipboard 未出现预期安全输出，必须记录为“自动化复制未验证”，不得把它当成产品回归，也不得把 UI 点击当成新的系统剪贴板 pass。真实 Chrome/Windows 手动验收仍是该层唯一的通过证据；此决策不新增 Clipboard API、HTTP、SQLite 写入或外部依赖。
