@@ -62,6 +62,7 @@ ai-service/
 ├── embedding.py                    # 旧 list-based embedding 兼容入口
 ├── rag.py                          # 旧 RAG 兼容入口
 ├── llm.py                          # deterministic/OpenAI/Ollama LLM adapter 入口
+├── lifecycle_report.py              # 本地只读 AI SQLite 生命周期聚合
 ├── app/
 │   ├── domain/
 │   │   ├── embeddings.py            # EmbeddingProvider/VectorStore/VectorRecord 契约
@@ -92,6 +93,7 @@ ai-service/
 │       ├── qdrant_vector_store.py   # 可选 Qdrant adapter
 │       └── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
 ├── scripts/smoke_qdrant.py          # 显式真实 Qdrant smoke
+├── scripts/devmemory_lifecycle_report.py # local-only read-only diagnostic CLI
 └── tests/                           # AI Service unit/contract/API 测试
 ```
 

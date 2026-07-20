@@ -1,5 +1,12 @@
 # DevMemo AI 项目状态
 
+## Phase 9f minimum slice (2026-07-20)
+
+- Completed exact cross-language Context Pack golden output: Python and Web now consume the same fixture cases and produce byte-for-byte identical Markdown and canonical compact snake_case JSON.
+- Added a local-only lifecycle diagnostic command, `python -m scripts.devmemory_lifecycle_report`, which opens the AI SQLite database read-only and reports only aggregate derived-record/status/version counts.
+- Verification: AI Service `179 passed` (one existing Starlette/httpx deprecation warning); Web `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
+- Phase 9f remains in progress for manual Context Pack feedback and controlled lifecycle evidence. Phase 8 public chunk API remains pending approval.
+
 ## 人工功能检查修复（2026-07-14）
 
 - 已修复本地回环地址 CORS 缺口：Compose 默认同时允许 `localhost:3001` 与 `127.0.0.1:3001`。

@@ -1,5 +1,15 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20
+
+### Phase 9f：Context Pack golden output 与本地生命周期诊断（最小切片）
+
+- Shared `contracts/context-pack-v1.json` now contains expected Markdown/JSON golden cases. Python and Web assert the same deterministic sort, dedupe, accepted-only filter, budget truncation, and deidentified source output.
+- Canonical wire JSON is compact snake_case. The fixture caught and fixed a Web trailing-newline drift, so Markdown is now byte-for-byte identical too.
+- Added `python -m scripts.devmemory_lifecycle_report`: a read-only local CLI that reports safe aggregate AI-owned SQLite lifecycle counts only; it creates no database, exposes no IDs/content/payloads/secrets, and adds no HTTP/worker/telemetry service.
+- Verification: AI `179 passed` (one existing deprecation warning); Web `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and diff check passed.
+- Next: finish Phase 9f manual Context Pack feedback and controlled lifecycle evidence; keep Phase 8 public chunk API pending.
+
 ## 2026-07-15 人工验收问题修复
 
 - 修复 Context Pack 对 `memos/{uid}` 与 `{uid}` 混用导致的当前 Memo 重复来源；取消全部来源后仍保留来源选择器，可恢复空态。

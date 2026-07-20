@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## Phase 9f minimum slice: golden parity and local diagnostic (2026-07-20)
+
+- `contracts/context-pack-v1.json` now supplies shared expected Markdown and canonical compact snake_case JSON golden output. Python and Web have independent implementations but exact output tests prevent contract drift; the test caught and fixed a Web trailing-newline mismatch.
+- `ai-service/lifecycle_report.py` plus `python -m scripts.devmemory_lifecycle_report [--database <path>]` is a local read-only diagnostic. It opens SQLite with `mode=ro`, reports only aggregate AI-derived table/status/version counts, does not create/migrate/write a DB, and never emits memo IDs, content, raw webhook payloads, or secrets.
+- Current evidence: AI full `179 passed` with one existing Starlette/httpx deprecation warning; Web full `33 files / 149 passed`; verify script, Compose config, TypeScript, build, lint, and `git diff --check` passed.
+- Still outstanding: a real Chrome system-clipboard acceptance remains unverified in the restricted in-app browser, and Phase 9f still needs controlled/manual lifecycle feedback evidence. Public chat, Qdrant collections, and Phase 8 public chunk API gate are unchanged.
+
 ## 人工验收与问题修复（2026-07-15）
 
 - 已手动验证创建两条 Memo、AI Inbox Accept/Reject、Context Pack question/预算、accepted-only 和显式跨 Memo 选择；本轮稳定详情页截图已在工具结果中展示。

@@ -1,5 +1,15 @@
 # DevMemo AI API
 
+## Phase 9f local lifecycle diagnostic (no HTTP API)
+
+Run locally from `ai-service`:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.devmemory_lifecycle_report
+```
+
+Optional `--database <path>` selects an AI Service SQLite file. The command opens the file through SQLite `mode=ro` and returns only aggregate `ai_notes`, `memo_templates`, `memo_insights`, `memo_chunk_index_state`, insight status/version range, and webhook-event status counts. It does not create, migrate, or modify a database; it omits memo IDs, raw content, raw webhook payloads, chunk content, and secrets. This is a local development diagnostic, not a public HTTP endpoint.
+
 ## Manual UI integration notes (2026-07-14)
 
 - The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.

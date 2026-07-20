@@ -94,7 +94,7 @@ describe("AI Memo Context Pack", () => {
     await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("insight-1")));
     fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
     await waitFor(() =>
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('"packVersion":"context-pack-v1"')),
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('"pack_version":"context-pack-v1"')),
     );
   });
 

@@ -7,6 +7,13 @@ import { type AiContextPackMemo, AiContextPackValidationError, buildContextPack 
 const fixture = JSON.parse(readFileSync(resolve(process.cwd(), "../contracts/context-pack-v1.json"), "utf-8")) as {
   memos: Record<string, { memo_id: string; title: string; summary: string }>;
   insights: Record<string, AiMemoInsight>;
+  golden_cases: Record<
+    string,
+    {
+      request: { question: string; memo_ids: string[]; insight_ids: string[]; max_chars: number; max_items: number };
+      expected: { markdown: string; json: Record<string, unknown> };
+    }
+  >;
 };
 const memo: AiContextPackMemo = {
   memoId: fixture.memos["memo-bug"].memo_id,
@@ -51,5 +58,25 @@ describe("Context Pack frontend contract", () => {
     expect(response.truncationReason).toBe("max_items");
     expect(response.markdown.length).toBeLessThanOrEqual(180);
     expect(response.markdown).not.toContain("raw content");
+  });
+
+  it.each(Object.entries(fixture.golden_cases))("matches the shared %s Markdown and canonical JSON golden output", (_name, goldenCase) => {
+    const response = buildContextPack(
+      {
+        question: goldenCase.request.question,
+        memoIds: goldenCase.request.memo_ids,
+        insightIds: goldenCase.request.insight_ids,
+        maxChars: goldenCase.request.max_chars,
+        maxItems: goldenCase.request.max_items,
+      },
+      Object.fromEntries(
+        Object.entries(fixture.memos).map(([memoId, value]) => [memoId, { memoId: value.memo_id, title: value.title, summary: value.summary }]),
+      ),
+      fixture.insights,
+    );
+
+    expect(response.markdown).toBe(goldenCase.expected.markdown);
+    expect(response.toJson()).toBe(JSON.stringify(goldenCase.expected.json));
+    expect(response.toJson()).not.toContain("Pending fact");
   });
 });

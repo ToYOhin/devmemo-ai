@@ -300,4 +300,12 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 3. Memos deleted Webhook 无论索引是否开启都清理 AI Service 自有 `ai_notes`、`memo_templates`、`memo_insights`；reject 作为 revoke 语义，版本递增和 query invalidation 使已撤销 insight 从 pack 移除。
 4. 保持 Context Pack 内存生成、不新增公共 HTTP、不连接 Qdrant、不写回 Memos、不启动 Agent/worker；Phase 8 public chunk API 继续 pending approval。
 
-验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 145 passed；TypeScript、build、lint、verify 脚本、Compose config 与 `git diff --check` 通过。下一阶段为 Phase 9f 生命周期观测、用户反馈和跨语言 golden output。
+验证：Context Pack 定向 12 passed；Webhook 定向 8 passed；AI Service 全量 175 passed；Web 全量 33 files / 147 passed；TypeScript、build、lint、verify 脚本、Compose config 与 `git diff --check` 通过。下一阶段为 Phase 9f 生命周期观测、用户反馈和跨语言 golden output。
+
+## Phase 9f：Context Pack 生命周期观测（最小切片已完成，继续验收）
+
+1. `contracts/context-pack-v1.json` 增加 expected Markdown/JSON golden cases；Python 和 Web 对同一 fixture 断言精确输出，覆盖 accepted-only、去重、稳定排序、预算截断与脱敏来源。
+2. 输出 JSON 固定为 compact snake_case canonical form；golden test 已发现并修复 Web Markdown 末尾换行漂移。
+3. 新增 `python -m scripts.devmemory_lifecycle_report [--database <path>]` 本地诊断。它以 SQLite `mode=ro` 只读 AI Service 自有数据库，仅输出派生表、insight 状态/版本和 outbox 状态的聚合计数；不创建数据库、不写入、不暴露 Memo ID/原文/payload/secret，也不新增 HTTP、worker 或 telemetry。
+
+验证：AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。后续仍需收集真实 Chrome 剪贴板反馈和受控生命周期证据；Phase 8 public chunk API 继续 pending approval。

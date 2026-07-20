@@ -231,3 +231,9 @@ Phase 9e 采用根目录 `contracts/context-pack-v1.json` 作为 Python/Web 测�
 Context Pack 的跨 Memo 选择必须来自 Memos 当前用户可见的 Memo 列表，并且每个额外 Memo 都需要用户显式勾选。默认仍只选择当前 Memo；额外 Memo 的 insight 通过同一 AI query key 查询，只有 accepted insight 可进入 pack，查询失败或 Memo 从可见列表消失时不得隐式扩展来源。这样把权限判断留在 Memos 产品边界，不在 AI Service 复制权限系统。
 
 当前 reject 即 insight revoke：状态变更必须带当前 version，成功后递增版本并失效该 Memo 的查询缓存；Context Pack 的 accepted-only 过滤保证撤销不会继续输出。Memo deleted Webhook 无论索引是否启用都会清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`，但不触碰 Memos 原文、Memos 数据库、公共 chat、完整/chunk collection 或 Qdrant volume。Context Pack 仍只在内存生成，不新增公共 HTTP、持久化审计、worker 或 Agent。
+
+## ADR-042：Phase 9f 使用输出 golden 与本地只读生命周期诊断守住双实现边界
+
+Python builder 与 Web adapter 继续独立，避免把浏览器 UI 与 AI Service 运行时耦合；根目录共享 fixture 因此从输入样例扩展为 expected Markdown 与 compact snake_case JSON golden output。两侧必须对同一 case 产生字节级一致结果，涵盖确定性排序、去重、accepted-only 过滤、预算截断与安全 source 输出。fixture 只用于测试，不作为生产运行时输入。
+
+生命周期观测采用 `python -m scripts.devmemory_lifecycle_report` 本地只读 CLI，而不是新增 HTTP/telemetry API。它通过 SQLite `mode=ro` 汇总 AI Service 自有表的安全计数，不创建、迁移或写入数据库，且不输出 Memo ID、原文、chunk、Webhook payload 或 secret。该决策不改变 Memos 的权限/删除权威边界，不引入 worker、Prometheus 或新默认依赖。

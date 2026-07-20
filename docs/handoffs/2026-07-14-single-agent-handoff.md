@@ -1,6 +1,6 @@
 # DevMemo AI 单 Agent 接管交接
 
-更新时间：2026-07-15（Phase 9e 人工验收与受限剪贴板修复后更新）
+更新时间：2026-07-20（Phase 9f golden parity 与本地只读诊断最小切片后更新）
 
 ## 当前工作模式
 
@@ -13,7 +13,7 @@
 - 主目录：`H:\DevMemoAI`
 - 分支：`codex/devmemo-ai-mvp`
 - 当前 HEAD：以 `git log --oneline -8` 为准；本轮人工验收修复与文档已纳入当前交接，用户未提交的 Prompt 文件仍需保留
-- GitHub remote：本轮完成后由当前 Agent 推送本次修复；以远端分支和提交校验为准
+- GitHub remote：本轮只形成本地 commit，未经用户明确要求不 push；以远端分支和提交校验为准
 - 工作区：保留用户已有的 `docs/prompts/NEW_WINDOW_PROMPT.md` 未提交修改
 - Memos 基线：v0.29.1
 - Go：`G:\Go`；工作区/缓存：`G:\GoWorkspace`
@@ -68,15 +68,17 @@ Phase 5f 代码切片、Phase 5g rollout gate、Phase 6 compatibility decision�
 14. Phase 9e 已新增共享 `contracts/context-pack-v1.json`，Web 使用当前用户可见 Memo 列表提供显式跨 Memo 选择；默认仍只选当前 Memo，只有 accepted insight 进入 pack，额外查询失败显示不可用提示。
 15. Phase 9e Memos deleted Webhook 已清理 AI 自有 `ai_notes`、`memo_templates`、`memo_insights`、`memo_chunk_index_state`；reject 是 revoke 语义，版本递增/查询失效后不会继续进入 pack；不触碰 Memos 原文、公共 chat、Qdrant volume。
 16. 本轮人工验收修复了 canonical/raw Memo ID 重复来源、清空来源后无法重新勾选和删除联动遗漏；In-App Browser 禁用两种剪贴板 API，copy 仍需真实 Chrome 复验。
+17. Phase 9f minimum slice completed: the shared fixture now includes expected Markdown and canonical compact snake_case JSON golden cases. Python and Web assert byte-for-byte output parity; the tests caught and fixed one Web trailing-newline mismatch.
+18. `python -m scripts.devmemory_lifecycle_report` is a local read-only diagnostic over AI-owned SQLite aggregates. It uses SQLite `mode=ro`, creates no missing DB, has no HTTP/worker/telemetry behavior, and never prints IDs, raw content, webhook payloads, or secrets.
 
 默认完整 Memo `memo-v1`、deterministic + memory、Webhook `code=0`、Memos 原有笔记/标签/搜索/编辑能力必须保持不变。
 
 ## 验证基线
 
 ```text
-AI Service full pytest      175 passed
+AI Service full pytest      179 passed
 Context Pack focused pytest 12 passed
-Frontend full tests          145 passed
+Frontend full tests          149 passed
 pnpm lint                    PASS
 TypeScript/build             PASS
 Go full test -p 2 ./...      PASS

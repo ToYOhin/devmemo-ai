@@ -127,8 +127,36 @@ export function buildContextPack(
 
   return {
     ...response,
-    toJson: () => JSON.stringify(response),
+    toJson: () => canonicalContextPackJson(response),
   };
+}
+
+function canonicalContextPackJson(response: Omit<AiContextPackResponse, "toJson">): string {
+  return JSON.stringify({
+    items: response.items.map((item) => ({
+      confidence: item.confidence,
+      insight_id: item.insightId,
+      item_id: item.itemId,
+      item_type: item.itemType,
+      memo_id: item.memoId,
+      source_ids: item.sourceIds,
+      summary: item.summary,
+      title: item.title,
+    })),
+    markdown: response.markdown,
+    pack_version: response.packVersion,
+    question: response.question,
+    sources: response.sources.map((source) => ({
+      insight_id: source.insightId,
+      memo_id: source.memoId,
+      source_id: source.sourceId,
+      source_refs: source.sourceRefs,
+      source_type: source.sourceType,
+      title: source.title,
+    })),
+    truncated: response.truncated,
+    truncation_reason: response.truncationReason,
+  });
 }
 
 interface Candidate {
@@ -197,6 +225,7 @@ function insightCandidate(insight: AiMemoInsight, memo: AiContextPackMemo): Cand
       `- Confidence: ${insight.confidence.toFixed(2)}`,
       `- Summary: ${summary}`,
       `- Source refs: ${sourceRefs.map((ref) => `\`${ref}\``).join(", ") || "none"}`,
+      "",
       "",
     ].join("\n"),
   };
