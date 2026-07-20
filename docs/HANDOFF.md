@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## Phase 10 local gateway contract evidence (2026-07-20)
+
+- `ai-service/scripts/public_chunk_gateway_contract_smoke.py` uses an in-process TestClient as a trusted-gateway simulator. It covers exact raw-body HMAC, tampered-body `401`, duplicate scope `422`, disabled/degraded `503`, and authorized, deduplicated, redacted `200` responses.
+- Full verification: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. Standalone strict `pnpm exec tsc --noEmit` remains blocked by 13 pre-existing dependency declaration and `src/types/view.d.ts` errors; the project lint TypeScript command uses `--skipLibCheck` and passed.
+- It does not start a service, contact a network, or output its temporary secret. This is local contract-only evidence, not a real gateway/deployment/canary rollout pass. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` by default.
+- Next slice: either verify a real trusted gateway with permission mapping and rollback conditions, or record one Bug Report DevMemory Loop feedback path. Do not change public chat, Memos core, collections, or volumes.
+
 ## 当前权威快照（2026-07-20）
 
 - 先读取 [`docs/handoffs/2026-07-20-devmemory-rollout-handoff.md`](handoffs/2026-07-20-devmemory-rollout-handoff.md)；它取代下方历史阶段叙述作为新窗口入口。

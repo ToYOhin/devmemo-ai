@@ -13,6 +13,8 @@ Qdrant、qdrant-client 和 FastEmbed 官方仓库为 Apache-2.0；FastEmbed 强�
 
 ## 仅参考，暂不引入
 
+Phase 10 本地 gateway contract smoke 只复用现有 FastAPI TestClient、标准库 HMAC 与既有 public-chunk contract；未新增第三方依赖、网关产品、Agent、MCP、worker 或浏览器签名能力。
+
 ## 二次开发对比与借鉴边界
 
 | 项目 | 原生强项 | DevMemo AI 借鉴 | 不直接采用的原因 |

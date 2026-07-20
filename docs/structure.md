@@ -83,6 +83,7 @@ ai-service/
 │   │   ├── offline_chunk_index.py   # 独立 chunk 试验索引
 │   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
 │   │   ├── public_chunk_retrieval.py # public-chunk-v1 authorization/dedupe/redaction projection
+│   ├── scripts/public_chunk_gateway_contract_smoke.py # local trusted-gateway contract evidence only
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
 │   │   ├── ops_security.py          # ops token 与错误脱敏
 │   │   ├── memo_insights.py         # deterministic insight 提取与稳定 ID

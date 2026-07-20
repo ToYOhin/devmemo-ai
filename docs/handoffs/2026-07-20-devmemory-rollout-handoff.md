@@ -32,6 +32,9 @@ git log --oneline -8
 
 ## 最近验证
 
+- Phase 10 gateway contract evidence: `python -m scripts.public_chunk_gateway_contract_smoke` passed with disabled `503`, missing/tampered signature `401`, ambiguous scope `422`, degraded `503`, and authorized/redacted/deduplicated `200`; related public-chunk tests: `8 passed` with one existing Starlette/httpx deprecation warning.
+- Full gate after this slice: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. Standalone strict `pnpm exec tsc --noEmit` is blocked by 13 existing dependency declaration and `src/types/view.d.ts` errors; this slice has no web/dependency changes and the project's `--skipLibCheck` lint type-check passed.
+- The script is in-process TestClient + fake coordinator only: it starts no server, makes no network call, and outputs no temporary secret. It is not trusted-gateway/deployment/canary proof; the default flag remains off and real permission mapping plus rollback drill are unverified.
 - AI Service 全量：186 passed（历史完整门禁，保留一个既有弃用警告）。
 - Web：33 个测试文件 / 149 passed；TypeScript、lint 通过。
 - Context Pack Chrome 验收：Markdown 512 字符，JSON 1,699 字符；两者均由 Windows `Get-Clipboard` 证实含预期来源。
@@ -39,7 +42,7 @@ git log --oneline -8
 
 ## 下一步只选一个切片
 
-1. 受控 gateway rollout evidence：验证网关签名与可见范围、失败码、去重、脱敏和关闭 flag 回滚；不得让浏览器签名或持有 secret。
+1. Real controlled gateway rollout: only with an actual gateway, Memos visibility mapping, and rollback conditions, verify deployed raw-body HMAC, failures, dedupe, redaction, and flag rollback. The browser must never sign or hold the secret.
 2. DevMemory 人工反馈：从一个 Bug Report 经过 Insight 审核、Context Pack、撤销/删除与复制，记录用户可理解性和未验证边界。
 
 不要同时推进两条；不增加 Agent、MCP、网页搜索、图数据库、Redis/Celery 或默认新依赖。

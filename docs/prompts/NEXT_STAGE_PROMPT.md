@@ -1,6 +1,8 @@
 # 下一阶段 Prompt：Phase 10 gateway rollout evidence + DevMemory feedback
 
 ~~~text
+Phase 10 update: the local `python -m scripts.public_chunk_gateway_contract_smoke` contract evidence is already complete. Do not repeat it as rollout proof. Choose exactly one: (A) only with a real trusted deployed gateway, Memos visibility mapping, and rollback conditions, collect deployment evidence; or (B) record one real Bug Report DevMemory feedback path. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` unless those real gateway conditions are met.
+
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
 协作模式：单 Agent。只使用 H:\DevMemoAI 主工作树；不要启动 Terra/Luna，也不要并行修改 project4 下的其他 worktree。一次完成一个最小、可验证的垂直切片；只有用户明确要求时才 push。

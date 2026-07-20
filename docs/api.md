@@ -292,6 +292,15 @@ Errors: invalid question/limit/scope → 422; missing/invalid gateway signature 
 
 ## Operational smoke
 
+本地 public chunk gateway contract smoke（不是部署 rollout）：
+
+~~~powershell
+Set-Location H:\DevMemoAI\ai-service
+.\.venv\Scripts\python.exe -m scripts.public_chunk_gateway_contract_smoke
+~~~
+
+该脚本只在进程内模拟受信任网关，临时签名 secret 不会输出；它验证 raw JSON HMAC、篡改、scope、错误码、去重和脱敏。真实 gateway 的权限映射、网络路径、灰度和关闭 flag 回滚仍须在受控部署环境单独验收。
+
 真实 Qdrant smoke 命令：
 
 ~~~powershell

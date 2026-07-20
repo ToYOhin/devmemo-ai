@@ -249,3 +249,9 @@ Python builder 与 Web adapter 继续独立，避免把浏览器 UI 与 AI Servi
 Context Pack 复制继续是浏览器内存中的本地交互，不新增 HTTP、SQLite 写入或外部依赖。实现优先在用户手势下使用 DOM copy，并仅在不可用时回退异步 Clipboard API；当两个能力都不可用时仍保留现有手动复制引导。复制状态不得通过会改变图标节点类型的瞬时替换破坏 React DOM 一致性。
 
 该决策已由真实 Chrome/Windows 系统剪贴板验收覆盖 Markdown 与 JSON。它不改变 Context Pack 的脱敏来源、accepted-only、显式跨 Memo 选择、公共 chat、Memos 权限边界或 public-chunk-v1 rollout 条件。
+
+## ADR-045：Phase 10 先记录本地 gateway contract evidence，不伪装为部署验收
+
+Phase 10 的第一个切片使用 `python -m scripts.public_chunk_gateway_contract_smoke` 在进程内模拟受信任网关。它通过 exact raw-body HMAC 绑定 question、limit 和唯一 `visible_memo_ids`，并验证 disabled、missing/tampered signature、ambiguous scope、degraded store、授权去重及 metadata 脱敏。临时 secret 不输出，也不进入浏览器或部署配置。
+
+该脚本使用 TestClient 和受控 fake chunk coordinator，不启动 HTTP 服务、不访问网络、不连接真实 Memos 权限层。因此它只能作为可重复的 contract/fake evidence，不能作为真实 gateway、用户可见范围映射、灰度流量或 flag rollback drill 的 pass。`AI_PUBLIC_CHUNK_RETRIEVAL=false` 继续是默认和唯一安全状态，直到真实受信任网关具有完整权限、兼容与回滚证据。

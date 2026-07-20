@@ -312,8 +312,10 @@ UI 提供 question、`max_chars`/`max_items`、Markdown preview/主复制、JSON
 
 验证：Phase 9f 最小切片 AI Service 全量 179 passed（保留 1 个既有 Starlette/httpx 弃用警告）；Web 全量 33 files / 149 passed；verify 脚本、Compose config、TypeScript、build、lint 与 `git diff --check` 通过。真实 Chrome/Windows 系统剪贴板验收也已通过：Markdown 与 JSON 均写入系统剪贴板且页面无 error boundary。Phase 8 public chunk API 已进入默认关闭的受控 rollout。
 
-## Phase 10：受控 gateway rollout 与 DevMemory 产品反馈（待执行）
+## Phase 10：受控 gateway rollout 与 DevMemory 产品反馈（进行中）
 
 1. 只在受信任网关一侧完成 raw-body HMAC、唯一 `visible_memo_ids` 传递和可审计的 disabled/401/422/503 smoke；不把签名 secret 或可见范围交给浏览器客户端，也不改 Memos 核心权限模型。
 2. 用一个真实开发场景收集 `Capture → Insight → Review → Context Pack` 的人工反馈，重点验证来源、撤销、删除与预算截断是否可理解；pack 继续仅在内存生成。
 3. 在收集到兼容性、权限与回滚证据前，不默认开启 `AI_PUBLIC_CHUNK_RETRIEVAL`，不修改 `/api/ai/chat`，不引入 Agent、网页搜索、MCP、图数据库或常驻 worker。
+
+已完成本地 contract evidence：`python -m scripts.public_chunk_gateway_contract_smoke` 使用进程内 TestClient 模拟可信网关，对 raw-body HMAC、篡改 401、重复 scope 422、disabled/degraded 503、可见范围强制、同 Memo 去重及 metadata 脱敏进行可重复断言。脚本不启动 HTTP 服务、不联网、不输出临时 secret；定向测试共 `8 passed`（保留既有 Starlette/httpx 弃用警告）。这只证明离线 contract，未验证真实网关、部署权限、灰度或回滚演练，故 public chunk 继续默认关闭。

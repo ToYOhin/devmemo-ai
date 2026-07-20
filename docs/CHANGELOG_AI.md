@@ -1,5 +1,13 @@
 # DevMemo AI 变更记录
 
+## 2026-07-20：Phase 10 本地 gateway contract evidence
+
+- 新增 `ai-service/scripts/public_chunk_gateway_contract_smoke.py`，以进程内受信任网关模拟器对精确 raw-body HMAC 和签名绑定的 `visible_memo_ids` 进行本地 smoke；输出只含状态码证据，临时 secret 不写入输出。
+- 覆盖 feature flag disabled `503`、缺签名/篡改 body `401`、重复可见范围 `422`、degraded store `503`，以及授权范围内同 Memo 去重和 metadata 脱敏 `200`。
+- 验证：public chunk API/retrieval/script 定向 `8 passed`；脚本输出 `PUBLIC_CHUNK_GATEWAY_CONTRACT_SMOKE_OK`。保留既有 Starlette/httpx 弃用警告。
+- 完整门禁：AI Service `187 passed`；Web `33 files / 149 passed`、build、项目 `pnpm lint` 通过。单独 strict `pnpm exec tsc --noEmit` 因既有第三方声明和 `src/types/view.d.ts` 的 13 个错误未通过；本轮未触及前端或依赖，项目定义 lint 的 `--skipLibCheck` 类型检查通过。
+- 未验证：真实受信任网关、部署环境权限映射、灰度流量和关闭 flag 回滚演练。因此这不是 rollout pass；`AI_PUBLIC_CHUNK_RETRIEVAL=false`、`/api/ai/chat`、Memos 核心、collection/volume 均未改变。
+
 ## 2026-07-20
 
 ### Context Pack Chrome system-clipboard acceptance
