@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## 当前结构接管入口（2026-07-27）
+
+- 已用现有 graphify 查询和实时源码双重检查项目结构；`graphify-out/graph.json` 停留在 2026-07-12，未覆盖近期 AI Inbox/Context Pack，因此只作为历史索引。
+- 当前权威结构与 Phase 12 接管顺序见 [`docs/handoffs/2026-07-27-project-structure-handoff.md`](handoffs/2026-07-27-project-structure-handoff.md)。
+- strict TypeScript 已现场复核为 15 项：TanStack/Solid 6、goober 1、mermaid/type-fest 1、react-leaflet-cluster 2、react-leaflet core context 4、项目 `FunctionType` 1。
+- 本次只更新交接与 Prompt，不改变运行时代码、依赖、lockfile、Memos/AI 数据或 public-chunk flag。
+
 ## Phase 11 Context Pack copy readiness（2026-07-27）
 
 - `AiMemoContextPack` 现在在每次生成结果上显示条目数、来源数与 `characters/max_chars`，让用户在复制前直接判断来源规模和预算占用。
@@ -23,13 +30,13 @@
 - This completes the available route-B path without creating a second Memo, seeding SQLite, bypassing Memos authentication, changing public chat, or enabling public chunks. A fresh same-profile Chrome tab verified the Context Pack budget and both system-copy formats, and the real participant recorded clear source, trustworthy review, useful budget, and expected copy behavior. Delete/revoke was intentionally not performed.
 - A fresh `.env.example` makes the local Vite AI URL and Memos proxy reproducible; the config now reads `.env.local` for `DEV_PROXY_SERVER` while preserving explicit process-environment precedence. This is local developer configuration only.
 - Verification for this slice is recorded in [`docs/handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md`](handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md) and [`docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`](handoffs/2026-07-20-devmemory-real-feedback-evidence.md). Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
-- Current gates: focused webhook regression `1 passed`; AI Service full suite and serial `scripts/verify-devmemo.ps1` both `188 passed` (one existing deprecation warning); Compose config passed; serial Web tests `33 files / 149 passed`, build, and project lint passed. Standalone strict Web TypeScript still has the known 13 dependency declaration/type errors.
+- Phase 10 当时的 gates：focused webhook regression `1 passed`; AI Service full suite and serial `scripts/verify-devmemo.ps1` both `188 passed` (one existing deprecation warning); Compose config passed; serial Web tests `33 files / 149 passed`, build, and project lint passed. 当时 standalone strict Web TypeScript 为 13 项；2026-07-27 当前基线已重新核对为 15 项，见顶部结构交接。
 - Fresh same-profile Chrome tab recovery now verifies accepted Insight and a `64`-character Context Pack `max_chars` truncation. Long-lived tab claiming remains unreliable after Vite restart. Real Chrome pointer clicks then wrote both Markdown and JSON to Windows clipboard; JSON parsed as `context-pack-v1`, Markdown had the expected heading, neither safe check matched payload/secret markers, and no console/React error occurred. The earlier automation-surface clipboard mismatch is a bridge limitation, not a product result.
 
 ## Phase 10 local gateway contract evidence (2026-07-20)
 
 - `ai-service/scripts/public_chunk_gateway_contract_smoke.py` uses an in-process TestClient as a trusted-gateway simulator. It covers exact raw-body HMAC, tampered-body `401`, duplicate scope `422`, disabled/degraded `503`, and authorized, deduplicated, redacted `200` responses.
-- Full verification: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. Standalone strict `pnpm exec tsc --noEmit` remains blocked by 13 pre-existing dependency declaration and `src/types/view.d.ts` errors; the project lint TypeScript command uses `--skipLibCheck` and passed.
+- Phase 10 contract slice verification: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. 该切片当时 standalone strict baseline 为 13 项；2026-07-27 当前基线为 15 项，项目 lint 的 `--skipLibCheck` 类型检查仍通过。
 - It does not start a service, contact a network, or output its temporary secret. This is local contract-only evidence, not a real gateway/deployment/canary rollout pass. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` by default.
 - Route B is complete. A future gateway slice requires a real trusted gateway, Memos visibility mapping, and rollback conditions; otherwise select a new explicitly approved product slice. Do not change public chat, Memos core, collections, or volumes.
 

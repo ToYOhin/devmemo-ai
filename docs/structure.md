@@ -26,7 +26,7 @@ H:\DevMemoAI/
 
 ## 单 Agent 开发入口
 
-当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
+当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`；当前结构与 Phase 12 接管入口为 `2026-07-27-project-structure-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
 
 ```text
 cmd/server/store/internal/proto

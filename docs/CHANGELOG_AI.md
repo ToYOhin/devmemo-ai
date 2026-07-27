@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-27：项目结构复核与 Phase 12 接管
+
+- 用历史 graphify 查询与实时 `rg` 源码引用核对 Memos、AI Service、Web AI feature、contracts 和 Compose 边界；明确 2026-07-12 图谱未覆盖近期 AI Inbox/Context Pack。
+- 重新运行独立 strict TypeScript，确认当前仍为 15 项，并按 TanStack/Solid、goober、mermaid、Leaflet 和项目声明分类。
+- 新增结构型 handoff，刷新新窗口与下一阶段 Prompt；没有运行时代码、依赖、lockfile、API、数据库或 feature flag 变更。
+
 ## 2026-07-27：Phase 11 Context Pack copy readiness
 
 - Context Pack 预览新增条目、来源和字符预算摘要，复制前即可看到当前 pack 的规模与 `max_chars` 占用。

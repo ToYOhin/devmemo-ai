@@ -1,5 +1,7 @@
 # DevMemo AI Phase 11 Context Pack copy readiness 交接
 
+> 当前结构与 Phase 12 接管入口已更新为 [`2026-07-27-project-structure-handoff.md`](2026-07-27-project-structure-handoff.md)；本文继续保留 Phase 11 实现与验证事实。
+
 更新时间：2026-07-27
 
 ## 结果

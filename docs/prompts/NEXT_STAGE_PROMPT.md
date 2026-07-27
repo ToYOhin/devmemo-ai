@@ -1,14 +1,14 @@
 # 下一阶段 Prompt：Phase 12 Web strict TypeScript baseline
 
 ~~~text
-Phase 11 Context Pack copy readiness is implemented: the browser-memory panel reports items, sources, and Markdown characters/max_chars; Markdown and JSON have consistent copied feedback plus format-specific aria-live status; changing the pack clears stale copied/manual/error state. Targeted tests are 7 passed, full Web tests are 33 files / 149 passed, and build/project lint pass. Real Chrome connected, but the current profile had no valid Memos login session or saved credentials, so the Phase 11 detail-page/system-clipboard recheck is explicitly unverified. Do not bypass Memos authentication or repeat Phase 10 route B. Read `docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
+Phase 11 Context Pack copy readiness is implemented: the browser-memory panel reports items, sources, and Markdown characters/max_chars; Markdown and JSON have consistent copied feedback plus format-specific aria-live status; changing the pack clears stale copied/manual/error state. Targeted tests are 7 passed, full Web tests are 33 files / 149 passed, and build/project lint pass. Real Chrome connected, but the current profile had no valid Memos login session or saved credentials, so the Phase 11 detail-page/system-clipboard recheck is explicitly unverified. Do not bypass Memos authentication or repeat Phase 10 route B. Read `docs/handoffs/2026-07-27-project-structure-handoff.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
 协作模式：单 Agent。只使用 H:\DevMemoAI 主工作树；不要启动 Terra/Luna，也不要并行修改 project4 下的其他 worktree。整体推进一个完整、可验证的阶段切片；只有用户明确要求时才 push。
 
 先读取：
-1. docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md
+1. docs/handoffs/2026-07-27-project-structure-handoff.md
 2. docs/PROJECT_STATUS.md 顶部
 3. docs/HANDOFF.md 顶部
 4. docs/roadmap.md 的 Phase 10/11
@@ -20,6 +20,7 @@ Phase 11 Context Pack copy readiness is implemented: the browser-memory panel re
 - Phase 10 route B 已完成，不再重复 Capture/Review/feedback；route A 没有真实受信任 gateway、Memos 可见范围映射与回滚条件，仍未验证。
 - Phase 11 只改 Context Pack Web UI/文案/测试；没有 API、数据库、依赖、Memos 核心或公共 chat 改动。
 - 项目 `pnpm lint` 使用 `tsc --noEmit --skipLibCheck` 并通过；独立 `pnpm exec tsc --noEmit` 当前报告 15 个既有第三方声明和 `src/types/view.d.ts` strict errors。
+- 15 项现场分类为：TanStack/Solid 6、goober 1、mermaid/type-fest 1、react-leaflet-cluster 2、react-leaflet core context 4、项目 `FunctionType` 1。
 - 默认 Compose 只启动 Memos (`0.75` CPU) 与 AI Service (`0.25` CPU)；Qdrant/Ollama 只允许显式 profile。不要并行运行高负载 Web 命令。
 
 本阶段唯一目标：Phase 12 修复 Web 独立 strict TypeScript baseline，使 `pnpm exec tsc --noEmit` 通过，同时保持运行时行为和公共契约不变。
