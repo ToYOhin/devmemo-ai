@@ -289,3 +289,11 @@ Vite 重启后，接管长期 Chrome 用户标签可能超时；同一 profile �
 自动化表面触发复制并不保证 Windows 系统剪贴板已被改写。若 host clipboard 未出现预期安全输出，必须记录为“自动化复制未验证”，不得把它当成产品回归，也不得把 UI 点击当成新的系统剪贴板 pass。Phase 10 已用真实 Chrome 指针点击及 host clipboard 复核确认 Markdown 与 JSON；此前自动化桥接不改写 clipboard 的观察仍只代表该工具路径。此决策不新增 Clipboard API、HTTP、SQLite 写入或外部依赖。
 
 Phase 10 route B 的真实参与者随后确认来源清晰、accepted Review 可信、`64` 字符预算有用且复制符合预期。该反馈只评价已验证的安全 UI，不授权额外的 review、delete/revoke 或 public-chunk rollout；完整安全记录见 `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`。
+
+## ADR-050：复制就绪反馈只描述当前浏览器内存中的 pack
+
+Context Pack 在复制前直接显示当前输出的条目数、唯一来源数和 Markdown 字符数/预算，避免用户只凭截断标记判断 pack 是否适合粘贴。Markdown 与 JSON 使用相同的瞬时成功状态，并通过格式明确的 `role=status`/`aria-live=polite` 消息支持辅助技术。question、显式来源或预算变化并生成新 pack 后，旧 copied/manual/error 状态必须清除，因为它只对应上一份输出。
+
+这些值全部来自现有浏览器内存 `context-pack-v1` 结果，不新增分析、权限推断、HTTP、SQLite、telemetry、Qdrant 或后台任务。安全字段、accepted-only、显式 Memo 选择、Python/Web golden、Memos 权限事实源与公共 chat 均不改变。
+
+本切片的组件测试、全量 Web 测试、build 与项目 lint 已通过。真实 Chrome 插件连接成功，但当前 profile 的 Memos 登录态已失效且无浏览器保存凭据，因此没有进入详情页，也没有从 SQLite/token 存储绕过认证。Phase 10 的系统剪贴板证据仍是历史事实，但不能替代 Phase 11 的运行时验收。

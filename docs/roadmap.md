@@ -329,3 +329,13 @@ The existing test Memo yielded one persisted Insight, and the one authorized sta
 Route B is complete and must not be rerun merely to accumulate evidence. Route A remains a separate option requiring a real trusted gateway, Memos visibility mapping, and rollback conditions; public chunk stays disabled. Without those conditions, the next project slice must be explicitly selected rather than inferred from this feedback run.
 
 Browser follow-up: a fresh tab in the same authenticated Chrome profile now reaches the existing Memo after Vite restart and confirmed accepted Insight plus a `64`-character `max_chars` truncation. Claiming a long-lived user tab can time out, so it is not a product defect. Real Chrome pointer interaction wrote both Markdown and JSON to Windows clipboard; the JSON parsed as `context-pack-v1`, the Markdown had its expected heading, the safe checks found no payload/secret markers, and no console/React error occurred. The earlier automated-click mismatch remains a bridge limitation only.
+
+## Phase 11：Context Pack copy readiness（Web slice 已完成）
+
+1. 在既有 Memo 详情页 Context Pack 预览中显示条目数、来源数和 `markdown.length/max_chars`，让用户在复制前判断内容规模与预算占用。
+2. Markdown/JSON 复制使用一致的按钮成功状态，并通过 `role=status`/`aria-live=polite` 播报具体格式；question、来源或预算导致 pack 输出变化时，清除旧 copied/manual/error 状态。
+3. 继续使用浏览器内存中的 `context-pack-v1` 输出，不新增 HTTP、SQLite、Qdrant、worker、依赖或公共 chat 行为；Memos 权限、accepted-only、显式来源和安全字段边界不变。
+
+验证：定向 `7 passed`；Web 全量低并发 `33 files / 149 passed`；build 与项目 lint 通过。独立 strict TypeScript 当前仍有 `15` 个既有第三方声明/`src/types/view.d.ts` 错误。Chrome 插件和低 CPU Compose 已启动验证，但当前 Chrome profile 没有有效 Memos 登录态或保存凭据，故未进入详情页；没有绕过认证，真实 UI/系统剪贴板复核保持未验证。
+
+下一阶段应选择一个新的、明确的受控产品切片。若只是补 Phase 11 运行时证据，必须先有正常 Memos 登录会话，再只读复核摘要、状态重置和 Markdown/JSON 复制；不得从数据库提取 token 或重跑 Phase 10 route B。Route A 仍要求真实受信任 gateway、Memos 可见范围映射与关闭 flag 回滚条件。

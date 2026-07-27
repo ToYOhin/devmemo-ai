@@ -1,5 +1,14 @@
 # DevMemo AI 当前交接
 
+## Phase 11 Context Pack copy readiness（2026-07-27）
+
+- `AiMemoContextPack` 现在在每次生成结果上显示条目数、来源数与 `characters/max_chars`，让用户在复制前直接判断来源规模和预算占用。
+- Markdown/JSON 都有一致的 `Copied` 按钮状态；隐藏的 `role=status`/`aria-live=polite` 会分别播报 Markdown 或 JSON 已复制。pack 输出变化会清除旧 copied/manual/error 状态。
+- 该切片只改 Web UI、三种语言文案和组件测试。Context Pack 仍是 accepted-only、显式来源、浏览器内存输出；无新 HTTP、SQLite、Qdrant、依赖、Agent 或 worker。
+- 验证：定向 `7 passed`；Web 全量 `33 files / 149 passed`；build、项目 lint 通过。独立 strict TypeScript 仍被 `15` 个既有依赖声明/`src/types/view.d.ts` 错误阻塞。
+- Chrome 插件与本地低 CPU Compose 均可运行，但当前 Chrome profile 的 Memos 认证会话已失效且无保存凭据；本次没有绕过认证，所以真实详情页与系统剪贴板复核未完成。此前 Phase 10 的 Markdown/JSON Windows 剪贴板证据仍有效，但不能冒充本切片验收。
+- 接管入口：[`docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md`](handoffs/2026-07-27-context-pack-copy-readiness-handoff.md) 与 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)。
+
 ## Low-CPU baseline (2026-07-20)
 
 - Default Compose is Memos `0.75` CPU + AI Service `0.25` CPU, with Memos/Go at one processor and AI numeric threads set to one. Qdrant/Ollama are now opt-in `qdrant`/`ollama` profiles.

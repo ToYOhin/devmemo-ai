@@ -1,5 +1,13 @@
 # DevMemo AI 变更记录
 
+## 2026-07-27：Phase 11 Context Pack copy readiness
+
+- Context Pack 预览新增条目、来源和字符预算摘要，复制前即可看到当前 pack 的规模与 `max_chars` 占用。
+- Markdown/JSON 复制按钮统一显示成功状态，并新增格式明确的无障碍 live-region 播报；pack 变化时清除上一份输出的复制/错误状态。
+- 新增三种语言文案与回归覆盖。Web 定向 `7 passed`、全量 `33 files / 149 passed`、build 和项目 lint 通过；独立 strict TypeScript 的 `15` 个既有错误仍单独记录。
+- 真实 Chrome 已连接，但当前 profile 缺少有效 Memos 登录会话且无保存凭据，故没有绕过认证进入详情页；本切片真实 UI/系统剪贴板复核未验证。
+- 未新增 API、数据库、依赖或后台任务；未修改 Memo/Insight、Memos 核心、公共 chat、collection/volume 或 `AI_PUBLIC_CHUNK_RETRIEVAL=false`。
+
 ## 2026-07-20：Phase 10 route B 真实参与者反馈完成
 
 - 记录既有非敏感 Bug Report 的四项真实参与者反馈：来源清晰、accepted Review 可信、`64` 字符预算有用、Markdown/JSON 复制符合预期。

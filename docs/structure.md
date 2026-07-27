@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-07-20
+更新时间：2026-07-27
 
 ## 顶层目录
 
@@ -26,7 +26,7 @@ H:\DevMemoAI/
 
 ## 单 Agent 开发入口
 
-当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
+当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
 
 ```text
 cmd/server/store/internal/proto
@@ -44,13 +44,13 @@ web/src/features/ai/
 ├── api.ts                 # AI Service URL、insight/template/summary 请求
 ├── hooks.ts               # React Query 读取与状态变更 hooks
 ├── AiMemoInsights.tsx     # Memo 详情页 AI Inbox：pending/accepted/rejected 审核
-├── AiMemoContextPack.tsx  # Phase 9d/9e：内存 preview/copy、权限感知显式跨 Memo 来源和状态 UI
+├── AiMemoContextPack.tsx  # Phase 9d-11：内存 preview/copy、显式来源、预算摘要、复制状态与无障碍反馈
 ├── contextPack.ts         # Phase 9b contract 的 Web provider-neutral adapter
 ├── AiMemoTemplate.tsx     # 结构化 Memo 模板展示
 └── AiMemoSummary.tsx      # bounded summary 展示
 ```
 
-当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，但已通过 `contracts/context-pack-v1.json` 的 Markdown/compact JSON golden 做字节级对齐，后续任何语义变更都必须扩展该 fixture。`graphify-out` 的历史图仍会把 “Inbox” 解析为 Memos `store/inbox.go`，且未收录近期 AI feature；结构判断应以源码与本文档为准，图谱重建是后续维护项。
+当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，但已通过 `contracts/context-pack-v1.json` 的 Markdown/compact JSON golden 做字节级对齐，后续任何语义变更都必须扩展该 fixture。Phase 11 只在组件层读取既有 pack 的 items/sources/markdown 长度并维护瞬时复制反馈，不改变 builder contract 或持久化边界。`graphify-out` 的历史图仍会把 “Inbox” 解析为 Memos `store/inbox.go`，且未收录近期 AI feature；结构判断应以源码与本文档为准，图谱重建是后续维护项。
 
 ## AI Service 目录
 

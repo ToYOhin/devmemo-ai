@@ -1,5 +1,11 @@
 # DevMemo AI API
 
+## Phase 11 Context Pack copy readiness（no API change）
+
+Phase 11 only changes the existing browser-memory Context Pack presentation. The UI now reports item count, source count, and current Markdown characters against `max_chars`; copy success identifies Markdown or JSON through both the button label and an accessible live region. A newly generated pack clears stale copy/error feedback.
+
+No request or response contract changed. Context Pack still uses explicit visible Memos, accepted insights, and safe title/summary/source refs in browser memory. It adds no HTTP route, persistence, Qdrant access, worker, or external transmission. `/api/ai/chat`, `CitationResponse`, `memo-v1`, `public-chunk-v1`, and `AI_PUBLIC_CHUNK_RETRIEVAL=false` are unchanged.
+
 ## Phase 9f local lifecycle diagnostic (no HTTP API)
 
 Run locally from `ai-service`:

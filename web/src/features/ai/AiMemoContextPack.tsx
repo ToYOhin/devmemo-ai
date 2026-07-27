@@ -133,6 +133,13 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
       return { response: null, error: true };
     }
   }, [acceptedInsights, maxChars, maxItems, question, selectedInsightIds, t, usableSelectedMemoIds, usableSelectedMemos]);
+  const packFingerprint = packState.response ? `${packState.response.markdown}\n${packState.response.toJson()}` : "";
+
+  useEffect(() => {
+    setCopiedFormat(null);
+    setCopyManualFallback(false);
+    setCopyError(false);
+  }, [packFingerprint]);
 
   if (!aiConfigured) return null;
 
@@ -301,6 +308,17 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
             </p>
           ) : (
             <>
+              <p data-testid="ai-context-pack-summary" className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>
+                  {packState.response.items.length} {t("ai-context-pack.items-count")}
+                </span>
+                <span>
+                  {packState.response.sources.length} {t("ai-context-pack.sources-count")}
+                </span>
+                <span>
+                  {packState.response.markdown.length}/{maxChars} {t("ai-context-pack.characters-count")}
+                </span>
+              </p>
               {packState.response.truncated && (
                 <p data-testid="ai-context-pack-truncated" className="text-xs text-amber-600 dark:text-amber-400">
                   {t("ai-context-pack.truncated")} ({packState.response.truncationReason})
@@ -321,8 +339,13 @@ const AiMemoContextPack = ({ memoId, memoTitle }: AiMemoContextPackProps) => {
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void handleCopy("json")}>
                   <FileJsonIcon className="h-3.5 w-3.5" />
-                  {t("ai-context-pack.copy-json")}
+                  {copiedFormat === "json" ? t("ai-context-pack.copied") : t("ai-context-pack.copy-json")}
                 </Button>
+                {copiedFormat && (
+                  <span role="status" aria-live="polite" className="sr-only">
+                    {copiedFormat === "markdown" ? t("ai-context-pack.copy-status-markdown") : t("ai-context-pack.copy-status-json")}
+                  </span>
+                )}
                 {copyError && (
                   <span data-testid="ai-context-pack-copy-error" className="self-center text-xs text-destructive">
                     {t("ai-context-pack.copy-failed")}

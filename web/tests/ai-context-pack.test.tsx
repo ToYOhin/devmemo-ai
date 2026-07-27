@@ -31,11 +31,16 @@ vi.mock("@/utils/i18n", () => ({
       "ai-context-pack.insights-unavailable": "Some selected Memo insights are unavailable and were excluded.",
       "ai-context-pack.explicit-selection": "Only checked sources are included.",
       "ai-context-pack.source-trace": "Sources in this pack",
+      "ai-context-pack.items-count": "items",
+      "ai-context-pack.sources-count": "sources",
+      "ai-context-pack.characters-count": "characters",
       "ai-context-pack.truncated": "Pack truncated",
       "ai-context-pack.build-failed": "Build failed",
       "ai-context-pack.copy-markdown": "Copy Markdown",
       "ai-context-pack.copy-json": "Copy JSON",
       "ai-context-pack.copied": "Copied",
+      "ai-context-pack.copy-status-markdown": "Markdown copied",
+      "ai-context-pack.copy-status-json": "JSON copied",
       "ai-context-pack.copy-failed": "Copy failed",
       "ai-context-pack.copy-manual": "Clipboard unavailable. The preview is selected; press Ctrl+C to copy.",
     })[key] ?? key,
@@ -89,13 +94,23 @@ describe("AI Memo Context Pack", () => {
     expect(screen.getByRole("spinbutton", { name: "Maximum characters" })).toHaveValue(2000);
     expect(screen.getByRole("spinbutton", { name: "Maximum items" })).toHaveValue(8);
     expect(screen.getByText("Sources in this pack")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-context-pack-summary")).toHaveTextContent("2 items");
+    expect(screen.getByTestId("ai-context-pack-summary")).toHaveTextContent("2 sources");
+    expect(screen.getByTestId("ai-context-pack-summary")).toHaveTextContent("/2000 characters");
 
     fireEvent.click(screen.getByRole("button", { name: "Copy Markdown" }));
     await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining("insight-1")));
+    expect(screen.getByRole("status")).toHaveTextContent("Markdown copied");
     fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('"pack_version":"context-pack-v1"')),
     );
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("JSON copied");
+
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Maximum characters" }), { target: { value: "64" } });
+    expect(screen.getByRole("button", { name: "Copy JSON" })).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("supports explicit deselection and shows the empty state", () => {

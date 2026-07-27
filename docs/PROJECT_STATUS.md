@@ -1,5 +1,13 @@
 # DevMemo AI 项目状态
 
+## Phase 11：Context Pack copy readiness（2026-07-27）
+
+- 已完成 Web-only Context Pack 复制就绪切片：预览上方现在显示条目数、来源数和 `当前字符数/max_chars`，Markdown/JSON 两个按钮都有一致的已复制状态，并通过 `role=status` + `aria-live=polite` 向辅助技术报告具体复制格式。
+- 当 question、来源选择或预算改变并生成新的 pack 时，旧的 copied/manual/error 状态会自动清除，避免把上一次复制结果误认为当前输出已复制。pack 仍只在浏览器内存生成；没有新增 API、SQLite 写入、Qdrant、worker、依赖或公共 chat 行为。
+- Web 定向测试 `7 passed`；全量低并发测试 `33 files / 149 passed`；build 与项目 `pnpm lint` 通过。独立 strict `pnpm exec tsc --noEmit` 当前报告 `15` 个既有第三方声明与 `src/types/view.d.ts` 错误；项目 lint 使用的 `--skipLibCheck` 类型门禁通过。
+- 真实 Chrome 插件已成功启动并连接。恢复低 CPU 默认 Compose 后，Vite/Memos 通路正常，但当前 Chrome profile 已无有效 Memos 登录态，登录表单也没有浏览器保存凭据；因此没有进入 Memo 详情页，Phase 11 的真实 UI/系统剪贴板复核记为“认证会话缺失，未验证”。没有从 SQLite/token 存储提取身份、伪造会话或修改 Memo/Insight。
+- 当前权威交接为 [`docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md`](handoffs/2026-07-27-context-pack-copy-readiness-handoff.md)。Phase 10 route B 保持已完成；route A 仍未验证，`AI_PUBLIC_CHUNK_RETRIEVAL=false` 保持不变。
+
 ## 当前验证与下一入口（2026-07-20）
 
 - CPU-conservation baseline is applied and verified: default Compose caps Memos `0.75` CPU and AI Service `0.25` CPU, with Memos/Go constrained to one processor. Qdrant and Ollama require explicit profiles; AI numerical thread variables are pinned to one. Runtime inspection, health, Compose config, and serial `verify-devmemo.ps1` (`187 passed`) are recorded in [`docs/handoffs/2026-07-20-low-cpu-baseline.md`](handoffs/2026-07-20-low-cpu-baseline.md).
