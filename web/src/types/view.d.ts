@@ -1,5 +1,5 @@
 interface DialogCallback {
-  destroy: FunctionType;
+  destroy: () => void;
 }
 
 type DialogProps = DialogCallback;

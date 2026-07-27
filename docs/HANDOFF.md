@@ -1,10 +1,17 @@
 # DevMemo AI 当前交接
 
+## Phase 12 Web strict TypeScript baseline（2026-07-27）
+
+- 独立 strict TypeScript 已由 15 项收敛到 0。修复只涉及 `web/tsconfig.json` 的两个精确 type-resolution paths、项目/第三方 `.d.ts` 兼容声明和 `view.d.ts` 的明确 callback 签名；package、lockfile 与运行时代码均未改变。
+- TanStack Query Devtools、goober、Mermaid/type-fest、React Leaflet deep context、Leaflet MarkerCluster 和项目 `FunctionType` 六组基线错误均已覆盖；没有使用全局 suppressions、宽泛 `any` 或 `@ts-ignore`。
+- 验证：strict tsc；定向 `2/2`；Web `33 files / 149 tests`；production build；项目 lint；Compose config；`git diff --check` 均通过。没有后端代码改动，故未重复 AI Service 全量或 Phase 10 route B。
+- 当前权威交接为 [`docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`](handoffs/2026-07-27-web-strict-typescript-handoff.md)。下一阶段按 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md) 进行 Phase 13 strict lint gate promotion；不自动升级依赖，不 push。
+
 ## 当前结构接管入口（2026-07-27）
 
 - 已用现有 graphify 查询和实时源码双重检查项目结构；`graphify-out/graph.json` 停留在 2026-07-12，未覆盖近期 AI Inbox/Context Pack，因此只作为历史索引。
 - 当前权威结构与 Phase 12 接管顺序见 [`docs/handoffs/2026-07-27-project-structure-handoff.md`](handoffs/2026-07-27-project-structure-handoff.md)。
-- strict TypeScript 已现场复核为 15 项：TanStack/Solid 6、goober 1、mermaid/type-fest 1、react-leaflet-cluster 2、react-leaflet core context 4、项目 `FunctionType` 1。
+- strict TypeScript 接管基线曾复核为 15 项：TanStack/Solid 6、goober 1、mermaid/type-fest 1、react-leaflet-cluster 2、react-leaflet core context 4、项目 `FunctionType` 1；现已由 Phase 12 收敛到 0。
 - 本次只更新交接与 Prompt，不改变运行时代码、依赖、lockfile、Memos/AI 数据或 public-chunk flag。
 
 ## Phase 11 Context Pack copy readiness（2026-07-27）
@@ -12,7 +19,7 @@
 - `AiMemoContextPack` 现在在每次生成结果上显示条目数、来源数与 `characters/max_chars`，让用户在复制前直接判断来源规模和预算占用。
 - Markdown/JSON 都有一致的 `Copied` 按钮状态；隐藏的 `role=status`/`aria-live=polite` 会分别播报 Markdown 或 JSON 已复制。pack 输出变化会清除旧 copied/manual/error 状态。
 - 该切片只改 Web UI、三种语言文案和组件测试。Context Pack 仍是 accepted-only、显式来源、浏览器内存输出；无新 HTTP、SQLite、Qdrant、依赖、Agent 或 worker。
-- 验证：定向 `7 passed`；Web 全量 `33 files / 149 passed`；build、项目 lint 通过。独立 strict TypeScript 仍被 `15` 个既有依赖声明/`src/types/view.d.ts` 错误阻塞。
+- 验证：定向 `7 passed`；Web 全量 `33 files / 149 passed`；build、项目 lint 通过。该切片结束时独立 strict TypeScript 被 `15` 个既有依赖声明/`src/types/view.d.ts` 错误阻塞；后续 Phase 12 已收敛到 0。
 - Chrome 插件与本地低 CPU Compose 均可运行，但当前 Chrome profile 的 Memos 认证会话已失效且无保存凭据；本次没有绕过认证，所以真实详情页与系统剪贴板复核未完成。此前 Phase 10 的 Markdown/JSON Windows 剪贴板证据仍有效，但不能冒充本切片验收。
 - 接管入口：[`docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md`](handoffs/2026-07-27-context-pack-copy-readiness-handoff.md) 与 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)。
 
@@ -30,13 +37,13 @@
 - This completes the available route-B path without creating a second Memo, seeding SQLite, bypassing Memos authentication, changing public chat, or enabling public chunks. A fresh same-profile Chrome tab verified the Context Pack budget and both system-copy formats, and the real participant recorded clear source, trustworthy review, useful budget, and expected copy behavior. Delete/revoke was intentionally not performed.
 - A fresh `.env.example` makes the local Vite AI URL and Memos proxy reproducible; the config now reads `.env.local` for `DEV_PROXY_SERVER` while preserving explicit process-environment precedence. This is local developer configuration only.
 - Verification for this slice is recorded in [`docs/handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md`](handoffs/2026-07-20-devmemory-feedback-webhook-evidence.md) and [`docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`](handoffs/2026-07-20-devmemory-real-feedback-evidence.md). Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
-- Phase 10 当时的 gates：focused webhook regression `1 passed`; AI Service full suite and serial `scripts/verify-devmemo.ps1` both `188 passed` (one existing deprecation warning); Compose config passed; serial Web tests `33 files / 149 passed`, build, and project lint passed. 当时 standalone strict Web TypeScript 为 13 项；2026-07-27 当前基线已重新核对为 15 项，见顶部结构交接。
+- Phase 10 当时的 gates：focused webhook regression `1 passed`; AI Service full suite and serial `scripts/verify-devmemo.ps1` both `188 passed` (one existing deprecation warning); Compose config passed; serial Web tests `33 files / 149 passed`, build, and project lint passed. 当时 standalone strict Web TypeScript 为 13 项；Phase 12 接管前重新核对为 15 项，现已收敛到 0。
 - Fresh same-profile Chrome tab recovery now verifies accepted Insight and a `64`-character Context Pack `max_chars` truncation. Long-lived tab claiming remains unreliable after Vite restart. Real Chrome pointer clicks then wrote both Markdown and JSON to Windows clipboard; JSON parsed as `context-pack-v1`, Markdown had the expected heading, neither safe check matched payload/secret markers, and no console/React error occurred. The earlier automation-surface clipboard mismatch is a bridge limitation, not a product result.
 
 ## Phase 10 local gateway contract evidence (2026-07-20)
 
 - `ai-service/scripts/public_chunk_gateway_contract_smoke.py` uses an in-process TestClient as a trusted-gateway simulator. It covers exact raw-body HMAC, tampered-body `401`, duplicate scope `422`, disabled/degraded `503`, and authorized, deduplicated, redacted `200` responses.
-- Phase 10 contract slice verification: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. 该切片当时 standalone strict baseline 为 13 项；2026-07-27 当前基线为 15 项，项目 lint 的 `--skipLibCheck` 类型检查仍通过。
+- Phase 10 contract slice verification: AI Service `187 passed`; Web `33 files / 149 passed`, build, and project `pnpm lint` passed. 该切片当时 standalone strict baseline 为 13 项；Phase 12 接管前为 15 项，现已收敛到 0。
 - It does not start a service, contact a network, or output its temporary secret. This is local contract-only evidence, not a real gateway/deployment/canary rollout pass. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false` by default.
 - Route B is complete. A future gateway slice requires a real trusted gateway, Memos visibility mapping, and rollback conditions; otherwise select a new explicitly approved product slice. Do not change public chat, Memos core, collections, or volumes.
 

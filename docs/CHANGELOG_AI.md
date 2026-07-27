@@ -1,5 +1,12 @@
 # DevMemo AI 变更记录
 
+## 2026-07-27：Phase 12 Web strict TypeScript baseline
+
+- 将独立 strict TypeScript 从 15 个既有声明错误收敛到 0：项目 callback 使用明确签名，移除未进入编译的同名声明文件，并为 TanStack Query Devtools、goober、Mermaid/type-fest、React Leaflet 与 MarkerCluster 增加窄范围编译期兼容声明。
+- `web/tsconfig.json` 只为 TanStack Query Devtools 与 goober 增加精确 type-resolution paths；未开启全局 `skipLibCheck`、未降低 strict、未使用宽泛 `any`/`@ts-ignore`，未新增或升级依赖，lockfile 未改变。
+- 验证：strict tsc 通过；Mermaid/地图定向 `2 files / 2 tests`；Web 全量 `33 files / 149 tests`；build、项目 lint、Compose config 与 `git diff --check` 通过。未修改后端运行时代码，未重跑 AI Service 全量门禁。
+- 没有 API、数据库、Context Pack、Memos 核心、公共 chat、collection/volume 或默认 feature flag 变化。
+
 ## 2026-07-27：项目结构复核与 Phase 12 接管
 
 - 用历史 graphify 查询与实时 `rg` 源码引用核对 Memos、AI Service、Web AI feature、contracts 和 Compose 边界；明确 2026-07-12 图谱未覆盖近期 AI Inbox/Context Pack。

@@ -336,6 +336,18 @@ Browser follow-up: a fresh tab in the same authenticated Chrome profile now reac
 2. Markdown/JSON 复制使用一致的按钮成功状态，并通过 `role=status`/`aria-live=polite` 播报具体格式；question、来源或预算导致 pack 输出变化时，清除旧 copied/manual/error 状态。
 3. 继续使用浏览器内存中的 `context-pack-v1` 输出，不新增 HTTP、SQLite、Qdrant、worker、依赖或公共 chat 行为；Memos 权限、accepted-only、显式来源和安全字段边界不变。
 
-验证：定向 `7 passed`；Web 全量低并发 `33 files / 149 passed`；build 与项目 lint 通过。独立 strict TypeScript 当前仍有 `15` 个既有第三方声明/`src/types/view.d.ts` 错误。Chrome 插件和低 CPU Compose 已启动验证，但当前 Chrome profile 没有有效 Memos 登录态或保存凭据，故未进入详情页；没有绕过认证，真实 UI/系统剪贴板复核保持未验证。
+验证：定向 `7 passed`；Web 全量低并发 `33 files / 149 passed`；build 与项目 lint 通过。该切片结束时独立 strict TypeScript 有 `15` 个既有第三方声明/`src/types/view.d.ts` 错误，后续 Phase 12 已收敛到 0。Chrome 插件和低 CPU Compose 已启动验证，但当前 Chrome profile 没有有效 Memos 登录态或保存凭据，故未进入详情页；没有绕过认证，真实 UI/系统剪贴板复核保持未验证。
 
 下一阶段应选择一个新的、明确的受控产品切片。若只是补 Phase 11 运行时证据，必须先有正常 Memos 登录会话，再只读复核摘要、状态重置和 Markdown/JSON 复制；不得从数据库提取 token 或重跑 Phase 10 route B。Route A 仍要求真实受信任 gateway、Memos 可见范围映射与关闭 flag 回滚条件。
+
+## Phase 12：Web strict TypeScript baseline（已完成）
+
+1. 复现并保留 15 项基线分类：TanStack/Solid 6、goober 1、Mermaid/type-fest 1、Leaflet MarkerCluster 2、React Leaflet deep context 4、项目 `FunctionType` 1。
+2. 项目 callback 改用明确函数签名；第三方声明只通过窄范围 `.d.ts` 与两个精确 TypeScript paths 补桥。未使用全局 `skipLibCheck`、关闭 strict、宽泛 `any`、`@ts-ignore` 或依赖升级。
+3. 所有改动仅影响编译期类型解析；Vite production build 仍解析既有 package 运行时代码。Context Pack、Memos 核心、AI Service、公共 chat、API、collection/volume 与默认 flags 不变。
+
+验证：独立 strict TypeScript 0 errors；Mermaid/地图定向 `2 files / 2 passed`；Web 全量低并发 `33 files / 149 passed`；build、项目 lint、Compose config 与 `git diff --check` 通过。没有后端运行时代码改动，因此未重跑 AI Service 全量门禁。
+
+## Phase 13：promote strict TypeScript into the project lint gate（下一阶段）
+
+把 `web/package.json` 的 lint TypeScript 子命令从 `tsc --noEmit --skipLibCheck` 提升为 `tsc --noEmit`，使当前已通过的 strict baseline 成为日常门禁。该切片只允许更新门禁、验证与文档；不得升级依赖、扩大兼容声明、修改运行时行为或重新执行 Phase 10 route B。若移除 flag 后出现与独立命令不同的错误，停止在准确诊断，不增加新的 suppression。

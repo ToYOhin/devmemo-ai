@@ -1,5 +1,11 @@
 # DevMemo AI API
 
+## Phase 12 strict TypeScript baseline（no API change）
+
+Phase 12 only repairs Web compile-time declaration resolution. It adds narrow local type bridges for the installed TanStack Query Devtools, goober, Mermaid/type-fest, React Leaflet, and Leaflet MarkerCluster declarations, plus an explicit project callback signature. No package, lockfile, runtime import, request, response, route, persistence, or authorization behavior changed.
+
+`/api/ai/chat`, `CitationResponse`, `memo-v1`, `context-pack-v1`, `public-chunk-v1`, Memos visibility authority, and `AI_PUBLIC_CHUNK_RETRIEVAL=false` remain unchanged.
+
 ## Phase 11 Context Pack copy readiness（no API change）
 
 Phase 11 only changes the existing browser-memory Context Pack presentation. The UI now reports item count, source count, and current Markdown characters against `max_chars`; copy success identifies Markdown or JSON through both the button label and an accessible live region. A newly generated pack clears stale copy/error feedback.

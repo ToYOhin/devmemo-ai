@@ -17,6 +17,8 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
+      "@tanstack/query-devtools": ["./src/types/compat/tanstack-query-devtools.d.ts"],
+      "goober": ["./src/types/compat/goober.d.ts"],
       "@/*": ["./src/*"]
     }
   },

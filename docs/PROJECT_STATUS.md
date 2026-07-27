@@ -1,17 +1,25 @@
 # DevMemo AI 项目状态
 
+## Phase 12：Web strict TypeScript baseline（2026-07-27）
+
+- 独立 `pnpm exec tsc --noEmit --pretty false` 已从 15 个既有声明错误收敛到 0；未启用全局 `skipLibCheck`、未关闭 strict、未使用 `any`/`@ts-ignore`，也未新增或升级依赖。
+- `src/types/view.d.ts` 不再依赖因同名 `common.ts` 而未进入编译的全局 `FunctionType`，改用明确的 `() => void`，并移除无效的 `common.d.ts`。第三方问题由窄范围类型兼容层处理：TanStack Query Devtools 与 goober 使用仅供 TypeScript 解析的精确 paths，Mermaid/type-fest、React Leaflet deep context 与 Leaflet MarkerCluster 补齐实际需要的声明。
+- 兼容层只影响编译期类型解析；production build 继续从已安装 package 解析运行时代码。没有修改 Context Pack、Memos server/store/proto、AI Service、API、数据库、公共 chat、collection/volume 或默认 flags。
+- 验证：strict TypeScript 通过；Mermaid/地图定向 `2 files / 2 passed`；Web 全量低并发 `33 files / 149 passed`；build、项目 lint、`docker compose config --quiet` 与 `git diff --check` 通过。未改后端运行时代码，因此未重跑 AI Service 全量门禁。
+- 权威交接为 [`docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`](handoffs/2026-07-27-web-strict-typescript-handoff.md)。下一切片是 Phase 13：把项目 lint 的 TypeScript 子门禁从 `--skipLibCheck` 提升到已验证的 strict baseline；仍不得借机升级依赖或改变运行时行为。
+
 ## 项目结构复核与新窗口入口（2026-07-27）
 
 - 当前运行时边界已从实时源码复核：Memos Go 是原始 Memo/权限事实源；AI Service 按 domain/services/adapters 管理派生状态与可选 provider；`MemoView` 内嵌 `AiMemoSummary`、`AiMemoTemplate`、`AiMemoInsights`、`AiMemoContextPack`。
 - 默认 Compose 仍只有 Memos + AI Service；Qdrant/Ollama 为显式 profile。默认索引、向量存储和 public chunk flags 未改变。
 - 现有 graphify 图停留在 2026-07-12，不包含近期 AI feature，不能单独作为当前结构事实源。
-- Phase 12 的 15 个 strict TypeScript 错误已重新运行并分类；权威接管文档为 [`docs/handoffs/2026-07-27-project-structure-handoff.md`](handoffs/2026-07-27-project-structure-handoff.md)，新窗口 Prompt 为 [`docs/prompts/NEW_WINDOW_PROMPT.md`](prompts/NEW_WINDOW_PROMPT.md)。
+- Phase 12 接管前的 15 个 strict TypeScript 错误已重新运行并分类；现已由 Phase 12 收敛到 0，完成态见 [`docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`](handoffs/2026-07-27-web-strict-typescript-handoff.md)，新窗口 Prompt 为 [`docs/prompts/NEW_WINDOW_PROMPT.md`](prompts/NEW_WINDOW_PROMPT.md)。
 
 ## Phase 11：Context Pack copy readiness（2026-07-27）
 
 - 已完成 Web-only Context Pack 复制就绪切片：预览上方现在显示条目数、来源数和 `当前字符数/max_chars`，Markdown/JSON 两个按钮都有一致的已复制状态，并通过 `role=status` + `aria-live=polite` 向辅助技术报告具体复制格式。
 - 当 question、来源选择或预算改变并生成新的 pack 时，旧的 copied/manual/error 状态会自动清除，避免把上一次复制结果误认为当前输出已复制。pack 仍只在浏览器内存生成；没有新增 API、SQLite 写入、Qdrant、worker、依赖或公共 chat 行为。
-- Web 定向测试 `7 passed`；全量低并发测试 `33 files / 149 passed`；build 与项目 `pnpm lint` 通过。独立 strict `pnpm exec tsc --noEmit` 当前报告 `15` 个既有第三方声明与 `src/types/view.d.ts` 错误；项目 lint 使用的 `--skipLibCheck` 类型门禁通过。
+- Web 定向测试 `7 passed`；全量低并发测试 `33 files / 149 passed`；build 与项目 `pnpm lint` 通过。该切片结束时独立 strict `pnpm exec tsc --noEmit` 报告 `15` 个既有第三方声明与 `src/types/view.d.ts` 错误；这些错误已由后续 Phase 12 收敛到 0。
 - 真实 Chrome 插件已成功启动并连接。恢复低 CPU 默认 Compose 后，Vite/Memos 通路正常，但当前 Chrome profile 已无有效 Memos 登录态，登录表单也没有浏览器保存凭据；因此没有进入 Memo 详情页，Phase 11 的真实 UI/系统剪贴板复核记为“认证会话缺失，未验证”。没有从 SQLite/token 存储提取身份、伪造会话或修改 Memo/Insight。
 - 当前权威交接为 [`docs/handoffs/2026-07-27-context-pack-copy-readiness-handoff.md`](handoffs/2026-07-27-context-pack-copy-readiness-handoff.md)。Phase 10 route B 保持已完成；route A 仍未验证，`AI_PUBLIC_CHUNK_RETRIEVAL=false` 保持不变。
 
@@ -25,10 +33,10 @@
 - The browser-control issue is now narrowed and recoverable: claiming a long-lived user tab can time out after a Vite restart, while a fresh tab in the same Chrome profile loads the authenticated Memo correctly. That fresh page confirmed the accepted Insight and a `64`-character Context Pack budget with visible `max_chars` truncation and no console errors.
 - The earlier browser-automation clipboard mismatch is now isolated to that bridge: real Chrome pointer clicks on both controls wrote safe output to Windows system clipboard. Markdown had the expected heading; JSON parsed as `context-pack-v1`; neither recorded check contained raw payload or secret markers. No raw clipboard value is recorded.
 - Focused DevMemory regression passed: `test_memo_insights.py`, Context Pack builder/golden, and lifecycle-report tests: `15 passed`. Compose was healthy; unauthenticated Memos `auth/me` returned `401`; the read-only lifecycle report exposed aggregates only.
-- Phase 10 当时的 verification：focused webhook regression `1 passed`; AI Service full suite and `scripts/verify-devmemo.ps1` both `188 passed` with one existing deprecation warning; `docker compose config --quiet` passed. Serial Web gate passed: `33 files / 149 passed`, build, and project `pnpm lint`. 当时 standalone strict baseline 为 13 项；2026-07-27 当前基线已现场复核为 15 项，见顶部结构交接。
+- Phase 10 当时的 verification：focused webhook regression `1 passed`; AI Service full suite and `scripts/verify-devmemo.ps1` both `188 passed` with one existing deprecation warning; `docker compose config --quiet` passed. Serial Web gate passed: `33 files / 149 passed`, build, and project `pnpm lint`. 当时 standalone strict baseline 为 13 项；2026-07-27 Phase 12 接管前复核为 15 项，现已收敛到 0。
 - The route-B test Memo was not recreated or deleted. The only new persisted AI state was the one authorized accepted Insight; no SQLite seed, authentication bypass, collection/volume change, public API change, or public-chunk flag change occurred. The four participant answers are recorded safely in [`docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`](handoffs/2026-07-20-devmemory-real-feedback-evidence.md).
 - Phase 10 的首个受控 gateway 证据切片已完成：`python -m scripts.public_chunk_gateway_contract_smoke` 在进程内模拟受信任网关，对精确 raw JSON HMAC、篡改拒绝、唯一可见范围、disabled/401/422/503、授权去重和脱敏逐项断言。它不启动服务、不访问网络、不输出临时 secret；这是本地 contract evidence，不是部署 gateway 或灰度 rollout 通过。
-- Phase 10 contract slice 当时门禁：AI Service `187 passed`；Web `33 files / 149 passed`、build、项目 `pnpm lint` 通过。该切片当时 strict baseline 为 13 项；2026-07-27 当前 baseline 为 15 项，项目 lint 的 `tsc --noEmit --skipLibCheck` 仍通过。
+- Phase 10 contract slice 当时门禁：AI Service `187 passed`；Web `33 files / 149 passed`、build、项目 `pnpm lint` 通过。该切片当时 strict baseline 为 13 项；Phase 12 接管前为 15 项，现已收敛到 0。
 - 本地 Chrome 产品验收已通过：Memo 详情页 AI Inbox 的 Context Pack `Copy Markdown` 与 `Copy JSON` 均实际写入 Windows 系统剪贴板。Markdown 为 512 字符并包含标题与 Memo/Insight 来源；JSON 为 1,699 字符、可解析且含两条可追溯来源。浏览器页面未再进入错误边界。
 - 复制实现优先使用受用户手势触发的 DOM `execCommand("copy")`，再回退到异步 Clipboard API；复制反馈不再动态替换 SVG 图标，避免先前 Chrome 表面中的 `insertBefore` React 错误。前端回归：`33 files / 149 passed`、TypeScript 与 lint 通过。
 - Phase 9f 的 golden parity、只读生命周期诊断和 Context Pack Chrome 复制证据均已完成；Phase 8 `public-chunk-v1` 仍为默认关闭的受控实现，不应在没有可信网关 HMAC/可见范围集成证据时开启。

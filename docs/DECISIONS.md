@@ -297,3 +297,11 @@ Context Pack 在复制前直接显示当前输出的条目数、唯一来源数�
 这些值全部来自现有浏览器内存 `context-pack-v1` 结果，不新增分析、权限推断、HTTP、SQLite、telemetry、Qdrant 或后台任务。安全字段、accepted-only、显式 Memo 选择、Python/Web golden、Memos 权限事实源与公共 chat 均不改变。
 
 本切片的组件测试、全量 Web 测试、build 与项目 lint 已通过。真实 Chrome 插件连接成功，但当前 profile 的 Memos 登录态已失效且无浏览器保存凭据，因此没有进入详情页，也没有从 SQLite/token 存储绕过认证。Phase 10 的系统剪贴板证据仍是历史事实，但不能替代 Phase 11 的运行时验收。
+
+## ADR-051：strict TypeScript 使用窄范围声明兼容层，不降低全局门禁
+
+独立 strict TypeScript 的 15 项基线来自项目 callback 别名未进入编译，以及已安装第三方 package 的缺失 transitive declarations、ESM export assignment 和未导出 deep type path。项目 callback 改用明确 `() => void`；TanStack Query Devtools 与 goober 通过两个精确 TypeScript paths 暴露其实际消费的公开类型；Mermaid/type-fest、React Leaflet context 与 Leaflet MarkerCluster 通过窄范围声明补桥。
+
+该兼容层只参与 TypeScript 类型解析，不替换 Vite 的运行时 package 解析，不引入或升级依赖，不修改 lockfile。禁止用全局 `skipLibCheck`、关闭 strict、宽泛 `any`、`@ts-ignore` 或删除检查来维持通过。依赖未来升级后，应在 strict tsc、定向测试和 production build 通过的前提下删除已经由上游修复的 bridge。
+
+Phase 12 验证为 strict 0 errors、定向 `2/2`、Web `149/149`、build、项目 lint、Compose config 与 diff check 全部通过。Context Pack、Memos/AI 权限边界、API、数据库、public chat、collection/volume 和 `AI_PUBLIC_CHUNK_RETRIEVAL=false` 均未改变。

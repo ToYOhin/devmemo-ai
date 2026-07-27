@@ -26,7 +26,7 @@ H:\DevMemoAI/
 
 ## 单 Agent 开发入口
 
-当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`；当前结构与 Phase 12 接管入口为 `2026-07-27-project-structure-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
+当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`；结构接管入口为 `2026-07-27-project-structure-handoff.md`；Phase 12 strict TypeScript 完成态在 `2026-07-27-web-strict-typescript-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
 
 ```text
 cmd/server/store/internal/proto
@@ -51,6 +51,10 @@ web/src/features/ai/
 ```
 
 当前问题：AI Inbox 是详情页内嵌 feature，不是全局 Inbox；Context Pack 的 Python builder 与 Web adapter 仍是两份实现，但已通过 `contracts/context-pack-v1.json` 的 Markdown/compact JSON golden 做字节级对齐，后续任何语义变更都必须扩展该 fixture。Phase 11 只在组件层读取既有 pack 的 items/sources/markdown 长度并维护瞬时复制反馈，不改变 builder contract 或持久化边界。`graphify-out` 的历史图仍会把 “Inbox” 解析为 Memos `store/inbox.go`，且未收录近期 AI feature；结构判断应以源码与本文档为准，图谱重建是后续维护项。
+
+### Web strict 类型兼容边界
+
+`web/src/types/compat/` 只为已安装 package 的公开消费面提供 TypeScript 解析映射；`strict-dependency-compat.d.ts` 补齐缺失的 type-fest utilities 与 React Leaflet deep context，`leaflet-markercluster.d.ts` 只声明当前 MarkerCluster 组件需要的 Leaflet plugin 类型。这些文件不参与运行时打包替换；production build 继续使用 `node_modules` 中的 JavaScript。未来依赖升级若修复对应声明，应先用 strict tsc 和 build 证明后再删除相应 bridge，不得长期同时维护重复来源。
 
 ## AI Service 目录
 

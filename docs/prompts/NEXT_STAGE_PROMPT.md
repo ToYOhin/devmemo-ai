@@ -1,43 +1,43 @@
-# 下一阶段 Prompt：Phase 12 Web strict TypeScript baseline
+# 下一阶段 Prompt：Phase 13 strict TypeScript lint gate promotion
 
 ~~~text
-Phase 11 Context Pack copy readiness is implemented: the browser-memory panel reports items, sources, and Markdown characters/max_chars; Markdown and JSON have consistent copied feedback plus format-specific aria-live status; changing the pack clears stale copied/manual/error state. Targeted tests are 7 passed, full Web tests are 33 files / 149 passed, and build/project lint pass. Real Chrome connected, but the current profile had no valid Memos login session or saved credentials, so the Phase 11 detail-page/system-clipboard recheck is explicitly unverified. Do not bypass Memos authentication or repeat Phase 10 route B. Read `docs/handoffs/2026-07-27-project-structure-handoff.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
+Phase 12 Web strict TypeScript baseline is complete. Independent `pnpm exec tsc --noEmit --pretty false` moved from 15 existing declaration errors to 0 without global `skipLibCheck`, disabled strictness, broad `any`, `@ts-ignore`, dependency changes, or lockfile changes. The solution uses an explicit project callback type, two exact TypeScript-only paths for TanStack Query Devtools/goober, and narrow declarations for Mermaid/type-fest and React Leaflet/MarkerCluster. Targeted tests are 2/2, full Web tests are 33 files / 149 passed, and build, project lint, Compose config, and diff check pass. Read `docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
 协作模式：单 Agent。只使用 H:\DevMemoAI 主工作树；不要启动 Terra/Luna，也不要并行修改 project4 下的其他 worktree。整体推进一个完整、可验证的阶段切片；只有用户明确要求时才 push。
 
 先读取：
-1. docs/handoffs/2026-07-27-project-structure-handoff.md
+1. docs/handoffs/2026-07-27-web-strict-typescript-handoff.md
 2. docs/PROJECT_STATUS.md 顶部
 3. docs/HANDOFF.md 顶部
-4. docs/roadmap.md 的 Phase 10/11
-5. docs/DECISIONS.md 的 ADR-043/044/048/049/050
+4. docs/roadmap.md 的 Phase 12/13
+5. docs/DECISIONS.md 的 ADR-051
 6. 本文件
 7. git status --short --branch 与 git log --oneline -8
 
 当前事实：
-- Phase 10 route B 已完成，不再重复 Capture/Review/feedback；route A 没有真实受信任 gateway、Memos 可见范围映射与回滚条件，仍未验证。
-- Phase 11 只改 Context Pack Web UI/文案/测试；没有 API、数据库、依赖、Memos 核心或公共 chat 改动。
-- 项目 `pnpm lint` 使用 `tsc --noEmit --skipLibCheck` 并通过；独立 `pnpm exec tsc --noEmit` 当前报告 15 个既有第三方声明和 `src/types/view.d.ts` strict errors。
-- 15 项现场分类为：TanStack/Solid 6、goober 1、mermaid/type-fest 1、react-leaflet-cluster 2、react-leaflet core context 4、项目 `FunctionType` 1。
-- 默认 Compose 只启动 Memos (`0.75` CPU) 与 AI Service (`0.25` CPU)；Qdrant/Ollama 只允许显式 profile。不要并行运行高负载 Web 命令。
+- Phase 12 的独立 strict TypeScript 已为 0 errors。兼容层只影响 TypeScript 类型解析；production build 继续使用已安装 package 的运行时代码。
+- `web/package.json` 的项目 lint 仍使用 `tsc --noEmit --skipLibCheck && biome check src`，所以日常/CI 风格门禁尚未强制执行已经通过的 strict baseline。
+- package 与 lockfile 在 Phase 12 未改变；TanStack Query Devtools、goober、Mermaid/type-fest、React Leaflet/MarkerCluster 的 bridge 均为窄范围声明，不应在没有上游替代证据时扩大或删除。
+- Phase 10 route B 已完成，不再重复；Phase 11 的真实详情页/系统剪贴板复核因当前 Chrome profile 无有效 Memos 登录态而未验证，不能写成 pass。
+- 默认保持 deterministic + memory、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`、`AI_VECTOR_STORE=memory`、`AI_PUBLIC_CHUNK_RETRIEVAL=false`。
 
-本阶段唯一目标：Phase 12 修复 Web 独立 strict TypeScript baseline，使 `pnpm exec tsc --noEmit` 通过，同时保持运行时行为和公共契约不变。
+本阶段唯一目标：Phase 13 把 Web 项目 lint 的 TypeScript 子门禁提升到 strict baseline，使 `pnpm lint` 直接执行不带 `--skipLibCheck` 的 `tsc --noEmit`，并保持运行时行为与公共契约不变。
 
 执行边界：
-- 先保存并分类当前 15 个错误，区分第三方 `.d.ts`、项目 `src/types/view.d.ts` 和真实源码错误；只修改解决根因所需的最小文件。
-- 优先修正项目声明和窄范围类型兼容层；不得通过全局 `skipLibCheck`、关闭 strict、宽泛 `any`、`@ts-ignore` 或删除类型检查来制造通过。
-- 本切片不升级或新增依赖。如果根因只能通过依赖升级解决，停止在可复核诊断与最小升级提案，不直接改 lockfile。
+- 先分别运行 `pnpm exec tsc --noEmit --pretty false` 与当前 `pnpm lint`，确认 Phase 12 基线仍通过。
+- 只把 `web/package.json` 的 lint script 从 `tsc --noEmit --skipLibCheck && biome check src` 改为 `tsc --noEmit && biome check src`；不修改 TypeScript strict 配置，不新增其他 script 或 suppression。
+- 本切片不新增、升级或删除依赖，不改 lockfile，不扩大或重写 Phase 12 declaration bridge。若移除 flag 后出现与独立 strict 命令不同的错误，停止在准确诊断，不用新的 paths、`any`、`@ts-ignore` 或局部 skip 掩盖。
 - 不修改 Context Pack contract/golden、Memos server/store/proto、AI Service API、`/api/ai/chat`、CitationResponse、memo-v1、public-chunk contract、collection 或 volume。
-- 不创建/修改/删除 Memo 或 Insight，不提取 token，不绕过 Memos 认证，不把 Phase 10 剪贴板证据写成 Phase 11/12 新 pass。
+- 不创建/修改/删除 Memo 或 Insight，不提取 token，不绕过 Memos 认证，不启动 Chrome/Qdrant/Ollama，不重跑 Phase 10 route B。
 
 验证顺序：
-1. `pnpm exec tsc --noEmit`，确认错误从当前 baseline 收敛到 0；若未到 0，保留准确错误分类，不宣称完成。
-2. 运行受影响模块的定向测试。
-3. 串行运行 `pnpm exec vitest run --maxWorkers=1`、`pnpm build`、`pnpm lint`。
-4. `docker compose config --quiet`；若没有后端代码改动，不重跑 AI Service 全量或 `verify-devmemo.ps1`。
+1. `pnpm lint`，确认 strict tsc 与 Biome 一起通过。
+2. `pnpm exec tsc --noEmit --pretty false`，确认显式 strict 命令仍为 0。
+3. 串行运行 `pnpm exec vitest run --maxWorkers=1` 与 `pnpm build`。
+4. `docker compose config --quiet`；没有后端代码改动，不重跑 AI Service 全量或 `verify-devmemo.ps1`。
 5. `git diff --check`。
 
-完成后更新 PROJECT_STATUS、CHANGELOG_AI、HANDOFF、roadmap、api、structure、DECISIONS、新 handoff 和本 Prompt；形成独立 commit，不自动 push。若 strict baseline 因必须升级依赖而阻塞，也提交仅包含准确诊断/提案的文档切片，不伪造通过。
+完成后更新 PROJECT_STATUS、CHANGELOG_AI、HANDOFF、roadmap、structure、DECISIONS、新 handoff 和本 Prompt；形成独立 commit，不自动 push。若门禁提升出现无法在既有 Phase 12 边界内解释的差异，只提交准确诊断/提案，不伪造通过。
 ~~~
