@@ -1,5 +1,13 @@
 # DevMemo AI 项目状态
 
+## 开源发布基础设施：身份、社区、默认部署与 CI 命名空间（2026-07-28）
+
+- 本仓库现明确为非官方的 DevMemo AI 下游项目：新增 `NOTICE`、`UPSTREAM.md`、`GOVERNANCE.md`、`SUPPORT.md`、`CODE_OF_CONDUCT.md` 与贡献说明；README 覆盖项目用途、起步方式、获取帮助、维护者、上游关系和许可证边界。`MIT` 许可证继续适用于本项目与上游兼容范围，未暗示与 Memos 官方关联。
+- 默认 `docker-compose.yml` 不再启用 Memos 的 `--allow-private-webhooks`。只有受控本地 Docker 开发拓扑可显式叠加 `docker-compose.local-webhook.yml`；这不改变 AI 默认 deterministic + memory、索引 flag、API、数据库或 Context Pack 边界。
+- 发布资产、安装脚本与 Docker 元数据改为 DevMemo 自有 `devmemo-ai` 名称和 `ghcr.io/${github.repository_owner}/devmemo-ai` 命名空间；新增 AI Service 测试工作流。Go module import path 保持上游路径，避免无关的运行时代码改动。
+- 验证：默认与本地 override Compose 均通过 `config --quiet`，且仅 override 包含私网 Webhook 放行；安装脚本经容器内 POSIX `sh -n` 与 `--help` 检查，工作流缩进/命名空间检查与 `git diff --check` 通过。没有因本次文档、Compose 或 CI 配置改动重跑应用全量测试。
+- 正式公开发布仍未获准：需要先修复既有后端 CI migration 超时、配置发布 token/包权限、启用私有漏洞报告通道，并在真实目标仓库复核 CI、镜像与发布资产。详见 [`docs/handoffs/2026-07-28-open-source-release-foundation-handoff.md`](handoffs/2026-07-28-open-source-release-foundation-handoff.md)。
+
 ## Phase 13：strict TypeScript lint gate promotion（2026-07-27）
 
 - `web/package.json` 的 `pnpm lint` 已从 `tsc --noEmit --skipLibCheck && biome check src` 提升为 `tsc --noEmit && biome check src`；Phase 12 已验证的 strict baseline 现在成为日常 Web 门禁。

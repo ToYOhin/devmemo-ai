@@ -5,9 +5,6 @@ services:
     image: neosmemo/memos:stable@sha256:3e1253477066eb2aefa91145f7f9038bb931ed88c8a3ee05310a933594cdba7d
     # Keep the default local product path within one CPU across Memos + AI.
     cpus: "0.75"
-    # The authenticated local user may opt into the internal AI webhook.
-    # This is required because the Compose service name resolves to a private IP.
-    command: ["--allow-private-webhooks"]
     environment:
       GOMAXPROCS: "1"
     ports:

@@ -1,5 +1,13 @@
 # DevMemo AI 当前交接
 
+## 开源发布基础设施（2026-07-28）
+
+- 已完成一个不增加产品功能的发布基础设施切片：DevMemo 自有身份、MIT/上游 NOTICE、贡献/支持/治理/行为准则、安全报告入口、默认安全部署拆分，以及自有 CI/镜像/发布资产命名空间。
+- 默认 Compose 不再允许私网 Webhook。需要本机 Memos 用户 webhook 指向 `ai-service` 时，只能显式使用 `docker-compose.local-webhook.yml`；禁止将该 override 用于公网或多用户部署。
+- 发布工作流与安装脚本使用 `devmemo-ai` 和 `ghcr.io/${github.repository_owner}/devmemo-ai`，并新增 AI Service pytest/Compose-config CI。Go module path 仍为 `github.com/usememos/memos`，这是保持上游代码可编译的实现边界，不代表发布归属。
+- 正式公开发布仍是 NO-GO：既有后端 CI migration 超时、GitHub 发布 secret/权限、私有漏洞报告通道和真实仓库发布证据尚未完成。不要通过恢复默认私网 Webhook、重用上游发布命名空间或跳过 CI 来绕过这些条件。
+- 权威接管记录为 [`docs/handoffs/2026-07-28-open-source-release-foundation-handoff.md`](handoffs/2026-07-28-open-source-release-foundation-handoff.md)；下一窗口先读该文件和 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)。不自动 push。
+
 ## Phase 13 strict TypeScript lint gate promotion（2026-07-27）
 
 - `pnpm lint` 现在直接执行 `tsc --noEmit && biome check src`，不再依赖 `--skipLibCheck`；这把 Phase 12 的 strict 0-error baseline 纳入项目日常门禁。

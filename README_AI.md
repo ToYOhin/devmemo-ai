@@ -41,6 +41,14 @@ docker compose up -d --build
 
 源码或 AI Service 配置变更后请使用 `--build`，避免容器继续运行旧镜像；仅重启未变更的服务时才使用 `docker compose up -d`。默认 CORS 同时允许 `http://localhost:3001` 和 `http://127.0.0.1:3001`。
 
+默认 Compose 不允许 Webhook 指向私网地址。仅在受控的本机 Docker 开发拓扑中，需要把 Memos 用户 Webhook 指向 `http://ai-service:8000/...` 时，显式叠加本地 override：
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.local-webhook.yml up -d --build
+```
+
+不要把 `docker-compose.local-webhook.yml` 用于公网或多用户部署。
+
 访问：
 
 - Memos: `http://localhost:5230`

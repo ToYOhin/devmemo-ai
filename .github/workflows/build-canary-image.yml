@@ -10,6 +10,10 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  CONTAINER_IMAGE: ghcr.io/${{ github.repository_owner }}/devmemo-ai
 
 jobs:
   build-frontend:
@@ -75,12 +79,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -100,7 +98,7 @@ jobs:
             COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=build-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
-          outputs: type=image,name=neosmemo/memos,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.CONTAINER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
         run: |
@@ -138,18 +136,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            neosmemo/memos
-            ghcr.io/usememos/memos
+            ${{ env.CONTAINER_IMAGE }}
           flavor: |
             latest=false
           tags: |
             type=raw,value=canary
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -162,11 +153,10 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'neosmemo/memos@sha256:%s ' *)
+            $(printf "${CONTAINER_IMAGE}@sha256:%s " *)
         env:
           DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
 
       - name: Inspect images
         run: |
-          docker buildx imagetools inspect neosmemo/memos:canary
-          docker buildx imagetools inspect ghcr.io/usememos/memos:canary
+          docker buildx imagetools inspect "${CONTAINER_IMAGE}:canary"

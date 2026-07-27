@@ -24,7 +24,7 @@ Optional `--database <path>` selects an AI Service SQLite file. The command open
 
 ## Phase 10 local webhook evidence (2026-07-20)
 
-No new HTTP contract was added. The current authenticated Memos user uses the existing webhook endpoint against the local Docker-network AI Service; Memos requires `--allow-private-webhooks` in this local topology because the target resolves to a private address. This changes neither Memos' authorization authority nor any public API.
+No new HTTP contract was added. The local feedback evidence used the existing webhook endpoint against the Docker-network AI Service; that controlled topology required `--allow-private-webhooks` because the target resolves to a private address. Public/default Compose no longer enables that flag: only the explicit `docker-compose.local-webhook.yml` development override may do so. This changes neither Memos' authorization authority nor any public API.
 
 Memos sends the current Memo identifier as `memos/<uid>` in this webhook shape, while the detail UI queries the terminal UID. AI Service now normalizes that resource name before reading or writing its derived SQLite state. A focused API regression verifies that the terminal UID reads the persisted Insight and the resource-name form is not exposed as a second identity.
 

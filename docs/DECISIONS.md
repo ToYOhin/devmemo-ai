@@ -311,3 +311,11 @@ Phase 12 验证为 strict 0 errors、定向 `2/2`、Web `149/149`、build、项�
 Phase 12 已在当前安装依赖下将独立 `tsc --noEmit` 收敛为 0 errors，因此 `web/package.json` 的日常 lint 不再保留 `--skipLibCheck`。`pnpm lint` 现在先运行 strict TypeScript，再执行 `biome check src`，使依赖声明回归在本地与 CI 风格门禁中立即可见。
 
 该提升不修改 `tsconfig` strict 设置、runtime module resolution、依赖/lockfile 或 API。若未来依赖升级引入新的 declaration 错误，先检查是否能以精确、运行时无关的兼容声明修复；不得恢复全局 skip、关闭 strict、使用宽泛 `any` 或 `@ts-ignore` 来换取绿色门禁。
+
+## ADR-053：开源发布默认安全部署、独立身份与 CI 命名空间
+
+DevMemo AI 是基于 Memos 的非官方下游项目。发布说明必须同时保留上游版本/许可 NOTICE、明确的维护者与贡献/支持/行为准则入口，以及本项目自己的安全报告渠道；不得把上游 issue、资助、Docker Hub、GHCR 或安装资产误表述为 DevMemo AI 的发布入口。Go module import path 继续保留 `github.com/usememos/memos`，以避免为品牌改名扩大到上游核心代码和运行时行为。
+
+默认 Compose 禁止 Memos 私网 Webhook 目标。只有受控本机开发需要访问 Docker service hostname 时，才可显式叠加 `docker-compose.local-webhook.yml`；公共或多用户部署不得使用该 override。该部署拆分不改变 Memos 权限事实源、AI 默认 deterministic + memory、Webhook/API/SQLite、Context Pack 或 `AI_PUBLIC_CHUNK_RETRIEVAL=false`。
+
+CI 和发布资产使用 `devmemo-ai` 与 `ghcr.io/${github.repository_owner}/devmemo-ai` 命名空间，并对 AI Service 增加独立 pytest 与 Compose-config 检查。正式 release 仍必须先取得可用的发布凭据/包权限、私有漏洞报告通道、通过的既有后端 CI 以及真实仓库发布证据；任何一项缺失时都不得发布、推送稳定标签或把文档中的预期命名空间宣称为已发布资产。
