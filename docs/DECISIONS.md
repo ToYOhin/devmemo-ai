@@ -305,3 +305,9 @@ Context Pack 在复制前直接显示当前输出的条目数、唯一来源数�
 该兼容层只参与 TypeScript 类型解析，不替换 Vite 的运行时 package 解析，不引入或升级依赖，不修改 lockfile。禁止用全局 `skipLibCheck`、关闭 strict、宽泛 `any`、`@ts-ignore` 或删除检查来维持通过。依赖未来升级后，应在 strict tsc、定向测试和 production build 通过的前提下删除已经由上游修复的 bridge。
 
 Phase 12 验证为 strict 0 errors、定向 `2/2`、Web `149/149`、build、项目 lint、Compose config 与 diff check 全部通过。Context Pack、Memos/AI 权限边界、API、数据库、public chat、collection/volume 和 `AI_PUBLIC_CHUNK_RETRIEVAL=false` 均未改变。
+
+## ADR-052：Web lint 必须执行 strict TypeScript baseline
+
+Phase 12 已在当前安装依赖下将独立 `tsc --noEmit` 收敛为 0 errors，因此 `web/package.json` 的日常 lint 不再保留 `--skipLibCheck`。`pnpm lint` 现在先运行 strict TypeScript，再执行 `biome check src`，使依赖声明回归在本地与 CI 风格门禁中立即可见。
+
+该提升不修改 `tsconfig` strict 设置、runtime module resolution、依赖/lockfile 或 API。若未来依赖升级引入新的 declaration 错误，先检查是否能以精确、运行时无关的兼容声明修复；不得恢复全局 skip、关闭 strict、使用宽泛 `any` 或 `@ts-ignore` 来换取绿色门禁。

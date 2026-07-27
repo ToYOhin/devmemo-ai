@@ -1,12 +1,19 @@
 # DevMemo AI 项目状态
 
+## Phase 13：strict TypeScript lint gate promotion（2026-07-27）
+
+- `web/package.json` 的 `pnpm lint` 已从 `tsc --noEmit --skipLibCheck && biome check src` 提升为 `tsc --noEmit && biome check src`；Phase 12 已验证的 strict baseline 现在成为日常 Web 门禁。
+- 未修改 TypeScript 配置、compat declarations、依赖、lockfile 或运行时代码；所有现有 Context Pack、Memos、AI Service、公共 chat 与 public-chunk 边界不变。
+- 验证：新的 `pnpm lint`、独立 strict tsc、Web 全量低并发 `33 files / 149 passed`、production build、`docker compose config --quiet` 与 `git diff --check` 均通过。build 保留既有大 chunk/plugin timing 警告；无后端改动，未重跑 AI Service 全量门禁。
+- 当前已定义的内部工程路线至此完成。权威交接为 [`docs/handoffs/2026-07-27-strict-lint-gate-handoff.md`](handoffs/2026-07-27-strict-lint-gate-handoff.md)；后续只在用户选择新产品切片、真实登录态复核或具备 gateway 前置条件时推进。
+
 ## Phase 12：Web strict TypeScript baseline（2026-07-27）
 
 - 独立 `pnpm exec tsc --noEmit --pretty false` 已从 15 个既有声明错误收敛到 0；未启用全局 `skipLibCheck`、未关闭 strict、未使用 `any`/`@ts-ignore`，也未新增或升级依赖。
 - `src/types/view.d.ts` 不再依赖因同名 `common.ts` 而未进入编译的全局 `FunctionType`，改用明确的 `() => void`，并移除无效的 `common.d.ts`。第三方问题由窄范围类型兼容层处理：TanStack Query Devtools 与 goober 使用仅供 TypeScript 解析的精确 paths，Mermaid/type-fest、React Leaflet deep context 与 Leaflet MarkerCluster 补齐实际需要的声明。
 - 兼容层只影响编译期类型解析；production build 继续从已安装 package 解析运行时代码。没有修改 Context Pack、Memos server/store/proto、AI Service、API、数据库、公共 chat、collection/volume 或默认 flags。
 - 验证：strict TypeScript 通过；Mermaid/地图定向 `2 files / 2 passed`；Web 全量低并发 `33 files / 149 passed`；build、项目 lint、`docker compose config --quiet` 与 `git diff --check` 通过。未改后端运行时代码，因此未重跑 AI Service 全量门禁。
-- 权威交接为 [`docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`](handoffs/2026-07-27-web-strict-typescript-handoff.md)。下一切片是 Phase 13：把项目 lint 的 TypeScript 子门禁从 `--skipLibCheck` 提升到已验证的 strict baseline；仍不得借机升级依赖或改变运行时行为。
+- 权威交接为 [`docs/handoffs/2026-07-27-web-strict-typescript-handoff.md`](handoffs/2026-07-27-web-strict-typescript-handoff.md)。其后续 Phase 13 已把项目 lint 的 TypeScript 子门禁提升到已验证的 strict baseline；未借机升级依赖或改变运行时行为。
 
 ## 项目结构复核与新窗口入口（2026-07-27）
 

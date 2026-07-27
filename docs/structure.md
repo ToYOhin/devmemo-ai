@@ -56,6 +56,8 @@ web/src/features/ai/
 
 `web/src/types/compat/` 只为已安装 package 的公开消费面提供 TypeScript 解析映射；`strict-dependency-compat.d.ts` 补齐缺失的 type-fest utilities 与 React Leaflet deep context，`leaflet-markercluster.d.ts` 只声明当前 MarkerCluster 组件需要的 Leaflet plugin 类型。这些文件不参与运行时打包替换；production build 继续使用 `node_modules` 中的 JavaScript。未来依赖升级若修复对应声明，应先用 strict tsc 和 build 证明后再删除相应 bridge，不得长期同时维护重复来源。
 
+Phase 13 已把 `web/package.json` 的 `lint` 固定为 `tsc --noEmit && biome check src`。因此 Web 日常门禁现在与独立 strict TypeScript 使用相同的声明检查范围；这只改变开发验证，不改变 Vite runtime resolution、前端行为或任一服务边界。
+
 ## AI Service 目录
 
 ```text

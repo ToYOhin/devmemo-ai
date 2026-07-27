@@ -348,6 +348,16 @@ Browser follow-up: a fresh tab in the same authenticated Chrome profile now reac
 
 验证：独立 strict TypeScript 0 errors；Mermaid/地图定向 `2 files / 2 passed`；Web 全量低并发 `33 files / 149 passed`；build、项目 lint、Compose config 与 `git diff --check` 通过。没有后端运行时代码改动，因此未重跑 AI Service 全量门禁。
 
-## Phase 13：promote strict TypeScript into the project lint gate（下一阶段）
+## Phase 13：promote strict TypeScript into the project lint gate（已完成）
 
-把 `web/package.json` 的 lint TypeScript 子命令从 `tsc --noEmit --skipLibCheck` 提升为 `tsc --noEmit`，使当前已通过的 strict baseline 成为日常门禁。该切片只允许更新门禁、验证与文档；不得升级依赖、扩大兼容声明、修改运行时行为或重新执行 Phase 10 route B。若移除 flag 后出现与独立命令不同的错误，停止在准确诊断，不增加新的 suppression。
+`web/package.json` 的 lint TypeScript 子命令已从 `tsc --noEmit --skipLibCheck` 提升为 `tsc --noEmit`，使 strict baseline 成为日常门禁。未升级依赖、扩大兼容声明、修改运行时行为或重跑 Phase 10 route B。
+
+验证：新的 `pnpm lint`、独立 strict tsc、Web 全量低并发 `33 files / 149 passed`、build、Compose config 与 `git diff --check` 通过。没有后端改动，因此未重跑 AI Service 全量或 `verify-devmemo.ps1`。
+
+## 后续选择（无默认实现阶段）
+
+当前已定义的内部工程路线已完成。后续只能在用户明确选择后推进：
+
+1. 正常 Memos 登录会话可用时，对 Phase 11 做只读详情页/系统剪贴板复核；不得提取 token、伪造会话或重跑 Phase 10 route B。
+2. route A 仅在真实受信任 gateway、Memos 可见范围映射和关闭 flag 的回滚条件同时存在时才可评估；`AI_PUBLIC_CHUNK_RETRIEVAL=false` 在此之前保持不变。
+3. 选择一项新的、与当前产品目标相关的受控功能切片；不得因路线图为空而推断授权。

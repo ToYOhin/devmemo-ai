@@ -1,5 +1,11 @@
 # DevMemo AI 变更记录
 
+## 2026-07-27：Phase 13 strict TypeScript lint gate promotion
+
+- 将 `web/package.json` 的 lint TypeScript 子命令提升为 `tsc --noEmit`，删除 `--skipLibCheck`，使 strict TypeScript baseline 成为日常 Web 门禁。
+- 验证：新的 lint、独立 strict tsc、Web 全量 `33 files / 149 tests`、production build、Compose config 和 diff check 通过；没有新增依赖、lockfile、运行时代码、API 或数据变化。
+- 当前已定义工程路线完成；下一步只能由用户选择新的产品切片，或在外部前置条件具备时进行受控复核。
+
 ## 2026-07-27：Phase 12 Web strict TypeScript baseline
 
 - 将独立 strict TypeScript 从 15 个既有声明错误收敛到 0：项目 callback 使用明确签名，移除未进入编译的同名声明文件，并为 TanStack Query Devtools、goober、Mermaid/type-fest、React Leaflet 与 MarkerCluster 增加窄范围编译期兼容声明。

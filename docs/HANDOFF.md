@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## Phase 13 strict TypeScript lint gate promotion（2026-07-27）
+
+- `pnpm lint` 现在直接执行 `tsc --noEmit && biome check src`，不再依赖 `--skipLibCheck`；这把 Phase 12 的 strict 0-error baseline 纳入项目日常门禁。
+- 验证：新的 lint、显式 strict tsc、Web `33 files / 149 tests`、production build、Compose config 与 diff check 均通过。没有后端改动、依赖/lockfile 改动或运行时行为变化，未重跑 AI Service 全量。
+- 当前已定义的内部工程路线完成。后续无默认实现任务：真实 Phase 11 UI/系统剪贴板复核需要正常 Memos 登录态；route A 仍需要真实受信任 gateway、可见范围映射和回滚条件。
+- 权威交接为 [`docs/handoffs/2026-07-27-strict-lint-gate-handoff.md`](handoffs/2026-07-27-strict-lint-gate-handoff.md)；下一窗口先读取 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)，等待用户选择新切片。不会自动 push。
+
 ## Phase 12 Web strict TypeScript baseline（2026-07-27）
 
 - 独立 strict TypeScript 已由 15 项收敛到 0。修复只涉及 `web/tsconfig.json` 的两个精确 type-resolution paths、项目/第三方 `.d.ts` 兼容声明和 `view.d.ts` 的明确 callback 签名；package、lockfile 与运行时代码均未改变。
