@@ -1,0 +1,116 @@
+{
+  "pack_version": "context-pack-v1",
+  "memos": {
+    "memo-bug": {
+      "memo_id": "memo-bug",
+      "title": "Port mapping failure",
+      "summary": "The service refused connections because the host port was wrong."
+    },
+    "memo-code": {
+      "memo_id": "memo-code",
+      "title": "Port helper",
+      "summary": "The helper validates the configured port before startup."
+    }
+  },
+  "insights": {
+    "insight-bug": {
+      "insight_id": "insight-bug",
+      "memo_id": "memo-bug",
+      "insight_type": "bug",
+      "title": "Wrong host port causes connection refusal",
+      "summary": "The host port mapping was wrong.",
+      "confidence": 0.96,
+      "status": "accepted",
+      "source_refs": ["template.root_cause"],
+      "version": 2,
+      "created_at": "2026-07-14T10:00:00+00:00",
+      "updated_at": "2026-07-14T11:00:00+00:00"
+    },
+    "insight-action": {
+      "insight_id": "insight-action",
+      "memo_id": "memo-code",
+      "insight_type": "action",
+      "title": "Validate the port before merge",
+      "summary": "Add a preflight check before merging the helper.",
+      "confidence": 0.82,
+      "status": "accepted",
+      "source_refs": ["template.description", "template`safe`ref"],
+      "version": 1,
+      "created_at": "2026-07-14T09:00:00+00:00",
+      "updated_at": "2026-07-14T12:00:00+00:00"
+    },
+    "insight-pending": {
+      "insight_id": "insight-pending",
+      "memo_id": "memo-bug",
+      "insight_type": "fact",
+      "title": "Pending fact",
+      "summary": "This must not enter a pack.",
+      "confidence": 0.99,
+      "status": "pending",
+      "source_refs": ["template.title"],
+      "version": 1,
+      "created_at": "2026-07-14T10:00:00+00:00",
+      "updated_at": "2026-07-14T10:00:00+00:00"
+    }
+  },
+  "golden_cases": {
+    "accepted_sorted": {
+      "request": {
+        "question": "What should I know about the port work?",
+        "memo_ids": ["memo-code", "memo-bug", "memo-bug"],
+        "insight_ids": ["insight-action", "insight-bug", "insight-action"],
+        "max_chars": 1200,
+        "max_items": 10
+      },
+      "expected": {
+        "markdown": "# DevMemory Context Pack\n\nQuestion: What should I know about the port work?\n\n## Memo `memo:memo-bug` — Port mapping failure\nSummary: The service refused connections because the host port was wrong.\n\n## Memo `memo:memo-code` — Port helper\nSummary: The helper validates the configured port before startup.\n\n## Insight `insight-bug` — Wrong host port causes connection refusal\n- Memo: `memo-bug` — Port mapping failure\n- Type: bug\n- Confidence: 0.96\n- Summary: The host port mapping was wrong.\n- Source refs: `template.root_cause`\n\n## Insight `insight-action` — Validate the port before merge\n- Memo: `memo-code` — Port helper\n- Type: action\n- Confidence: 0.82\n- Summary: Add a preflight check before merging the helper.\n- Source refs: `template.description`, `template'safe'ref`\n\n",
+        "json": {
+          "items": [
+            {"confidence": null, "insight_id": null, "item_id": "memo:memo-bug", "item_type": "memo", "memo_id": "memo-bug", "source_ids": ["memo:memo-bug"], "summary": "The service refused connections because the host port was wrong.", "title": "Port mapping failure"},
+            {"confidence": null, "insight_id": null, "item_id": "memo:memo-code", "item_type": "memo", "memo_id": "memo-code", "source_ids": ["memo:memo-code"], "summary": "The helper validates the configured port before startup.", "title": "Port helper"},
+            {"confidence": 0.96, "insight_id": "insight-bug", "item_id": "insight-bug", "item_type": "insight", "memo_id": "memo-bug", "source_ids": ["memo:memo-bug", "insight-bug"], "summary": "The host port mapping was wrong.", "title": "Wrong host port causes connection refusal"},
+            {"confidence": 0.82, "insight_id": "insight-action", "item_id": "insight-action", "item_type": "insight", "memo_id": "memo-code", "source_ids": ["memo:memo-code", "insight-action"], "summary": "Add a preflight check before merging the helper.", "title": "Validate the port before merge"}
+          ],
+          "markdown": "# DevMemory Context Pack\n\nQuestion: What should I know about the port work?\n\n## Memo `memo:memo-bug` — Port mapping failure\nSummary: The service refused connections because the host port was wrong.\n\n## Memo `memo:memo-code` — Port helper\nSummary: The helper validates the configured port before startup.\n\n## Insight `insight-bug` — Wrong host port causes connection refusal\n- Memo: `memo-bug` — Port mapping failure\n- Type: bug\n- Confidence: 0.96\n- Summary: The host port mapping was wrong.\n- Source refs: `template.root_cause`\n\n## Insight `insight-action` — Validate the port before merge\n- Memo: `memo-code` — Port helper\n- Type: action\n- Confidence: 0.82\n- Summary: Add a preflight check before merging the helper.\n- Source refs: `template.description`, `template'safe'ref`\n\n",
+          "pack_version": "context-pack-v1",
+          "question": "What should I know about the port work?",
+          "sources": [
+            {"insight_id": null, "memo_id": "memo-bug", "source_id": "memo:memo-bug", "source_refs": [], "source_type": "memo", "title": "Port mapping failure"},
+            {"insight_id": null, "memo_id": "memo-code", "source_id": "memo:memo-code", "source_refs": [], "source_type": "memo", "title": "Port helper"},
+            {"insight_id": "insight-bug", "memo_id": "memo-bug", "source_id": "insight-bug", "source_refs": ["template.root_cause"], "source_type": "insight", "title": "Wrong host port causes connection refusal"},
+            {"insight_id": "insight-action", "memo_id": "memo-code", "source_id": "insight-action", "source_refs": ["template.description", "template'safe'ref"], "source_type": "insight", "title": "Validate the port before merge"}
+          ],
+          "truncated": false,
+          "truncation_reason": null
+        }
+      }
+    },
+    "max_items": {
+      "request": {
+        "question": "What should I know about the port work?",
+        "memo_ids": ["memo-code", "memo-bug", "memo-bug"],
+        "insight_ids": ["insight-action", "insight-bug", "insight-action"],
+        "max_chars": 500,
+        "max_items": 2
+      },
+      "expected": {
+        "markdown": "# DevMemory Context Pack\n\nQuestion: What should I know about the port work?\n\n## Memo `memo:memo-bug` — Port mapping failure\nSummary: The service refused connections because the host port was wrong.\n\n## Memo `memo:memo-code` — Port helper\nSummary: The helper validates the configured port before startup.\n\n",
+        "json": {
+          "items": [
+            {"confidence": null, "insight_id": null, "item_id": "memo:memo-bug", "item_type": "memo", "memo_id": "memo-bug", "source_ids": ["memo:memo-bug"], "summary": "The service refused connections because the host port was wrong.", "title": "Port mapping failure"},
+            {"confidence": null, "insight_id": null, "item_id": "memo:memo-code", "item_type": "memo", "memo_id": "memo-code", "source_ids": ["memo:memo-code"], "summary": "The helper validates the configured port before startup.", "title": "Port helper"}
+          ],
+          "markdown": "# DevMemory Context Pack\n\nQuestion: What should I know about the port work?\n\n## Memo `memo:memo-bug` — Port mapping failure\nSummary: The service refused connections because the host port was wrong.\n\n## Memo `memo:memo-code` — Port helper\nSummary: The helper validates the configured port before startup.\n\n",
+          "pack_version": "context-pack-v1",
+          "question": "What should I know about the port work?",
+          "sources": [
+            {"insight_id": null, "memo_id": "memo-bug", "source_id": "memo:memo-bug", "source_refs": [], "source_type": "memo", "title": "Port mapping failure"},
+            {"insight_id": null, "memo_id": "memo-code", "source_id": "memo:memo-code", "source_refs": [], "source_type": "memo", "title": "Port helper"}
+          ],
+          "truncated": true,
+          "truncation_reason": "max_items"
+        }
+      }
+    }
+  }
+}

@@ -1,117 +1,83 @@
-<div align="center">
-  <p><b>Featured Sponsors</b></p>
-  <table>
-    <tr>
-      <td align="center" width="50%">
-        <a href="https://go.warp.dev/memos" target="_blank" rel="noopener">
-          <picture>
-            <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/warpdotdev/brand-assets/refs/heads/main/Logos/Warp-Wordmark-White.png" />
-            <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/warpdotdev/brand-assets/refs/heads/main/Logos/Warp-Wordmark-Black.png" />
-            <img alt="Warp" height="44" src="https://raw.githubusercontent.com/warpdotdev/brand-assets/refs/heads/main/Logos/Warp-Wordmark-Black.png" />
-          </picture>
-          <br/>
-          <span>Warp is an agentic development environment.</span>
-        </a>
-      </td>
-      <td align="center" width="50%">
-        <a href="https://coderabbit.link/usememos" target="_blank" rel="noopener">
-          <picture>
-            <source media="(prefers-color-scheme: dark)" srcset="https://victorious-bubble-f69a016683.media.strapiapp.com/White_Typemark_79b9189d19.svg" />
-            <source media="(prefers-color-scheme: light)" srcset="https://victorious-bubble-f69a016683.media.strapiapp.com/Orange_Typemark_43bf516c9d.svg" />
-            <img alt="CodeRabbit" height="44" src="https://victorious-bubble-f69a016683.media.strapiapp.com/Orange_Typemark_43bf516c9d.svg" />
-          </picture>
-          <br/>
-          <span>Cut code review time &amp; bugs in half, instantly.</span>
-        </a>
-      </td>
-    </tr>
-  </table>
-</div>
+# DevMemo AI
 
-# Memos
+DevMemo AI is an open-source, self-hosted developer knowledge base built on
+[Memos](https://github.com/usememos/memos). It keeps Memos as the source of
+truth for Memo data and permissions, and adds a separate AI Service for safe,
+reviewable derived insights and Context Packs.
 
-<img align="right" height="96px" src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/logo-rounded.png" alt="Memos" />
+> **Unofficial downstream project.** DevMemo AI is not affiliated with,
+> endorsed by, or supported by the Memos project. See [UPSTREAM.md](UPSTREAM.md)
+> and [NOTICE](NOTICE) for the upstream baseline and attribution.
 
-Open-source, self-hosted note-taking tool built for quick capture. Markdown-native, lightweight, and fully yours.
+## What it does
 
-[![Home](https://img.shields.io/badge/🏠-usememos.com-blue?style=flat-square)](https://usememos.com)
-[![Live Demo](https://img.shields.io/badge/✨-Try%20Demo-orange?style=flat-square)](https://demo.usememos.com/)
-[![Docs](https://img.shields.io/badge/📚-Documentation-green?style=flat-square)](https://usememos.com/docs)
-[![Discord](https://img.shields.io/badge/💬-Discord-5865f2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/tfPJa4UmAv)
-[![Docker Pulls](https://img.shields.io/docker/pulls/neosmemo/memos?style=flat-square&logo=docker)](https://hub.docker.com/r/neosmemo/memos)
+- Keep notes, permissions, and primary storage in Memos.
+- Derive Code Snippet and Bug Report summaries through a separate FastAPI
+  service.
+- Review AI insights before they can appear in a bounded, copyable Context
+  Pack.
+- Run locally by default with deterministic providers and in-memory retrieval;
+  cloud models, FastEmbed, Qdrant, Ollama, indexing, and public chunk retrieval
+  are explicit opt-ins.
 
-<img src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/demo.png" alt="Memos Demo Screenshot" height="512" />
+## Quick start
 
-## Features
+Prerequisites: Docker Desktop with Compose.
 
-- **Instant Capture** — Timeline-first UI. Open, write, done — no folders to navigate.
-- **Total Data Ownership** — Self-hosted on your infrastructure. Notes stored in Markdown, always portable. Zero telemetry.
-- **Radical Simplicity** — Single Go binary, ~20MB Docker image. One command to deploy with SQLite, MySQL, or PostgreSQL.
-- **Open & Extensible** — MIT-licensed with full REST and gRPC APIs for integration.
-
-## Quick Start
-
-### Docker (Recommended)
-
-```bash
-docker run -d \
-  --name memos \
-  -p 5230:5230 \
-  -v ~/.memos:/var/opt/memos \
-  neosmemo/memos:stable
+```powershell
+git clone https://github.com/ToYOhin/devmemo-ai.git
+Set-Location devmemo-ai
+docker compose config
+docker compose up -d --build
 ```
 
-Open `http://localhost:5230` and start writing!
+Open Memos at <http://localhost:5230> and AI Service health at
+<http://localhost:8000/health>.
 
-### Native Binary
+The default deployment keeps `AI_INDEX_ON_WEBHOOK=false`,
+`AI_INDEX_MODE=memo`, `AI_VECTOR_STORE=memory`, and
+`AI_PUBLIC_CHUNK_RETRIEVAL=false`. It does **not** permit private-network
+Webhook targets. Local development that intentionally connects a Memos Webhook
+to the Compose AI Service must use the explicit override documented in
+[README_AI.md](README_AI.md).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/usememos/memos/main/scripts/install.sh | sh
+## Development
+
+```powershell
+# AI Service tests
+Set-Location ai-service
+.\.venv\Scripts\python.exe -m pytest -q tests
+
+# Web checks
+Set-Location ..\web
+pnpm lint
+pnpm test
+pnpm build
 ```
 
-### Try the Live Demo
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. The
+project's current product boundaries and configuration are documented in
+[README_AI.md](README_AI.md).
 
-Don't want to install yet? Try our [live demo](https://demo.usememos.com/) first!
+## Getting help
 
-### Other Installation Methods
+- For DevMemo AI bugs and feature requests, use this repository's issue forms.
+- For setup and usage guidance, read [SUPPORT.md](SUPPORT.md).
+- For security reports, follow [SECURITY.md](SECURITY.md); do not disclose
+  vulnerabilities in public issues.
+- For behavior that is unchanged from upstream Memos, consult the
+  [Memos project](https://github.com/usememos/memos) rather than treating
+  upstream maintainers as DevMemo AI support staff.
 
-- **Docker Compose** - Recommended for production deployments
-- **Pre-built Binaries** - Available for Linux, macOS, and Windows
-- **Kubernetes** - Helm charts and manifests available
-- **Build from Source** - For development and customization
+## Maintainer and governance
 
-See our [installation guide](https://usememos.com/docs/deploy) for detailed instructions.
-
-## Contributing
-
-Contributions are welcome — bug reports, feature suggestions, pull requests, documentation, and translations.
-
-- [Report bugs](https://github.com/usememos/memos/issues/new?template=bug_report.md)
-- [Suggest features](https://github.com/usememos/memos/issues/new?template=feature_request.md)
-- [Submit pull requests](https://github.com/usememos/memos/pulls)
-- [Improve documentation](https://github.com/usememos/dotcom)
-- [Help with translations](https://github.com/usememos/memos/tree/main/web/src/locales)
-
-## Sponsors
-* [**CodeRabbit** - Cut code review time & bugs in half, instantly](https://coderabbit.link/usememos)
-* [**Warp** - The agentic development environment](https://go.warp.dev/memos)
-* [**SSD Nodes** - Affordable VPS hosting for self-hosters](https://ssdnodes.com/?utm_source=memos&utm_medium=sponsor)
-* [**InstaPods** - Get your app online in seconds](https://instapods.com/?utm_source=memos&utm_medium=sponsor) • [Deploy Memos in 30 Seconds](https://instapods.com/apps/memos/?utm_source=memos&utm_medium=sponsor)
-
-Love Memos? [Sponsor us on GitHub](https://github.com/sponsors/usememos) to help keep the project growing!
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=usememos/memos&type=Date)](https://star-history.com/#usememos/memos&Date)
+The project is currently maintained by [@ToYOhin](https://github.com/ToYOhin).
+Decision-making, review, and release expectations are described in
+[GOVERNANCE.md](GOVERNANCE.md). Community expectations are in
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 
-Memos is open-source software licensed under the [MIT License](LICENSE). See our [Privacy Policy](https://usememos.com/privacy) for details on data handling.
-
----
-
-**[Website](https://usememos.com)** • **[Documentation](https://usememos.com/docs)** • **[Demo](https://demo.usememos.com/)** • **[Discord](https://discord.gg/tfPJa4UmAv)** • **[X/Twitter](https://x.com/usememos)**
-
-<a href="https://vercel.com/oss">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
-</a>
+DevMemo AI is distributed under the [MIT License](LICENSE). It contains
+downstream modifications of Memos; the required upstream attribution and
+licensing notices are preserved in [NOTICE](NOTICE).

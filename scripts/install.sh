@@ -2,30 +2,30 @@
 
 set -eu
 
-REPO="${REPO:-usememos/memos}"
-BIN_NAME="memos"
-VERSION="${MEMOS_VERSION:-}"
-INSTALL_DIR="${MEMOS_INSTALL_DIR:-}"
-SKIP_CHECKSUM="${MEMOS_SKIP_CHECKSUM:-0}"
-QUIET="${MEMOS_INSTALL_QUIET:-0}"
+REPO="${REPO:-ToYOhin/devmemo-ai}"
+BIN_NAME="devmemo-ai"
+VERSION="${DEVMEMO_VERSION:-}"
+INSTALL_DIR="${DEVMEMO_INSTALL_DIR:-}"
+SKIP_CHECKSUM="${DEVMEMO_SKIP_CHECKSUM:-0}"
+QUIET="${DEVMEMO_INSTALL_QUIET:-0}"
 
 usage() {
   cat <<'EOF'
-Install Memos from GitHub Releases.
+Install DevMemo AI from GitHub Releases.
 
 Usage:
   install.sh [--version <version>] [--install-dir <dir>] [--repo <owner/name>] [--skip-checksum]
 
 Environment:
-  MEMOS_VERSION         Version to install. Accepts "0.28.1" or "v0.28.1". Defaults to latest release.
-  MEMOS_INSTALL_DIR     Directory to install the binary into.
-  MEMOS_SKIP_CHECKSUM   Set to 1 to skip checksum verification.
-  MEMOS_INSTALL_QUIET   Set to 1 to reduce log output.
-  REPO                  GitHub repository in owner/name form. Defaults to usememos/memos.
+  DEVMEMO_VERSION         Version to install. Accepts "0.1.0" or "v0.1.0". Defaults to latest release.
+  DEVMEMO_INSTALL_DIR     Directory to install the binary into.
+  DEVMEMO_SKIP_CHECKSUM   Set to 1 to skip checksum verification.
+  DEVMEMO_INSTALL_QUIET   Set to 1 to reduce log output.
+  REPO                    GitHub repository in owner/name form. Defaults to ToYOhin/devmemo-ai.
 
 Examples:
-  curl -fsSL https://raw.githubusercontent.com/usememos/memos/main/scripts/install.sh | sh
-  curl -fsSL https://raw.githubusercontent.com/usememos/memos/main/scripts/install.sh | sh -s -- --version 0.28.1
+  curl -fsSL https://raw.githubusercontent.com/ToYOhin/devmemo-ai/main/scripts/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/ToYOhin/devmemo-ai/main/scripts/install.sh | sh -s -- --version 0.1.0
 EOF
 }
 

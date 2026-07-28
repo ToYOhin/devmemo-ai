@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,8 +32,11 @@ const (
 	testPassword = "test"
 
 	// Memos container settings for migration testing.
-	MemosDockerImage   = "neosmemo/memos"
-	StableMemosVersion = "stable" // Always points to the latest stable release
+	MemosDockerImage = "neosmemo/memos"
+	// MigrationFixtureVersion is a pullable upstream image with a schema older
+	// than this checkout. Do not use the floating "stable" tag here: upstream
+	// may advance its schema before this checkout does.
+	MigrationFixtureVersion = "0.26.2"
 
 	mysqlNetworkAlias    = "memos-mysql"
 	postgresNetworkAlias = "memos-postgres"
@@ -320,7 +324,9 @@ func StartMemosContainer(ctx context.Context, cfg MemosContainerConfig) (testcon
 		Env:          env,
 		ExposedPorts: []string{"5230/tcp"},
 		WaitingFor:   MemosStartupWaitStrategy,
-		User:         fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
+	}
+	if runtime.GOOS != "windows" {
+		req.User = fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	}
 
 	// Use local image if specified

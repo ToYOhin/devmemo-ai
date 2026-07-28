@@ -43,6 +43,7 @@ func TestMigrationFromV0262PreservesLegacyData(t *testing.T) {
 	settingBeforeSeed, err := legacyStore.GetInstanceBasicSetting(ctx)
 	require.NoError(t, err)
 	t.Logf("Legacy schema version before migration: %s", settingBeforeSeed.SchemaVersion)
+	require.NoError(t, legacyStore.Close())
 
 	err = container.Terminate(ctx)
 	require.NoError(t, err, "failed to stop v0.26.2 memos container")
@@ -58,6 +59,9 @@ func TestMigrationFromV0262PreservesLegacyData(t *testing.T) {
 	require.Zero(t, count, "v0.26.2 database should not have a STORAGE setting before migration")
 
 	ts := NewTestingStoreWithDSN(ctx, t, driver, hostDSN)
+	t.Cleanup(func() {
+		_ = ts.Close()
+	})
 	err = ts.Migrate(ctx)
 	require.NoError(t, err, "migration from v0.26.2 should succeed for %s", driver)
 

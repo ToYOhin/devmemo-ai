@@ -1,0 +1,30 @@
+{
+  "api_version": "public-chunk-v1",
+  "request": {
+    "question": "Docker port mapping",
+    "limit": 2,
+    "visible_memo_ids": ["memo-a", "memo-b"]
+  },
+  "response": {
+    "api_version": "public-chunk-v1",
+    "index_version": "memo-chunk-v1",
+    "provider": "deterministic",
+    "chunks": [
+      {
+        "memo_id": "memo-a",
+        "chunk_id": "memo-chunk-v1:a:0001",
+        "chunk_index": 1,
+        "score": 0.92,
+        "metadata": {"source_type": "memo_chunk", "title": "Docker ports"}
+      },
+      {
+        "memo_id": "memo-b",
+        "chunk_id": "memo-chunk-v1:b:0000",
+        "chunk_index": 0,
+        "score": 0.8,
+        "metadata": {"source_type": "memo_chunk", "title": "Proxy setup"}
+      }
+    ],
+    "retrieved_count": 2
+  }
+}

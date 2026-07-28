@@ -41,7 +41,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.11.3
-          args: --timeout=3m
+          args: --timeout=5m
 
   tests:
     name: Tests (${{ matrix.test-group }})

@@ -14,6 +14,14 @@ import (
 	teststore "github.com/usememos/memos/store/test"
 )
 
+func newFrontendTestingStore(ctx context.Context, t *testing.T) *store.Store {
+	testStore := teststore.NewTestingStore(ctx, t)
+	t.Cleanup(func() {
+		_ = testStore.Close()
+	})
+	return testStore
+}
+
 func TestFrontendService_CacheHeaderRules(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -73,7 +81,7 @@ func TestFrontendService_CacheHeaderRules(t *testing.T) {
 
 func TestFrontendService_StaticCacheHeaders(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 
 	e := echo.New()
 	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)
@@ -124,7 +132,7 @@ func TestFrontendService_StaticCacheHeaders(t *testing.T) {
 
 func TestFrontendService_MissingAssetDoesNotFallbackToIndex(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 
 	e := echo.New()
 	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)
@@ -138,7 +146,7 @@ func TestFrontendService_MissingAssetDoesNotFallbackToIndex(t *testing.T) {
 
 func TestFrontendService_SkipsDynamicRoutes(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 
 	e := echo.New()
 	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)
@@ -156,7 +164,7 @@ func TestFrontendService_SkipsDynamicRoutes(t *testing.T) {
 
 func TestFrontendService_RobotsTXT(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 	profile := &profile.Profile{
 		InstanceURL: "https://demo.usememos.com/",
 	}
@@ -175,7 +183,7 @@ func TestFrontendService_RobotsTXT(t *testing.T) {
 
 func TestFrontendService_SitemapXML(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 	profile := &profile.Profile{
 		InstanceURL: "https://demo.usememos.com",
 	}
@@ -218,7 +226,7 @@ func TestFrontendService_SitemapXML(t *testing.T) {
 
 func TestFrontendService_SitemapRoutesRequireInstanceURL(t *testing.T) {
 	ctx := context.Background()
-	testStore := teststore.NewTestingStore(ctx, t)
+	testStore := newFrontendTestingStore(ctx, t)
 
 	e := echo.New()
 	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)

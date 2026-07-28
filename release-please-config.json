@@ -6,8 +6,8 @@
   "packages": {
     ".": {
       "release-type": "go",
-      "package-name": "memos",
-      "changelog-path": "CHANGELOG.md",
+      "package-name": "devmemo-ai",
+      "changelog-path": "CHANGELOG_DEVMEMO.md",
       "changelog-sections": [
         {
           "type": "feat",

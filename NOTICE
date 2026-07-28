@@ -1,0 +1,20 @@
+DevMemo AI is an unofficial downstream project based on Memos.
+
+Upstream baseline
+-----------------
+Project: Memos (https://github.com/usememos/memos)
+Baseline: v0.29.1
+Copyright: Copyright (c) 2025 Memos
+License: MIT; the complete license text is in LICENSE.
+
+DevMemo AI additions
+--------------------
+The DevMemo AI-specific documentation, Compose configuration, CI configuration,
+and AI Service additions are maintained by the DevMemo AI contributors and are
+also distributed under the MIT License unless a file states otherwise.
+
+No affiliation
+--------------
+DevMemo AI is not an official Memos release and is not affiliated with,
+endorsed by, or supported by the Memos project. Do not use the Memos name,
+logos, support channels, or container registries to imply that relationship.

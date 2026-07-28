@@ -1,70 +1,32 @@
-# 下一阶段 Prompt：Phase 2c Memos React 模板展示与复制 UI
+# 下一阶段 Prompt：项目完成态与下一切片选择
 
-将下面整段复制到新的 Codex 窗口或下一次任务中：
+~~~text
+Phase 13 and the 2026-07-28 open-source release slices are complete. DevMemo AI has a non-official downstream identity, upstream/MIT notice, community and security files, a safe default Compose path, and DevMemo-owned CI/release/image namespaces. The migration fixture and golangci timeout fixes have passed real PR CI; the GHCR canary and private `v0.1.0-rc.1` prerelease both passed, including runner-side image inspection and six Release assets. The Windows archive checksum, extraction, and `--help` were verified locally at low CPU. A missing `RELEASE_PLEASE_TOKEN` now safely skips optional automatic proposals; manual stable tags remain supported. Public stable release is still NO-GO while the repository is private and private vulnerability reporting is unavailable. Read `docs/handoffs/2026-07-28-rc-release-validation-handoff.md` and `docs/release-preflight.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
-```text
-你正在继续 H:\DevMemoAI 的 DevMemo AI 项目。
+继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
-先读取以下真相源：
-- docs/PROJECT_STATUS.md
-- docs/HANDOFF.md
-- docs/roadmap.md
-- docs/structure.md
-- docs/DOC_UPDATE_POLICY.md
-- docs/DECISIONS.md
-- docs/api.md
-- git status --short --branch
-- git log --oneline -8
+协作模式：单 Agent。只使用 H:\DevMemoAI 主工作树；不要启动 Terra/Luna，也不要并行修改 project4 下的其他 worktree。只有用户明确要求时才 push。
 
-当前已完成：
-- AI Service 已解析并持久化 Code Snippet/Bug Report。
-- memo_templates 按 memo_id 幂等 upsert，保存 payload 和 raw_content。
-- GET /api/ai/templates/{memo_id} 已提供读取 API。
-- AI Service 当前测试为 15 passed。
+先读取：
+1. docs/handoffs/2026-07-28-rc-release-validation-handoff.md
+2. docs/PROJECT_STATUS.md 顶部
+3. docs/HANDOFF.md 顶部
+4. docs/roadmap.md 的发布/后续选择
+5. docs/DECISIONS.md 的 ADR-051 至 ADR-054
+6. 本文件
+7. git status --short --branch 与 git log --oneline -8
 
-当前目标：在 Memos React 前端实现 Phase 2c 的最小模板展示/复制 UI。
+当前完成态：
+- 当前已定义的内部工程路线与本地发布准备切片已完成；没有默认的新实现任务。
+- Phase 10 route B 已完成，不重复。Phase 11 真实详情页/系统剪贴板复核因当前 Chrome profile 无有效 Memos 登录态而未验证，不能写成 pass。
+- route A 仍缺少真实受信任 gateway、Memos 可见范围映射和 rollback 条件；保持 `AI_PUBLIC_CHUNK_RETRIEVAL=false`，不扩展浏览器签名。
+- 默认保持 deterministic + memory、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`、`AI_VECTOR_STORE=memory`。
 
-本次只做一个可验证垂直切片：
-1. 先定位现有 Memo 详情/展示组件、React Query/Connect 数据层和既有复制按钮模式。
-2. 新增一个独立的 AI template client/hook，读取 AI Service 的 GET /api/ai/templates/{memo_id}。
-3. 使用显式配置 `VITE_AI_SERVICE_URL`；未配置或请求失败时不影响 Memo 页面和普通 Markdown 展示。
-4. Code Snippet 展示 title、language、description、tags、代码块和复制按钮。
-5. Bug Report 展示 title、environment、error、reproduction_steps、root_cause、solution。
-6. 复制按钮使用浏览器 Clipboard API，并提供失败/成功的可见反馈；不引入新的编辑器或高亮库，优先复用 Memos 现有 Markdown/highlight 能力。
-7. 用 feature flag 或安全默认值控制新区域，默认 AI Service 不可用时隐藏/降级。
+在用户明确选择前：只回答、诊断或准备无副作用的提案；不得自行实现新功能、修改 API/数据库/依赖、启动外部 profile、创建或修改 Memo/Insight、提取 token、绕过认证，或把历史证据冒充为新验收。也不得重新把私网 Webhook 放行写入默认 Compose、复用上游发布命名空间，或跳过既有 CI/发布前置条件。未经明确授权，不得 push、改仓库可见性、设置长期 PAT secret、打 tag 或发版。
 
-不要做：
-- 不修改 Memos server/store/proto。
-- 不加入 Qdrant、FastEmbed、RAG、AI chat。
-- 不让 React 直接访问 SQLite。
-- 不大范围重写 MemoEditor、React Query 或路由。
-- 不为了 UI 引入 LangChain、LlamaIndex、CodeMirror 等新依赖。
-
-实现要求：
-- 遵循 AGENTS.md 的 React/TypeScript/Biome/React Query 约定。
-- 组件、hook、API client 使用清晰的 AI feature 目录，避免散落到上游通用组件。
-- 先写 API client/hook 测试或 mock，再接 UI；每一步先验证。
-- 如果跨端口请求需要 CORS，只做最小配置，并记录决策，不修改 Memos 核心。
-
-验证命令：
-- powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-devmemo.ps1
-- cd web; pnpm lint
-- cd web; pnpm test
-- cd web; pnpm build
-- git diff --check
-
-完成条件：
-- Code Snippet 和 Bug Report UI 在有数据时可展示。
-- 复制按钮有成功和失败反馈。
-- AI Service 不可用、404、普通 Memo 时页面不报错、不影响原有内容。
-- 新增 frontend tests；当前 AI Service 15 个测试仍全部通过。
-- 更新 docs/PROJECT_STATUS.md、docs/CHANGELOG_AI.md、docs/HANDOFF.md。
-- 更新本文件为下一阶段 Prompt，并同步 docs/prompts/NEW_WINDOW_PROMPT.md 的默认阶段描述。
-- 如 API/结构/决策变化，同步 docs/api.md、docs/structure.md、docs/DECISIONS.md。
-- 形成独立 commit，并报告真实验证结果和未验证项。
-
-停止条件：
-- 需要修改 Memos 核心 API 或数据库才能继续时，先停下并报告具体文件和影响。
-- 前端依赖安装/构建因网络阻塞时，记录命令和证据，不把环境问题写成代码失败。
-- 发现现有 UI 没有稳定的详情入口时，先做最小可访问的 memo detail surface，不自行扩大为完整 AI 助手页面。
-```
+可选的下一切片（必须由用户选择）：
+1. 有正常 Memos 登录会话时，对 Phase 11 做只读 UI/系统剪贴板复核。
+2. 有真实 gateway、visibility mapping 与 rollback 条件时，评估 route A 的独立受控 rollout。
+3. 选择一个新的受控产品功能目标并先写最小 proposal/验收边界。
+4. 选择发布准备收尾：由维护者先完成 `docs/release-preflight.md` 的外部仓库设置；随后单独授权公开可见性、稳定 tag 或正式发布。不得把现有私有 RC 当作正式发布。
+~~~

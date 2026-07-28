@@ -1,6 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useInstance } from "@/contexts/InstanceContext";
+import AiMemoContextPack from "@/features/ai/AiMemoContextPack";
+import AiMemoInsights from "@/features/ai/AiMemoInsights";
+import AiMemoSummary from "@/features/ai/AiMemoSummary";
+import AiMemoTemplate from "@/features/ai/AiMemoTemplate";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useUser } from "@/hooks/useUserQueries";
 import { findTagMetadata } from "@/lib/tag";
@@ -42,6 +46,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
   const location = useLocation();
   const isInMemoDetailPage = location.pathname.startsWith(`/${memoData.name}`) || location.pathname.startsWith("/memos/shares/");
   const showCommentPreview = !isInMemoDetailPage && computeCommentAmount(memoData) > 0;
+  const memoId = memoData.name.split("/").pop() || memoData.name;
 
   useEffect(() => {
     const card = cardRef.current;
@@ -124,6 +129,15 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
       <MemoHeader showCreator={showCreator} showVisibility={showVisibility} showPinned={showPinned} />
 
       <MemoBody compact={compact} />
+
+      {isInMemoDetailPage && (
+        <>
+          <AiMemoTemplate memoId={memoId} />
+          <AiMemoInsights memoId={memoId} />
+          <AiMemoContextPack memoId={memoId} memoTitle={memoData.property?.title || memoId} />
+          <AiMemoSummary memoId={memoId} title={memoData.property?.title ?? ""} content={memoData.content} tags={memoData.tags ?? []} />
+        </>
+      )}
 
       <PreviewImageDialog
         open={previewState.open}

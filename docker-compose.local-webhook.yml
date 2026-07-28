@@ -1,0 +1,6 @@
+# Local development override only. It permits a Memos user Webhook to reach the
+# ai-service Compose hostname, which resolves to a private Docker address.
+# Do not include this file in public or multi-user deployments.
+services:
+  memos:
+    command: ["--allow-private-webhooks"]
