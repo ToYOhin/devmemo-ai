@@ -319,3 +319,9 @@ DevMemo AI 是基于 Memos 的非官方下游项目。发布说明必须同时�
 默认 Compose 禁止 Memos 私网 Webhook 目标。只有受控本机开发需要访问 Docker service hostname 时，才可显式叠加 `docker-compose.local-webhook.yml`；公共或多用户部署不得使用该 override。该部署拆分不改变 Memos 权限事实源、AI 默认 deterministic + memory、Webhook/API/SQLite、Context Pack 或 `AI_PUBLIC_CHUNK_RETRIEVAL=false`。
 
 CI 和发布资产使用 `devmemo-ai` 与 `ghcr.io/${github.repository_owner}/devmemo-ai` 命名空间，并对 AI Service 增加独立 pytest 与 Compose-config 检查。正式 release 仍必须先取得可用的发布凭据/包权限、私有漏洞报告通道、通过的既有后端 CI 以及真实仓库发布证据；任何一项缺失时都不得发布、推送稳定标签或把文档中的预期命名空间宣称为已发布资产。
+
+## ADR-054：迁移 CI 使用固定兼容 fixture，linter 超时不得掩盖零问题结果
+
+`store/test` 的迁移兼容测试不得使用浮动的 `neosmemo/memos:stable` 镜像。上游 stable 可在本项目未同步 schema migration 时前进，形成“当前代码尝试降级未来数据库”的无效失败。测试改用固定、可拉取的 `neosmemo/memos:0.26.2` fixture，并验证 SQLite schema 从 `0.26.5` 迁移到当前 `0.28.1` 后仍可写入数据。该 fixture 只用于测试，不改变默认 Compose 镜像、运行时升级策略或上游归属。
+
+远端 golangci-lint 已在 `0 issues` 后因固定三分钟 timeout 失败，因此 action timeout 增至五分钟。它不放宽 lint 规则、跳过检查或改变 Go 编译/运行时。完整 Store 驱动矩阵和真实 GitHub Actions 仍须在维护者授权 push 后重新验证；本机低 CPU 检查只证明固定 SQLite 迁移路径。

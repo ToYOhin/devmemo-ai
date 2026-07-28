@@ -1,5 +1,12 @@
 # DevMemo AI 当前交接
 
+## 发布前 CI 收敛（2026-07-28）
+
+- PR #1 的 Store migration 失败来自浮动 `stable` 镜像生成 schema `0.30.1`，高于当前源码的 `0.28.1`；测试已改为固定、可拉取的 `neosmemo/memos:0.26.2` fixture。低 CPU SQLite 实测从 `0.26.5` 迁移到 `0.28.1` 成功，并通过写入校验。
+- golangci-lint 曾在 `0 issues` 后仍触发三分钟 action timeout；工作流现使用 `--timeout=5m`。本地没有 golangci-lint 二进制，尚未运行该 action 本身；工作流 YAML 已解析。
+- 维护者仍需完成 GitHub 外部动作：创建并保存 `RELEASE_PLEASE_TOKEN`，决定公开可见性后启用/验证私密漏洞报告渠道，push 当前提交并观察真实 CI、release asset 与 GHCR。当前 secrets 列表为 0，仓库仍为 private；不得假称这些外部条件已完成。
+- 为遵守本机 CPU 限制，全驱动 Store 门禁未完成；只完成一条串行迁移 fixture 测试。精确清单见 [`docs/release-preflight.md`](release-preflight.md)，权威交接为 [`docs/handoffs/2026-07-28-release-ci-preflight-handoff.md`](handoffs/2026-07-28-release-ci-preflight-handoff.md)。不自动 push、改可见性、打 tag 或发版。
+
 ## 开源发布基础设施（2026-07-28）
 
 - 已完成一个不增加产品功能的发布基础设施切片：DevMemo 自有身份、MIT/上游 NOTICE、贡献/支持/治理/行为准则、安全报告入口、默认安全部署拆分，以及自有 CI/镜像/发布资产命名空间。

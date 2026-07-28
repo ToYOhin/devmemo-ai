@@ -1,5 +1,12 @@
 # DevMemo AI 项目状态
 
+## 发布前 CI 收敛与外部前置清单（2026-07-28）
+
+- 已修复远端 PR #1 的两个已证实 CI 根因：`store/test` 不再使用会漂移到未来 schema 的 `neosmemo/memos:stable`，而是使用可拉取的 `0.26.2` 迁移 fixture；golangci-lint 从 `3m` 调整为 `5m`，避免已经报告 `0 issues` 时仍因硬超时失败。
+- 真实、低负载迁移验证通过：SQLite fixture schema `0.26.5` 串行迁移到当前 `0.28.1`，并验证可写入数据。工作流 YAML 解析与 `git diff --check` 通过。为限制本机 CPU，没有重跑 MySQL/PostgreSQL 全驱动 store 门禁；远端 CI 必须在后续 push 后重新验证。
+- GitHub 只读复核：仓库仍为私有，Actions secrets 数为 `0`，因此 `RELEASE_PLEASE_TOKEN` 尚未配置；默认 workflow token 权限为 read，但 release/package 作业已有自己的最小写权限。私有仓库的 private vulnerability reporting API 当前无法确认启用，不能宣称已具备公开报告渠道。
+- 发布仍为 NO-GO，直到维护者配置 release token、决定并完成公开可见性/私有漏洞报告渠道、push 后通过真实 CI，并验证 GitHub Release/GHCR 资产。操作清单见 [`docs/release-preflight.md`](release-preflight.md)，接管记录见 [`docs/handoffs/2026-07-28-release-ci-preflight-handoff.md`](handoffs/2026-07-28-release-ci-preflight-handoff.md)。
+
 ## 开源发布基础设施：身份、社区、默认部署与 CI 命名空间（2026-07-28）
 
 - 本仓库现明确为非官方的 DevMemo AI 下游项目：新增 `NOTICE`、`UPSTREAM.md`、`GOVERNANCE.md`、`SUPPORT.md`、`CODE_OF_CONDUCT.md` 与贡献说明；README 覆盖项目用途、起步方式、获取帮助、维护者、上游关系和许可证边界。`MIT` 许可证继续适用于本项目与上游兼容范围，未暗示与 Memos 官方关联。

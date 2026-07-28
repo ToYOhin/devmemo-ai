@@ -118,18 +118,19 @@ func TestMigrationMultipleReRuns(t *testing.T) {
 	require.Equal(t, initialVersion, finalVersion, "version should remain unchanged after multiple re-runs")
 }
 
-// TestMigrationFromStableVersion verifies that upgrading from a stable Memos version
-// to the current version works correctly. This is the critical upgrade path test.
+// TestMigrationFromPinnedFixtureVersion verifies that upgrading from the
+// pinned upstream fixture schema to the current version works correctly. This
+// is the critical upgrade path test.
 //
 // Test flow:
-// 1. Start a stable Memos container to create a database with the old schema
+// 1. Start the pinned Memos fixture container to create an old-schema database
 // 2. Stop the container and wait for cleanup
 // 3. Use the store directly to run migration with current code
 // 4. Verify the migration succeeded and data can be written
 //
 // Note: This test is skipped when running with -race flag because testcontainers
 // has known race conditions in its reaper code that are outside our control.
-func TestMigrationFromStableVersion(t *testing.T) {
+func TestMigrationFromPinnedFixtureVersion(t *testing.T) {
 	// Skip for non-SQLite drivers (simplifies the test)
 	if getDriverFromEnv() != "sqlite" {
 		t.Skip("skipping upgrade test for non-sqlite driver")
@@ -140,22 +141,22 @@ func TestMigrationFromStableVersion(t *testing.T) {
 	ctx := context.Background()
 	dataDir := t.TempDir()
 
-	// 1. Start stable Memos container to create database with old schema
+	// 1. Start pinned Memos fixture container to create database with old schema.
 	cfg := MemosContainerConfig{
 		Driver:  "sqlite",
 		DataDir: dataDir,
-		Version: StableMemosVersion,
+		Version: MigrationFixtureVersion,
 	}
 
-	t.Logf("Starting Memos %s container to create old-schema database...", cfg.Version)
+	t.Logf("Starting pinned Memos %s container to create old-schema database...", cfg.Version)
 	container, err := StartMemosContainer(ctx, cfg)
-	require.NoError(t, err, "failed to start stable memos container")
+	require.NoError(t, err, "failed to start pinned memos container")
 
 	// Wait for the container to fully initialize the database
 	time.Sleep(10 * time.Second)
 
 	// Stop the container gracefully
-	t.Log("Stopping stable Memos container...")
+	t.Log("Stopping pinned Memos fixture container...")
 	err = container.Terminate(ctx)
 	require.NoError(t, err, "failed to stop memos container")
 
@@ -174,7 +175,8 @@ func TestMigrationFromStableVersion(t *testing.T) {
 	// Get the schema version before migration
 	oldSetting, err := ts.GetInstanceBasicSetting(ctx)
 	require.NoError(t, err)
-	t.Logf("Old schema version: %s", oldSetting.SchemaVersion)
+	oldSchemaVersion := oldSetting.SchemaVersion
+	t.Logf("Old schema version: %s", oldSchemaVersion)
 
 	// 3. Run migration with current code
 	t.Log("Running migration with current code...")
@@ -203,5 +205,5 @@ func TestMigrationFromStableVersion(t *testing.T) {
 	require.NoError(t, err, "should create memo after migration")
 	require.Equal(t, "Content after upgrade from stable", memo.Content)
 
-	t.Logf("Migration successful: %s -> %s", oldSetting.SchemaVersion, newVersion)
+	t.Logf("Migration successful: %s -> %s", oldSchemaVersion, newVersion)
 }
