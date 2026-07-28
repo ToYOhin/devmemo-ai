@@ -1,5 +1,13 @@
 # DevMemo AI 项目状态
 
+## 公开稳定发布完成，GHCR 包可见性待收尾（2026-07-28）
+
+- [v0.1.0](https://github.com/ToYOhin/devmemo-ai/releases/tag/v0.1.0) 已作为稳定 GitHub Release 发布，指向 `main` 的 `75ce0de5e69eddd66bdab15f2b6bf278a222ad6f`；Release workflow 成功构建六个原生资产、`checksums.txt` 与 `v0.1.0`/`0.1`/`stable` 多架构镜像标签。
+- Windows 稳定 ZIP 已低负载复核：SHA-256 `fbb406355fdae63707585d59557374e51064be40bd8496bd26cf9cd5b40b054f` 与 Release 清单一致，解压后的 `devmemo-ai.exe --help` 成功。产物保留在 `H:\codex-output\devmemo-stable-asset-verify-20260728`。
+- 仓库已由 private 改为 public，GitHub private vulnerability reporting 已启用并读取到 `enabled=true`。Release Please 没有专用 PAT 时安全跳过；手工稳定 tag/release 继续是受支持路径。
+- 仍有一个发布可用性缺口：`ghcr.io/toyohin/devmemo-ai:stable` 的 Container package 独立于仓库，当前仍为 private，匿名 inspect 返回 401。当前 GitHub CLI OAuth token 缺少 `read/write:packages`，且浏览器会话无法完成交互式授权，因此尚未能把该 package 改为 public；不得把 runner-side registry inspect 误写为匿名拉取通过。
+- 最新交接与唯一剩余动作见 [`docs/handoffs/2026-07-28-public-release-handoff.md`](handoffs/2026-07-28-public-release-handoff.md)。产品默认与安全边界不变。
+
 ## 真实 GitHub CI、GHCR 与 RC 发布资产验证（2026-07-28）
 
 - 已推送 `codex/devmemo-ai-mvp`，PR #1 的 Backend、Frontend 与 AI Service Actions 均为绿色；Store 的 SQLite/MySQL/PostgreSQL 驱动矩阵和 golangci-lint 均在真实 GitHub runner 通过。
