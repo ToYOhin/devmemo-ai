@@ -13,7 +13,7 @@
 - 手动 GHCR canary 已通过 amd64/arm64 构建、manifest 合并和 runner-side `imagetools inspect`；首次运行暴露并修复了 OCI repository 大小写限制。
 - 私有 RC `v0.1.0-rc.1` 已成功生成六个原生二进制、`checksums.txt` 与多架构镜像；Windows ZIP 的 SHA-256、解压和 `devmemo-ai.exe --help` 已本机低负载复核。
 - 稳定 `v0.1.0` 已发布，六个原生二进制、`checksums.txt` 与 `v0.1.0`/`0.1`/`stable` 多架构镜像标签均由 Release workflow 成功生成；稳定 Windows ZIP 已独立校验 SHA-256、解压和 `--help`。
-- 仓库已公开，GitHub private vulnerability reporting 已启用。Container package 仍须单独改为 public；仓库可见性不会自动改变已发布 GHCR package 的可见性。
+- 仓库已公开，GitHub private vulnerability reporting 已启用。独立 Container package 已单独设为 public；仓库可见性本身不会自动改变已发布 GHCR package 的可见性。
 
 ## 维护者必须完成的 GitHub 设置
 
@@ -29,10 +29,10 @@
 3. 若配置了该可选 token，确认 Release Please 只生成 DevMemo AI 自有版本、changelog 和 tag 提案；未配置时确认 workflow 的安全跳过不影响手工稳定发布。
 4. 只有用户明确授权发布后，才创建或接受稳定版本 tag；随后确认 GitHub Release 资产的二进制名为 `devmemo-ai`、GHCR 镜像位于 `ghcr.io/toyohin/devmemo-ai`、安装脚本校验和可用，并记录回滚步骤。`v0.1.0-rc.1` 已作为私有 prerelease 验证资产链路，不能替代正式发布批准。
 
-## 发布后唯一待完成项
+## 发布后可用性复核（已完成）
 
-1. 使用拥有 GitHub Packages 管理权限的会话，将 `https://github.com/ToYOhin/devmemo-ai/pkgs/container/devmemo-ai/settings` 的 package visibility 改为 Public；该操作会使 `ghcr.io/toyohin/devmemo-ai` 允许匿名 pull。
-2. 以未登录 Docker 客户端复核 `docker buildx imagetools inspect ghcr.io/toyohin/devmemo-ai:stable`，确认可见 amd64、arm64 与 arm/v7 manifest。不要把仓库公开、runner-side inspect 或认证拉取当作这一步的替代证据。
+1. 维护者已将 `https://github.com/users/ToYOhin/packages/container/devmemo-ai/settings` 的 package visibility 设为 Public。
+2. 未登录 Docker 客户端已成功执行 `docker buildx imagetools inspect ghcr.io/toyohin/devmemo-ai:stable`，确认 OCI index digest `sha256:86a099ceb6e8752aceec8517574840ec0df97730945d0843b5b0305df782dd06` 公开列出 `linux/amd64`、`linux/arm64` 与 `linux/arm/v7` manifest。仓库公开、runner-side inspect 或认证拉取均不替代这项匿名证据。
 
 ## 保持不变的产品边界
 

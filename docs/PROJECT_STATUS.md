@@ -1,12 +1,19 @@
 # DevMemo AI 项目状态
 
-## 公开稳定发布完成，GHCR 包可见性待收尾（2026-07-28）
+## 当前结构复核与新窗口入口（2026-07-28）
+
+- 实时源码复核确认：Memos Go server/store/proto 是 Memo 原始数据、身份与权限的事实源；独立 FastAPI AI Service 只保存派生 SQLite 状态；Web 入口是 Memo 详情页中的 `AiMemoInsights` 与 `AiMemoContextPack`。Context Pack 继续只在浏览器内存生成，accepted-only、显式来源且不暴露 raw content、Webhook payload、secret 或 chunk content。
+- 默认不变：deterministic + memory、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`、`AI_VECTOR_STORE=memory`、`AI_PUBLIC_CHUNK_RETRIEVAL=false`；Memos/AI 默认 CPU 上限分别为 `0.75`/`0.25`，Qdrant/Ollama 是显式 profile。
+- `graphify-out/graph.json` 仍停留在 2026-07-12，未覆盖近期 AI Inbox/Context Pack，不能作为结构事实源。结构判断以实时源码与 `docs/structure.md` 为准。
+- 仓库与 `v0.1.0` GitHub Release 已公开，private vulnerability reporting 已启用；独立 GHCR package 也已公开，匿名 `stable` inspect 已确认 `linux/amd64`、`linux/arm64` 与 `linux/arm/v7`。完整结构、发行闭环和后续受控选择见 [`docs/handoffs/2026-07-28-ghcr-public-closeout-handoff.md`](handoffs/2026-07-28-ghcr-public-closeout-handoff.md)，新窗口使用 [`docs/prompts/NEXT_STAGE_PROMPT.md`](prompts/NEXT_STAGE_PROMPT.md)。
+
+## 公开稳定发布与 GHCR 匿名拉取闭环（2026-07-28）
 
 - [v0.1.0](https://github.com/ToYOhin/devmemo-ai/releases/tag/v0.1.0) 已作为稳定 GitHub Release 发布，指向 `main` 的 `75ce0de5e69eddd66bdab15f2b6bf278a222ad6f`；Release workflow 成功构建六个原生资产、`checksums.txt` 与 `v0.1.0`/`0.1`/`stable` 多架构镜像标签。
 - Windows 稳定 ZIP 已低负载复核：SHA-256 `fbb406355fdae63707585d59557374e51064be40bd8496bd26cf9cd5b40b054f` 与 Release 清单一致，解压后的 `devmemo-ai.exe --help` 成功。产物保留在 `H:\codex-output\devmemo-stable-asset-verify-20260728`。
 - 仓库已由 private 改为 public，GitHub private vulnerability reporting 已启用并读取到 `enabled=true`。Release Please 没有专用 PAT 时安全跳过；手工稳定 tag/release 继续是受支持路径。
-- 仍有一个发布可用性缺口：`ghcr.io/toyohin/devmemo-ai:stable` 的 Container package 独立于仓库，当前仍为 private，匿名 inspect 返回 401。当前 GitHub CLI OAuth token 缺少 `read/write:packages`，且浏览器会话无法完成交互式授权，因此尚未能把该 package 改为 public；不得把 runner-side registry inspect 误写为匿名拉取通过。
-- 最新交接与唯一剩余动作见 [`docs/handoffs/2026-07-28-public-release-handoff.md`](handoffs/2026-07-28-public-release-handoff.md)。产品默认与安全边界不变。
+- 维护者 GitHub 会话已将独立 Container package 设为 public。未登录 Docker 客户端执行 `docker buildx imagetools inspect ghcr.io/toyohin/devmemo-ai:stable` 成功，OCI index digest 为 `sha256:86a099ceb6e8752aceec8517574840ec0df97730945d0843b5b0305df782dd06`，并列出 `linux/amd64`、`linux/arm64` 与 `linux/arm/v7`（另有各平台 attestation manifest）。
+- 这完成了发行后的唯一可用性缺口；没有重打 tag、重发 Release、改动产品配置或保存 Packages token。后续没有默认实现任务，需由用户明确选择下一切片。权威交接见 [`docs/handoffs/2026-07-28-ghcr-public-closeout-handoff.md`](handoffs/2026-07-28-ghcr-public-closeout-handoff.md)。
 
 ## 真实 GitHub CI、GHCR 与 RC 发布资产验证（2026-07-28）
 
