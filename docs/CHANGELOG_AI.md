@@ -30,7 +30,7 @@
 ## 2026-07-20：Phase 10 route B 真实参与者反馈完成
 
 - 记录既有非敏感 Bug Report 的四项真实参与者反馈：来源清晰、accepted Review 可信、`64` 字符预算有用、Markdown/JSON 复制符合预期。
-- 新增 [`docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`](handoffs/2026-07-20-devmemory-real-feedback-evidence.md)，将反馈与已验证的 webhook、Context Pack 和 Chrome/Windows 剪贴板证据关联；不记录原始 Memo、ID、payload、secret 或 chunk content。
+- 记录真实参与者反馈与已验证的 webhook、Context Pack 和 Chrome/Windows 剪贴板证据关联；不记录原始 Memo、ID、payload、secret 或 chunk content。
 - route B 完成；没有创建/删除 Memo、没有再次改变 Insight 状态、没有执行 delete/revoke，也没有启用 public chunk 或修改公共 chat/Memos 核心。
 
 ## 2026-07-20：Phase 10 route B Context Pack Chrome/Windows 复制复核
@@ -53,7 +53,7 @@
 
 - 已在认证 Memos UI 保存一条非敏感测试 Bug Report，并在详情页确认 Context Pack 入口；不记录 Memo ID 或原文。
 - 保存后只读 lifecycle aggregate 仍为 `memo_insights=0` 和一个既有 `processed` webhook event，故严格停在 Capture。没有 accept/reject、pack 生成/预算截断、复制、删除/撤销或人工反馈 pass。
-- 新增 [`docs/handoffs/2026-07-20-devmemory-feedback-capture-blocked.md`](handoffs/2026-07-20-devmemory-feedback-capture-blocked.md)；下一步只能先低 CPU、只读诊断正常集成是否能为该现有测试 Memo 产生 Insight，不能再创建测试 Memo 或 seed SQLite。
+- 记录受控 capture 观察的阻塞边界；后续只能先低 CPU、只读诊断正常集成是否能为现有测试 Memo 产生 Insight，不能创建测试 Memo 或 seed SQLite。
 
 ## 2026-07-20：Phase 10 route B execution authorization
 
@@ -69,13 +69,13 @@
 
 ## 2026-07-20：Phase 10 route B real-feedback plan
 
-- 新增 [`docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`](handoffs/2026-07-20-devmemory-real-feedback-plan.md)，把下一步限定为一位在场且同意的真实参与者完成一次 Bug Report `Capture -> Insight -> Review -> Context Pack`。
+- 将后续真实反馈限定为一位在场且同意的参与者完成一次 Bug Report `Capture -> Insight -> Review -> Context Pack`。
 - 计划明确登录态/SQLite 对齐、安全摘要、accept/reject、revoke/delete、预算截断、Chrome Markdown/JSON 复制、四项人工反馈问题和停止条件；无参与者、无 Insight、状态不一致或异常时只记录阻塞，不伪造闭环。
 - 没有运行时代码/API/配置变化，`AI_PUBLIC_CHUNK_RETRIEVAL=false`、公共 chat、Memos 核心和 collection/volume 不变。
 
 ## 2026-07-20：Phase 10 DevMemory feedback observation boundary
 
-- 选择 route B，仅以只读方式观察已登录本地 Memos 中的一个真实 Bug Report capture；新增 [`docs/handoffs/2026-07-20-devmemory-feedback-observation.md`](handoffs/2026-07-20-devmemory-feedback-observation.md) 记录可复核事实与未验证边界。
+- 选择 route B，仅以只读方式观察已登录本地 Memos 中的一个真实 Bug Report capture，并记录可复核事实与未验证边界。
 - Compose/AI health 正常，匿名 Memos `auth/me` 为 `401`；只读 lifecycle report 的 AI SQLite aggregate 为 `memo_insights=0`、一个 processed webhook event。后续只读 Chrome 复核已正确渲染空 `/inbox`；先前旧 Memo body 为不可复现的陈旧观察，仍不把页面历史展示写成 accepted/rejected 的持久化证据。
 - 定向回归：MemoInsight、Context Pack builder/golden 与 lifecycle report `15 passed`。没有执行 accept/reject、删除/撤销、预算截断、复制或任何持久化变更；无人工参与者反馈，不能视为完整 DevMemory feedback pass。
 - 完整 AI Service 与 `scripts/verify-devmemo.ps1` 均为 `187 passed`（保留既有 Starlette/httpx 弃用警告），Compose config 通过。文档切片后按用户 CPU 节制要求未重跑 Web test/build/lint；strict TypeScript 仍为既有 13 项依赖声明/`src/types/view.d.ts` 错误。
@@ -134,7 +134,7 @@
 
 - 新增下一阶段方向：AI Inbox + Decision Ledger，将 Memo 派生为可审核、可撤销、可追溯的 fact/decision/action/bug insight。
 - 对比 Memos、Khoj、AnythingLLM、AFFiNE、Logseq、Outline 后，确定不复制第三方源码、不引入通用 agent 平台，优先构建 provenance + approval + temporal lifecycle 差异化。
-- `docs/prompts/NEXT_STAGE_PROMPT.md` 已切换到 Phase 9；Phase 8 public chunk API 仍保持 pending approval。
+- 阶段规划已切换到 Phase 9；Phase 8 public chunk API 仍保持 pending approval。
 
 ### Phase 9a：AI Inbox / Decision Ledger 首个垂直切片
 
@@ -196,7 +196,7 @@
 
 ### 单 Agent 接管模式
 - 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。
-- 新增 `docs/handoffs/2026-07-14-single-agent-handoff.md`，固化当前结构、验证基线、未完成项和新窗口接管步骤。
+- 记录当时的单 Agent 结构、验证基线与未完成项。
 
 ### Phase 5e：chunk 检索与可观测性收敛
 - 新增 provider-neutral `ChunkIndexStateStats`/`ChunkIndexHealth`，对照 VectorStore 点数与 SQLite 登记状态。

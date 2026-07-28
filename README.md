@@ -84,21 +84,9 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 
 若在受控的本机 Docker 开发环境中明确需要 Memos Webhook 指向 `ai-service`，请使用 [README_AI.md](README_AI.md) 中的 `docker-compose.local-webhook.yml` override。不要将该 override 用于公网或多用户部署。
 
-### 开发与验证
+### 进一步了解
 
-```powershell
-# AI Service tests
-Set-Location ai-service
-.\.venv\Scripts\python.exe -m pytest -q tests
-
-# Web checks
-Set-Location ..\web
-pnpm lint
-pnpm test
-pnpm build
-```
-
-请优先执行与改动相关的最小检查。配置、架构与 AI 能力说明见 [README_AI.md](README_AI.md)；贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+部署配置、可选 AI 适配器与本地 Webhook override 见 [README_AI.md](README_AI.md)。欢迎按照 [CONTRIBUTING.md](CONTRIBUTING.md) 参与贡献。
 
 ### 支持、安全与治理
 
@@ -218,23 +206,11 @@ target `ai-service`, use the `docker-compose.local-webhook.yml` override
 documented in [README_AI.md](README_AI.md). Do not use that override for a
 public or multi-user deployment.
 
-### Development and verification
+### Further reading
 
-```powershell
-# AI Service tests
-Set-Location ai-service
-.\.venv\Scripts\python.exe -m pytest -q tests
-
-# Web checks
-Set-Location ..\web
-pnpm lint
-pnpm test
-pnpm build
-```
-
-Run the smallest relevant check first. [README_AI.md](README_AI.md) documents
-the AI configuration and architecture; [CONTRIBUTING.md](CONTRIBUTING.md)
-describes the contribution workflow.
+[README_AI.md](README_AI.md) documents deployment configuration, optional AI
+adapters, and the local Webhook override. Contributions are welcome through
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Support, security, and governance
 

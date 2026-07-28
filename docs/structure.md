@@ -27,11 +27,9 @@ H:\DevMemoAI/
 
 ## Memos 核心边界
 
-## 单 Agent 开发入口
+## 对外文档与部署边界
 
-当前源码唯一开发入口是 `H:\DevMemoAI` 主工作树。`docs/handoffs/` 保存可复用的接管快照；Phase 10 的历史观察/阻塞记录保留在 `2026-07-20-devmemory-feedback-observation.md` 与 `2026-07-20-devmemory-feedback-capture-blocked.md`，其后续真实本地 Webhook 证据在 `2026-07-20-devmemory-feedback-webhook-evidence.md`，Context Pack 浏览器恢复及 Chrome/Windows clipboard 证据在 `2026-07-20-devmemory-context-pack-browser-evidence.md`，route-B 真实参与者反馈完成记录在 `2026-07-20-devmemory-real-feedback-evidence.md`。Phase 11 的复制就绪 UI、验证与认证阻塞记录在 `2026-07-27-context-pack-copy-readiness-handoff.md`；结构接管入口为 `2026-07-27-project-structure-handoff.md`；Phase 12 strict TypeScript 完成态在 `2026-07-27-web-strict-typescript-handoff.md`。这些文件只记录证据边界与流程，不引入运行时结构。`web/.env.example` 是本地 Vite 的可复制端点样例；实际 `.env.local` 被忽略且不保存 secret。`docs/prompts/NEW_WINDOW_PROMPT.md` 是新窗口总入口，`docs/prompts/NEXT_STAGE_PROMPT.md` 是当前阶段执行 Prompt。`C:\Users\HP\Documents\project4\devmemo-ai-workspace` 是本机历史 worktree 编排目录，不属于运行时结构，也不作为默认并行开发入口。
-
-开源发布基础设施的权威交接为 `docs/handoffs/2026-07-28-open-source-release-foundation-handoff.md`。根目录的 `README.md`、`CONTRIBUTING.md`、`SUPPORT.md`、`GOVERNANCE.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`NOTICE` 与 `UPSTREAM.md` 共同描述 DevMemo AI 的非官方下游身份、帮助/贡献入口和安全报告边界。默认 `docker-compose.yml` 不放行私网 Webhook；`docker-compose.local-webhook.yml` 只能由本机受控开发显式叠加，不能作为公共/多用户部署配置。
+根目录的 `README.md`、`README_AI.md`、`CONTRIBUTING.md`、`SUPPORT.md`、`GOVERNANCE.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`NOTICE` 与 `UPSTREAM.md` 共同描述 DevMemo AI 的非官方下游身份、部署方式、帮助/贡献入口和安全报告边界。默认 `docker-compose.yml` 不放行私网 Webhook；`docker-compose.local-webhook.yml` 只能由本机受控开发显式叠加，不能作为公共或多用户部署配置。
 
 ```text
 cmd/server/store/internal/proto
@@ -194,7 +192,7 @@ docker compose up -d
   └── ollama      -> ollama-data
 ```
 
-默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。默认 Compose 只启动 Memos (`0.75` CPU) 和 AI Service (`0.25` CPU)，Qdrant/Ollama 必须通过 profile 显式启动；应用后的配额证据在 `docs/handoffs/2026-07-20-low-cpu-baseline.md`。Qdrant 配置同时保留完整 Memo collection 和独立 chunk collection 名称。
+默认 `AI_PROVIDER=deterministic`、`AI_EMBEDDING_PROVIDER=deterministic`、`AI_VECTOR_STORE=memory`、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`，不会因模型下载、Qdrant 或 Ollama 增加日常 CPU/网络负担。默认 Compose 只启动 Memos (`0.75` CPU) 和 AI Service (`0.25` CPU)，Qdrant/Ollama 必须通过 profile 显式启动。Qdrant 配置同时保留完整 Memo collection 和独立 chunk collection 名称。
 
 ## 迁移与升级规则
 

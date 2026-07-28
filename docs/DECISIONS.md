@@ -18,7 +18,7 @@ deterministic、OpenAI、Ollama 实现放在 adapter 层，业务逻辑依赖 pr
 
 ## ADR-005：每个切片产生下一阶段 Prompt
 
-PROJECT_STATUS、CHANGELOG_AI、HANDOFF、NEXT_STAGE_PROMPT 是固定交付物，验证事实必须刷新。
+对外变更应同步更新适用的用户文档与变更记录，并如实说明验证范围。
 
 ## ADR-006：模板失败回退 plain Memo
 
@@ -262,7 +262,7 @@ route B 可以使用真实、已登录的本地 Bug Report 作为 Capture 观察
 
 这保持 Context Pack 的浏览器内存、accepted-only、脱敏来源与 Memos 权限权威边界不变。观察过程不允许绕过 Memos 登录、读取 raw content、修改 Memo/Insight 或把历史 Phase 9f 剪贴板验收重新表述为新的人工反馈；public chunk 继续默认关闭，直到 ADR-043 所需的真实网关证据存在。
 
-下一步真实反馈执行遵循 `docs/handoffs/2026-07-20-devmemory-real-feedback-plan.md`：只有在场且同意的参与者可触发 review/revoke/delete/copy；无参与者或无 Insight 时停止并如实记录。该计划不创建新运行时契约，也不授权 API 绕过、SQLite seed 或浏览器 secret 暴露。
+真实反馈只能由在场且同意的参与者触发 review/revoke/delete/copy；无参与者或无 Insight 时应停止并如实记录。该过程不创建新运行时契约，也不授权 API 绕过、SQLite seed 或浏览器 secret 暴露。
 
 当前参与者授权只覆盖一个非敏感测试 Memo 的创建与一次 Insight accept/reject；删除/撤销属于独立的行动时确认，不能由先前 review 授权推断。
 
@@ -288,7 +288,7 @@ Vite 重启后，接管长期 Chrome 用户标签可能超时；同一 profile �
 
 自动化表面触发复制并不保证 Windows 系统剪贴板已被改写。若 host clipboard 未出现预期安全输出，必须记录为“自动化复制未验证”，不得把它当成产品回归，也不得把 UI 点击当成新的系统剪贴板 pass。Phase 10 已用真实 Chrome 指针点击及 host clipboard 复核确认 Markdown 与 JSON；此前自动化桥接不改写 clipboard 的观察仍只代表该工具路径。此决策不新增 Clipboard API、HTTP、SQLite 写入或外部依赖。
 
-Phase 10 route B 的真实参与者随后确认来源清晰、accepted Review 可信、`64` 字符预算有用且复制符合预期。该反馈只评价已验证的安全 UI，不授权额外的 review、delete/revoke 或 public-chunk rollout；完整安全记录见 `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`。
+Phase 10 route B 的真实参与者随后确认来源清晰、accepted Review 可信、`64` 字符预算有用且复制符合预期。该反馈只评价已验证的安全 UI，不授权额外的 review、delete/revoke 或 public-chunk rollout。
 
 ## ADR-050：复制就绪反馈只描述当前浏览器内存中的 pack
 

@@ -38,4 +38,4 @@ Keep Memos core changes out of AI slices. Chunk Webhook mode is opt-in and isola
 
 ## Task completion docs
 
-After every completed slice, update `docs/PROJECT_STATUS.md`, append `docs/CHANGELOG_AI.md`, refresh `docs/HANDOFF.md`, and replace `docs/prompts/NEXT_STAGE_PROMPT.md`. Use `docs/prompts/TASK_PROMPT_TEMPLATE.md` when starting a new slice.
+Keep public documentation, release notes, and contributor guidance aligned with any user-visible behavior or deployment change. Do not publish secrets, local paths, credentials, or internal planning records.

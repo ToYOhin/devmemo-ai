@@ -28,7 +28,7 @@ No new HTTP contract was added. The local feedback evidence used the existing we
 
 Memos sends the current Memo identifier as `memos/<uid>` in this webhook shape, while the detail UI queries the terminal UID. AI Service now normalizes that resource name before reading or writing its derived SQLite state. A focused API regression verifies that the terminal UID reads the persisted Insight and the resource-name form is not exposed as a second identity.
 
-For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review, bounded Context Pack, Chrome/Windows Markdown/JSON system-copy, and four participant-feedback results; see `docs/handoffs/2026-07-20-devmemory-real-feedback-evidence.md`. No raw Memo data, webhook payload, secret, or chunk content is exposed.
+For live Compose diagnostics, run `docker compose exec -T ai-service python -m scripts.devmemory_lifecycle_report`; the command remains read-only and aggregate-only. A host invocation without an explicit Compose-mounted database path can inspect a different local file and must not be used as live-service evidence. Route B has real Capture → Insight → accepted Review, bounded Context Pack, Chrome/Windows Markdown/JSON system-copy, and participant-feedback evidence. No raw Memo data, webhook payload, secret, or chunk content is exposed.
 
 The subsequent same-profile Chrome check confirmed the existing UI's accepted Insight and a visible `max_chars` budget truncation. It did not add an API route or request. Real pointer clicks on each copy control updated Windows clipboard with safe Markdown and parseable `context-pack-v1` JSON; the earlier automated-click mismatch remains a browser-automation bridge limitation.
 
@@ -61,7 +61,7 @@ VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http:
 - AI_FASTEMBED_CACHE_DIR：可选模型缓存目录；Compose 默认 `/app/model-cache`，由 `ai-model-cache` volume 持久化。
 - FastEmbed 初始化会触发模型准备/下载；因此不属于默认启动路径。
 - Compose 默认仅启动 Memos/AI Service（`0.75`/`0.25` CPU），并把 AI 数值线程固定为 `1`；Ollama 需要 `docker compose --profile ollama up -d ollama`，不属于默认成本。
-- 当前运行中的配额、thread limit 与 health/serial verification evidence 见 `docs/handoffs/2026-07-20-low-cpu-baseline.md`；该控制只影响本地资源预算，不改变任何 HTTP contract。
+- 该控制只影响本地资源预算，不改变任何 HTTP contract。
 - AI_INDEX_ON_WEBHOOK=false：默认关闭 Webhook 向量索引；设为 `true` 后 create/update/delete 才编排向量生命周期。
 - AI_INDEX_MODE=memo：默认使用完整 Memo `memo-v1`；只有显式设置为 `chunk` 且同时开启 `AI_INDEX_ON_WEBHOOK=true` 时，Webhook 才使用 `memo-chunk-v1` 生命周期。
 - AI_WEBHOOK_SECRET：可选 Webhook HMAC secret；为空时保持兼容放行，配置后请求必须携带 `X-DevMemo-Signature: sha256=<hex>`。
