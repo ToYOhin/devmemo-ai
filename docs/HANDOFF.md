@@ -1,10 +1,17 @@
 # DevMemo AI 当前交接
 
+## 真实 GitHub CI、GHCR 与 RC 发布资产（2026-07-28）
+
+- `codex/devmemo-ai-mvp` 已推送；PR #1 的 Backend、Frontend、AI Service workflow 全绿，包含 Store SQLite/MySQL/PostgreSQL 矩阵和 golangci-lint。
+- 第一轮手动 canary 真实暴露 GHCR 大写 owner 导致 OCI reference 无效；修复为固定小写 `ghcr.io/toyohin/devmemo-ai` 后，第二轮 canary 的 amd64、arm64、manifest 合并与 runner-side registry inspect 全部通过。
+- 已经用户授权创建 `v0.1.0-rc.1` prerelease（非稳定版）。Release workflow 构建并上传六个原生资产、`checksums.txt`，并发布多架构镜像。低负载本机复核已验证 Windows ZIP SHA-256、解压和 `devmemo-ai.exe --help`；不要把它表述为完整安装/服务运行验收。
+- 正式公开发布仍被外部治理条件阻塞：仓库 private、Actions secrets 为 0（`RELEASE_PLEASE_TOKEN` 缺失），且私密漏洞报告渠道未确认。当前登录 token 缺少 private Packages `read:packages`，本机直接 registry inspect 的 `403` 不代表 workflow 发布失败。详见 [`docs/handoffs/2026-07-28-rc-release-validation-handoff.md`](handoffs/2026-07-28-rc-release-validation-handoff.md) 与 [`docs/release-preflight.md`](release-preflight.md)。不自动改可见性、配置 token、推稳定 tag 或发布正式版。
+
 ## 发布前 CI 收敛（2026-07-28）
 
 - PR #1 的 Store migration 失败来自浮动 `stable` 镜像生成 schema `0.30.1`，高于当前源码的 `0.28.1`；测试已改为固定、可拉取的 `neosmemo/memos:0.26.2` fixture。低 CPU SQLite 实测从 `0.26.5` 迁移到 `0.28.1` 成功，并通过写入校验。
 - golangci-lint 曾在 `0 issues` 后仍触发三分钟 action timeout；工作流现使用 `--timeout=5m`。本地没有 golangci-lint 二进制，尚未运行该 action 本身；工作流 YAML 已解析。
-- 维护者仍需完成 GitHub 外部动作：创建并保存 `RELEASE_PLEASE_TOKEN`，决定公开可见性后启用/验证私密漏洞报告渠道，push 当前提交并观察真实 CI、release asset 与 GHCR。当前 secrets 列表为 0，仓库仍为 private；不得假称这些外部条件已完成。
+- 维护者仍需完成 GitHub 外部动作：创建并保存 `RELEASE_PLEASE_TOKEN`，决定公开可见性后启用/验证私密漏洞报告渠道。当前 secrets 列表为 0，仓库仍为 private；真实 CI、RC Release asset 与 GHCR 已在本次交接顶部复核，不得把这些证据延伸为公开稳定发布已获批准。
 - 为遵守本机 CPU 限制，全驱动 Store 门禁未完成；只完成一条串行迁移 fixture 测试。精确清单见 [`docs/release-preflight.md`](release-preflight.md)，权威交接为 [`docs/handoffs/2026-07-28-release-ci-preflight-handoff.md`](handoffs/2026-07-28-release-ci-preflight-handoff.md)。不自动 push、改可见性、打 tag 或发版。
 
 ## 开源发布基础设施（2026-07-28）

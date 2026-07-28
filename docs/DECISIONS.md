@@ -324,4 +324,12 @@ CI 和发布资产使用 `devmemo-ai` 与 `ghcr.io/${github.repository_owner}/de
 
 `store/test` 的迁移兼容测试不得使用浮动的 `neosmemo/memos:stable` 镜像。上游 stable 可在本项目未同步 schema migration 时前进，形成“当前代码尝试降级未来数据库”的无效失败。测试改用固定、可拉取的 `neosmemo/memos:0.26.2` fixture，并验证 SQLite schema 从 `0.26.5` 迁移到当前 `0.28.1` 后仍可写入数据。该 fixture 只用于测试，不改变默认 Compose 镜像、运行时升级策略或上游归属。
 
-远端 golangci-lint 已在 `0 issues` 后因固定三分钟 timeout 失败，因此 action timeout 增至五分钟。它不放宽 lint 规则、跳过检查或改变 Go 编译/运行时。完整 Store 驱动矩阵和真实 GitHub Actions 仍须在维护者授权 push 后重新验证；本机低 CPU 检查只证明固定 SQLite 迁移路径。
+远端 golangci-lint 已在 `0 issues` 后因固定三分钟 timeout 失败，因此 action timeout 增至五分钟。它不放宽 lint 规则、跳过检查或改变 Go 编译/运行时。授权 push 后，完整 Store 驱动矩阵与真实 GitHub Actions 已通过；本机低 CPU 检查仍只证明固定 SQLite 迁移路径，不替代远端矩阵证据。
+
+## ADR-055：GHCR 使用固定小写命名空间，RC 资产验证不等同于公开稳定发布
+
+OCI repository 名称必须小写；GitHub owner 的展示大小写不能直接插入 GHCR repository reference。DevMemo AI 的 canary 与 release workflow 因此固定使用 `ghcr.io/toyohin/devmemo-ai`，而不依赖 `${{ github.repository_owner }}`。该变更只修复发布元数据，不改变 Go module、Memos 运行时、默认 Compose、AI provider、索引或 Context Pack 边界。
+
+在真实 GitHub runner 上，修复后的 canary 已通过 amd64/arm64 build、manifest 合并与 registry inspect；`v0.1.0-rc.1` 作为 private prerelease 已生成六个原生资产、校验清单与多架构镜像。本机仅以低负载校验 Windows ZIP 的 SHA-256、解压和 `devmemo-ai.exe --help`；这不是完整安装、升级、运行时或公开用户验收。
+
+RC 不能解除公开稳定发布的治理条件：仓库可见性、`RELEASE_PLEASE_TOKEN`、外部可用的私密漏洞报告渠道、维护者审阅与独立的稳定 tag/release 授权仍然必需。当前本机 OAuth token 缺少 private Packages `read:packages`，直接 GHCR inspect 返回 403；runner-side inspect 成功是发布工作流证据，但不替代维护者需要时配置最小可轮换拉取凭据。

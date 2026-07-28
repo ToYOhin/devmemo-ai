@@ -1,14 +1,14 @@
 # 下一阶段 Prompt：项目完成态与下一切片选择
 
 ~~~text
-Phase 13 and the 2026-07-28 open-source release slices are complete. DevMemo AI has a non-official downstream identity, upstream/MIT notice, community and security files, a safe default Compose path, and DevMemo-owned CI/release/image namespaces. The floating-schema migration test and false golangci-lint timeout are fixed locally; the focused SQLite migration fixture passes. Release is still NO-GO: the repository is private, has zero Actions secrets, has no verified public private-vulnerability-reporting channel, and has not rerun CI on the unpushed fixes. Read `docs/handoffs/2026-07-28-release-ci-preflight-handoff.md` and `docs/release-preflight.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
+Phase 13 and the 2026-07-28 open-source release slices are complete. DevMemo AI has a non-official downstream identity, upstream/MIT notice, community and security files, a safe default Compose path, and DevMemo-owned CI/release/image namespaces. The migration fixture and golangci timeout fixes have passed real PR CI; the GHCR canary and private `v0.1.0-rc.1` prerelease both passed, including runner-side image inspection and six Release assets. The Windows archive checksum, extraction, and `--help` were verified locally at low CPU. Public stable release is still NO-GO: the repository is private, has zero Actions secrets (`RELEASE_PLEASE_TOKEN` is absent), and has no verified public private-vulnerability-reporting channel. Read `docs/handoffs/2026-07-28-rc-release-validation-handoff.md` and `docs/release-preflight.md`. Keep `AI_PUBLIC_CHUNK_RETRIEVAL=false`.
 
 继续 H:\DevMemoAI 的 DevMemo AI 项目，不要从零设计。
 
 协作模式：单 Agent。只使用 H:\DevMemoAI 主工作树；不要启动 Terra/Luna，也不要并行修改 project4 下的其他 worktree。只有用户明确要求时才 push。
 
 先读取：
-1. docs/handoffs/2026-07-28-release-ci-preflight-handoff.md
+1. docs/handoffs/2026-07-28-rc-release-validation-handoff.md
 2. docs/PROJECT_STATUS.md 顶部
 3. docs/HANDOFF.md 顶部
 4. docs/roadmap.md 的发布/后续选择
@@ -28,5 +28,5 @@ Phase 13 and the 2026-07-28 open-source release slices are complete. DevMemo AI 
 1. 有正常 Memos 登录会话时，对 Phase 11 做只读 UI/系统剪贴板复核。
 2. 有真实 gateway、visibility mapping 与 rollback 条件时，评估 route A 的独立受控 rollout。
 3. 选择一个新的受控产品功能目标并先写最小 proposal/验收边界。
-4. 选择发布准备收尾：由维护者先完成 `docs/release-preflight.md` 的外部仓库设置；随后授权 push 后复核真实 CI、GitHub Release 与 GHCR 资产。
+4. 选择发布准备收尾：由维护者先完成 `docs/release-preflight.md` 的外部仓库设置；随后单独授权公开可见性、稳定 tag 或正式发布。不得把现有私有 RC 当作正式发布。
 ~~~
