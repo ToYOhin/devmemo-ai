@@ -11,12 +11,12 @@
 ## 仍然存在的外部治理边界
 
 - 这是 private prerelease，不是公开或稳定发布；不得将其宣传为正式 GA。
-- 仓库仍为 private，Actions secrets 数为 0，`RELEASE_PLEASE_TOKEN` 尚未配置；私密漏洞报告渠道尚未确认可供外部研究者使用。
+- 仓库仍为 private，Actions secrets 数为 0；`RELEASE_PLEASE_TOKEN` 缺失时自动 proposal 安全跳过，手工稳定 tag/release 继续可用。私密漏洞报告渠道尚未确认可供外部研究者使用。
 - 本机 GitHub OAuth token 可登录 GHCR 但没有 private Packages `read:packages`，直接 `imagetools inspect` 返回 403。GitHub runner 的 inspect 已成功，因此这是维护者本地凭据范围问题，不是 workflow 或镜像发布失败。不要把 token 写入文件、secret、日志或 issue。
 - 不得自行改变仓库可见性、创建长期 PAT、推 stable tag 或创建正式 Release；这些是维护者的独立外部决策。
 
 ## 下一步（仅在明确授权时）
 
-1. 维护者配置可轮换、最小权限的 `RELEASE_PLEASE_TOKEN`，并确认外部私密漏洞报告渠道与公开可见性策略。
-2. 单独授权 stable tag/Release 后，重新确认 Release Please 只使用 DevMemo AI 命名、GHCR `ghcr.io/toyohin/devmemo-ai` 和可回滚的发布说明。
+1. 确认外部私密漏洞报告渠道与公开可见性策略；如需自动 proposal，再配置可轮换、最小权限的 `RELEASE_PLEASE_TOKEN`。
+2. 单独授权 stable tag/Release 后，重新确认手工 release 只使用 DevMemo AI 命名、GHCR `ghcr.io/toyohin/devmemo-ai` 和可回滚的发布说明。
 3. 继续保持默认 deterministic + memory、`AI_INDEX_ON_WEBHOOK=false`、`AI_INDEX_MODE=memo`、`AI_VECTOR_STORE=memory` 与 `AI_PUBLIC_CHUNK_RETRIEVAL=false`；本次没有修改 Memos 原始数据、AI SQLite、Context Pack 或公共 API。

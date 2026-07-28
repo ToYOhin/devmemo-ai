@@ -6,14 +6,14 @@
 - GHCR 发现并修复了一个真实配置缺陷：OCI repository 必须为小写。canary 与 release workflow 现固定使用 `ghcr.io/toyohin/devmemo-ai`；第二次手动 canary 的 `linux/amd64`、`linux/arm64` 构建、合并 manifest 与 runner-side `imagetools inspect` 均通过。
 - 经明确授权创建了私有仓库的预发布 `v0.1.0-rc.1`，不是稳定版。Release workflow 成功生成 Linux amd64/arm64/armv7、macOS amd64/arm64、Windows amd64 共六个二进制资产和 `checksums.txt`，并成功发布对应的多架构 GHCR 镜像。
 - 本机以低负载下载 Windows ZIP：其 SHA-256 与 Release `checksums.txt` 匹配，解压后的 `devmemo-ai.exe --help` 退出成功；Release 的六个二进制资产名称与校验清单一一对应。证据与后续边界见 [`docs/handoffs/2026-07-28-rc-release-validation-handoff.md`](handoffs/2026-07-28-rc-release-validation-handoff.md)。
-- 正式公开发布仍为 NO-GO：仓库仍为 private、`RELEASE_PLEASE_TOKEN` 尚未配置、外部私密漏洞报告渠道尚未确认。当前本机 GitHub OAuth token 也没有 private Packages 的读取授权，故本机直接 GHCR inspect 返回 `403`；这不影响已在 GitHub runner 完成的镜像 inspect，但后续维护者如需本机拉取私有镜像应使用可轮换的最小 `read:packages` token。不得擅自改可见性、设置长期 token 或推稳定 tag。
+- 正式公开发布仍为 NO-GO：仓库仍为 private、外部私密漏洞报告渠道尚未确认。`RELEASE_PLEASE_TOKEN` 现为可选自动化能力；未配置时 workflow 安全跳过，手工稳定 tag/release 不受阻塞。当前本机 GitHub OAuth token 也没有 private Packages 的读取授权，故本机直接 GHCR inspect 返回 `403`；这不影响已在 GitHub runner 完成的镜像 inspect，但后续维护者如需本机拉取私有镜像应使用可轮换的最小 `read:packages` token。不得擅自改可见性或设置长期 token。
 
 ## 发布前 CI 收敛与外部前置清单（2026-07-28）
 
 - 已修复远端 PR #1 的两个已证实 CI 根因：`store/test` 不再使用会漂移到未来 schema 的 `neosmemo/memos:stable`，而是使用可拉取的 `0.26.2` 迁移 fixture；golangci-lint 从 `3m` 调整为 `5m`，避免已经报告 `0 issues` 时仍因硬超时失败。
 - 真实、低负载迁移验证通过：SQLite fixture schema `0.26.5` 串行迁移到当前 `0.28.1`，并验证可写入数据。工作流 YAML 解析与 `git diff --check` 通过。为限制本机 CPU，没有重跑 MySQL/PostgreSQL 全驱动 store 门禁；远端 CI 必须在后续 push 后重新验证。
-- GitHub 只读复核：仓库仍为私有，Actions secrets 数为 `0`，因此 `RELEASE_PLEASE_TOKEN` 尚未配置；默认 workflow token 权限为 read，但 release/package 作业已有自己的最小写权限。私有仓库的 private vulnerability reporting API 当前无法确认启用，不能宣称已具备公开报告渠道。
-- 公开稳定发布仍为 NO-GO，直到维护者配置 release token，并决定和完成公开可见性/外部私密漏洞报告渠道。真实 CI、RC GitHub Release 与 GHCR 资产已经在本次状态顶部复核；操作清单见 [`docs/release-preflight.md`](release-preflight.md)，最新接管记录见 [`docs/handoffs/2026-07-28-rc-release-validation-handoff.md`](handoffs/2026-07-28-rc-release-validation-handoff.md)。
+- GitHub 只读复核：仓库仍为私有，Actions secrets 数为 `0`；默认 workflow token 权限为 read，但 release/package 作业已有自己的最小写权限。`RELEASE_PLEASE_TOKEN` 缺失只会使自动 proposal 安全跳过。私有仓库的 private vulnerability reporting API 当前无法确认启用，不能宣称已具备公开报告渠道。
+- 公开稳定发布仍为 NO-GO，直到维护者决定并完成公开可见性/外部私密漏洞报告渠道。真实 CI、RC GitHub Release 与 GHCR 资产已经在本次状态顶部复核；操作清单见 [`docs/release-preflight.md`](release-preflight.md)，最新接管记录见 [`docs/handoffs/2026-07-28-rc-release-validation-handoff.md`](handoffs/2026-07-28-rc-release-validation-handoff.md)。
 
 ## 开源发布基础设施：身份、社区、默认部署与 CI 命名空间（2026-07-28）
 

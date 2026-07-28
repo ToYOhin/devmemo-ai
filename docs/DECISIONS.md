@@ -332,4 +332,4 @@ OCI repository 名称必须小写；GitHub owner 的展示大小写不能直接�
 
 在真实 GitHub runner 上，修复后的 canary 已通过 amd64/arm64 build、manifest 合并与 registry inspect；`v0.1.0-rc.1` 作为 private prerelease 已生成六个原生资产、校验清单与多架构镜像。本机仅以低负载校验 Windows ZIP 的 SHA-256、解压和 `devmemo-ai.exe --help`；这不是完整安装、升级、运行时或公开用户验收。
 
-RC 不能解除公开稳定发布的治理条件：仓库可见性、`RELEASE_PLEASE_TOKEN`、外部可用的私密漏洞报告渠道、维护者审阅与独立的稳定 tag/release 授权仍然必需。当前本机 OAuth token 缺少 private Packages `read:packages`，直接 GHCR inspect 返回 403；runner-side inspect 成功是发布工作流证据，但不替代维护者需要时配置最小可轮换拉取凭据。
+RC 不能解除公开稳定发布的治理条件：仓库可见性、外部可用的私密漏洞报告渠道、维护者审阅与独立的稳定 tag/release 授权仍然必需。`RELEASE_PLEASE_TOKEN` 只用于可选的自动 proposal；缺失时 workflow 安全跳过，不能用个人 OAuth token 代替。当前本机 OAuth token 缺少 private Packages `read:packages`，直接 GHCR inspect 返回 403；runner-side inspect 成功是发布工作流证据，但不替代维护者需要时配置最小可轮换拉取凭据。
