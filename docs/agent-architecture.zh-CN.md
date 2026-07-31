@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。它默认关闭；尚未交付 Web UI、Agent 持久化、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，但功能仍默认关闭；尚未交付 Agent 持久化、远程部署或通用公开可用性。
 
 ## 目标
 
@@ -90,7 +90,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 
 1. **契约与 feature gate — 已完成。** 严格 `AI_AGENT_ENABLED` 解析与 provider-neutral domain type 已有序列化测试。
 2. **只读证据 Agent 与认证 BFF — 已完成。** `EvidenceAnswerAgent`、签名内部路由、Memos BFF、可见性过滤与定向集成测试已实现。
-3. **显式实验 UI — 未开始。** 只有在再次获得明确授权后，才增加清晰标记、opt-in 的 Memo 详情页入口；它只显示安全 citation 与步骤状态，不显示内部上下文。
+3. **显式实验 UI — 已完成。** Memo 详情页入口有清晰标记，用户展开入口并提交问题前不会发出请求。它仅以 `question` 和 `limit` 调用同源 Memos BFF，然后严格解析并显示安全 answer、citation 与脱敏步骤状态；不直连 AI Service，也不持久化结果。
 4. **受控 provider smoke — 未开始。** 可选地用维护者本地配置的 provider 验证同一路径；这不是默认 Compose 或 CI 要求。
 
 ## A1 验收结果

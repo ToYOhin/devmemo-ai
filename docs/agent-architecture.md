@@ -1,8 +1,9 @@
 # Evidence Answer Agent
 
 > Status: the A1 local-first, read-only backend is implemented and locally
-> runtime-verified. It remains disabled by default. No Web UI, Agent
-> persistence, remote deployment, or general-public availability is delivered.
+> runtime-verified. A2 adds an explicit experimental Web entry, while the
+> feature remains disabled by default. No Agent persistence, remote deployment,
+> or general-public availability is delivered.
 
 ## Purpose
 
@@ -128,10 +129,11 @@ LLM provider.
 2. **Read-only evidence Agent and authenticated BFF — complete.** The
    `EvidenceAnswerAgent`, signed internal route, Memos BFF, visibility filter,
    and targeted integration tests are in place.
-3. **Explicit experimental UI — not started.** Only after separate explicit
-   authorization, add a
-   clearly labelled, opt-in Memo-detail entry point. It shows safe citations
-   and step status, not internal context.
+3. **Explicit experimental UI — complete.** The Memo-detail entry is clearly
+   labelled and sends no request until the user opens it and submits a question.
+   It calls the same-origin Memos BFF with only `question` and `limit`, then
+   strictly parses and renders only the safe answer, citations, and sanitized
+   step status. It does not expose the AI Service directly or persist a result.
 4. **Controlled provider smoke — not started.** Optionally verify the same path with a
    locally configured provider. This is not a default Compose or CI requirement.
 

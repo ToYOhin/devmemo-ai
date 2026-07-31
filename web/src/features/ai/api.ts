@@ -1,3 +1,5 @@
+import { getAccessToken } from "@/auth-state";
+
 export type AiTemplateKind = "code" | "bug";
 
 export interface AiCodeSnippet {
@@ -61,6 +63,35 @@ export interface AiMemoInsight {
   updated_at: string;
 }
 
+export interface AiEvidenceCitation {
+  memo_id: string;
+  title: string;
+  summary: string;
+  source_refs: string[];
+}
+
+export interface AiEvidenceTraceStep {
+  index: number;
+  name: "search_memos" | "answer_from_evidence";
+  status: "completed";
+  result_count?: number;
+}
+
+export interface AiEvidenceAnswer {
+  answer: string;
+  citations: AiEvidenceCitation[];
+  trace: {
+    terminal_state: "answered" | "no_context";
+    steps: AiEvidenceTraceStep[];
+  };
+}
+
+export class AiEvidenceAnswerRequestError extends Error {
+  constructor(public readonly status: number | null) {
+    super("Evidence Answer request failed");
+  }
+}
+
 export const getAiServiceUrl = (): string => {
   const configuredUrl = import.meta.env.VITE_AI_SERVICE_URL?.trim();
   return configuredUrl ? configuredUrl.replace(/\/+$/, "") : "";
@@ -104,6 +135,92 @@ const readString = (value: unknown): string | null => (typeof value === "string"
 const readTags = (value: unknown): string[] | null => {
   if (!Array.isArray(value) || !value.every((tag) => typeof tag === "string")) return null;
   return value;
+};
+
+const hasExactKeys = (value: Record<string, unknown>, keys: string[]): boolean => {
+  const actualKeys = Object.keys(value);
+  return actualKeys.length === keys.length && actualKeys.every((key) => keys.includes(key));
+};
+
+export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null => {
+  if (!isRecord(value) || !hasExactKeys(value, ["answer", "citations", "provider", "retrieved_count", "agent_version", "trace"]))
+    return null;
+
+  const answer = readString(value.answer);
+  const provider = readString(value.provider);
+  const retrievedCount = value.retrieved_count;
+  const agentVersion = value.agent_version;
+  if (
+    answer === null ||
+    provider === null ||
+    typeof retrievedCount !== "number" ||
+    !Number.isInteger(retrievedCount) ||
+    retrievedCount < 0 ||
+    agentVersion !== "evidence-answer-agent-v1" ||
+    !Array.isArray(value.citations)
+  ) {
+    return null;
+  }
+
+  const citations = value.citations.map((citation): AiEvidenceCitation | null => {
+    if (!isRecord(citation) || !hasExactKeys(citation, ["memo_id", "embedding_id", "score", "title", "summary", "source_refs", "metadata"]))
+      return null;
+    const memoId = readString(citation.memo_id);
+    const embeddingId = readString(citation.embedding_id);
+    const title = readString(citation.title);
+    const summary = readString(citation.summary);
+    const sourceRefs = readTags(citation.source_refs);
+    const metadata = isRecord(citation.metadata) ? citation.metadata : null;
+    if (
+      memoId === null ||
+      embeddingId === null ||
+      typeof citation.score !== "number" ||
+      !Number.isFinite(citation.score) ||
+      title === null ||
+      summary === null ||
+      sourceRefs === null ||
+      metadata === null ||
+      !hasExactKeys(metadata, ["memo_type", "tags", "index_version"]) ||
+      readString(metadata.memo_type) === null ||
+      readTags(metadata.tags) === null ||
+      metadata.index_version !== "memo-v1"
+    ) {
+      return null;
+    }
+    return { memo_id: memoId, title, summary, source_refs: sourceRefs };
+  });
+  if (citations.some((citation) => citation === null) || citations.length !== retrievedCount) return null;
+
+  if (!isRecord(value.trace) || !hasExactKeys(value.trace, ["terminal_state", "steps"]) || !Array.isArray(value.trace.steps)) return null;
+  const terminalState = value.trace.terminal_state;
+  if (terminalState !== "answered" && terminalState !== "no_context") return null;
+  const steps = value.trace.steps.map((step): AiEvidenceTraceStep | null => {
+    if (!isRecord(step)) return null;
+    const hasResultCount = Object.hasOwn(step, "result_count");
+    if (!hasExactKeys(step, hasResultCount ? ["index", "kind", "name", "status", "result_count"] : ["index", "kind", "name", "status"]))
+      return null;
+    if (!Number.isInteger(step.index) || step.kind !== (step.index === 1 ? "tool" : "final") || step.status !== "completed") return null;
+    if (step.index === 1 && step.name === "search_memos" && Number.isInteger(step.result_count) && step.result_count === citations.length) {
+      return { index: step.index, name: step.name, status: step.status, result_count: step.result_count };
+    }
+    if (step.index === 2 && step.name === "answer_from_evidence" && !hasResultCount) {
+      return { index: step.index, name: step.name, status: step.status };
+    }
+    return null;
+  });
+  if (
+    steps.some((step) => step === null) ||
+    (terminalState === "answered" && steps.length !== 2) ||
+    (terminalState === "no_context" && steps.length !== 1)
+  ) {
+    return null;
+  }
+
+  return {
+    answer,
+    citations: citations as AiEvidenceCitation[],
+    trace: { terminal_state: terminalState, steps: steps as AiEvidenceTraceStep[] },
+  };
 };
 
 export const parseAiMemoNote = (value: unknown): AiMemoNote | null => {
@@ -302,4 +419,23 @@ export async function summarizeAiMemo(request: AiSummarizeRequest): Promise<AiMe
   const note = parseAiMemoNote(await response.json());
   if (!note) throw new Error("AI summary response was invalid");
   return note;
+}
+
+export async function requestAiEvidenceAnswer(question: string, limit: number, signal?: AbortSignal): Promise<AiEvidenceAnswer> {
+  const accessToken = getAccessToken();
+  const response = await fetch("/api/ai/agent/answer", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: JSON.stringify({ question, limit }),
+    signal,
+  });
+  if (!response.ok) throw new AiEvidenceAnswerRequestError(response.status);
+
+  const answer = parseAiEvidenceAnswer(await response.json());
+  if (!answer) throw new AiEvidenceAnswerRequestError(null);
+  return answer;
 }
