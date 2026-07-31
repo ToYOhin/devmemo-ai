@@ -23,6 +23,10 @@ from app.services.agent_delegation import (
 from app.services.retrieval_service import RetrievalService
 
 
+class AgentProviderError(RuntimeError):
+    """Raised when the configured answer provider cannot complete safely."""
+
+
 class EvidenceAnswerAgent:
     """Execute one authorized whole-Memo search without HTTP or persistence."""
 
@@ -114,7 +118,10 @@ class EvidenceAnswerAgent:
             f"Question: {question}\n"
             f"Context:\n{context}"
         )
-        result = await self._provider.generate(prompt)
+        try:
+            result = await self._provider.generate(prompt)
+        except Exception as error:
+            raise AgentProviderError("Agent provider unavailable") from error
         answer = result.text.strip()
         if not answer or "[" not in answer or _contains_complete_memo_content(answer, context):
             return fallback
