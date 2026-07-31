@@ -29,6 +29,15 @@ class RecordingProvider:
         return LLMResult(text="Safe answer [1].", provider=self.name)
 
 
+class EchoingProvider(RecordingProvider):
+    async def generate(self, prompt: str) -> LLMResult:
+        self.prompts.append(prompt)
+        return LLMResult(
+            text="Docker ports use the host mapping declared in Compose. [1]",
+            provider=self.name,
+        )
+
+
 def _agent_with_memos() -> tuple[EvidenceAnswerAgent, RecordingProvider]:
     service = EmbeddingService(DeterministicEmbeddingProvider(), InMemoryVectorStore(8))
     index_memo(
@@ -124,3 +133,15 @@ def test_agent_rejects_an_invalid_delegation_before_retrieval_or_provider():
         asyncio.run(agent.run_delegated(body + b" ", headers, "test-agent-secret", now))
 
     assert provider.prompts == []
+
+
+def test_agent_replaces_a_provider_echo_of_complete_memo_content():
+    agent, _ = _agent_with_memos()
+    provider = EchoingProvider()
+    agent._provider = provider
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert len(provider.prompts) == 1
+    assert result.answer == "Found 1 authorized Memo source(s) relevant to the question [1]."

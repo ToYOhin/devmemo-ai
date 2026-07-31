@@ -104,8 +104,9 @@ class EvidenceAnswerAgent:
         context: str,
         citations: tuple[AgentCitation, ...],
     ) -> str:
+        fallback = f"Found {len(citations)} authorized Memo source(s) relevant to the question [1]."
         if _provider_name(self._provider) == "deterministic":
-            return f"Found {len(citations)} authorized Memo source(s) relevant to the question [1]."
+            return fallback
 
         prompt = (
             "Answer the question using only the authorized knowledge-base context below. "
@@ -114,7 +115,10 @@ class EvidenceAnswerAgent:
             f"Context:\n{context}"
         )
         result = await self._provider.generate(prompt)
-        return result.text.strip()
+        answer = result.text.strip()
+        if not answer or "[" not in answer or _contains_complete_memo_content(answer, context):
+            return fallback
+        return answer
 
 
 def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCitation:
@@ -138,3 +142,13 @@ def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCi
 
 def _provider_name(provider: object) -> str:
     return str(provider.name)
+
+
+def _contains_complete_memo_content(answer: str, context: str) -> bool:
+    """Reject a provider response that includes an entire internal Memo block."""
+
+    for block in context.split("\n\n"):
+        _, separator, content = block.partition("\n")
+        if separator and content and content != "(memo content unavailable)" and content in answer:
+            return True
+    return False
