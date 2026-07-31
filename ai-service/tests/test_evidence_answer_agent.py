@@ -135,7 +135,7 @@ def test_agent_rejects_an_invalid_delegation_before_retrieval_or_provider():
     assert provider.prompts == []
 
 
-def test_agent_replaces_a_provider_echo_of_complete_memo_content():
+def test_agent_never_projects_provider_text_to_the_safe_answer():
     agent, _ = _agent_with_memos()
     provider = EchoingProvider()
     agent._provider = provider

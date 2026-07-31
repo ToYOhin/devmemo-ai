@@ -119,13 +119,13 @@ class EvidenceAnswerAgent:
             f"Context:\n{context}"
         )
         try:
-            result = await self._provider.generate(prompt)
+            await self._provider.generate(prompt)
         except Exception as error:
             raise AgentProviderError("Agent provider unavailable") from error
-        answer = result.text.strip()
-        if not answer or "[" not in answer or _contains_complete_memo_content(answer, context):
-            return fallback
-        return answer
+        # A provider receives authorized internal context, but its untrusted text
+        # is never projected to the browser. This preserves the no-raw-Memo
+        # response boundary while retaining an explicit provider failure signal.
+        return fallback
 
 
 def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCitation:
@@ -149,13 +149,3 @@ def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCi
 
 def _provider_name(provider: object) -> str:
     return str(provider.name)
-
-
-def _contains_complete_memo_content(answer: str, context: str) -> bool:
-    """Reject a provider response that includes an entire internal Memo block."""
-
-    for block in context.split("\n\n"):
-        _, separator, content = block.partition("\n")
-        if separator and content and content != "(memo content unavailable)" and content in answer:
-            return True
-    return False
