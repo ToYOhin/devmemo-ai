@@ -94,6 +94,9 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 			next(w, r, pathParams)
 		}
 	}
+	if err := s.registerConfiguredAgentRoutes(echoServer); err != nil {
+		return err
+	}
 
 	// Create gRPC-Gateway mux with auth middleware.
 	gwMux := runtime.NewServeMux(

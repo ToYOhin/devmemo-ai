@@ -7,6 +7,7 @@ import json
 import os
 import re
 from dataclasses import asdict
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
@@ -45,6 +46,12 @@ from app.services.memo_insights import derive_memo_insights
 from app.services.ops_security import summarize_error, verify_ops_token
 from app.services.public_chunk_retrieval import build_public_chunk_response
 from app.services.retrieval_service import RetrievalService
+from app.services.agent_delegation import (
+    INTERNAL_ANSWER_PATH,
+    AgentDelegationError,
+    AgentDelegationHeaders,
+)
+from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
 from app.settings import AiSettings, parse_env_bool
@@ -445,6 +452,37 @@ async def chat(request: ChatRequest) -> ChatResponse:
         provider=result.provider,
         retrieved_count=len(citations),
     )
+
+
+@app.post(INTERNAL_ANSWER_PATH)
+async def answer_delegated_agent_request(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Execute one Memos-signed Agent request without exposing a browser API."""
+
+    if not settings.agent_enabled or settings.agent_internal_secret is None:
+        raise HTTPException(status_code=404, detail="not found")
+
+    try:
+        result = await EvidenceAnswerAgent(
+            RetrievalService(embedding_service), provider
+        ).run_delegated(
+            await raw_request.body(),
+            AgentDelegationHeaders(signature or "", timestamp or ""),
+            settings.agent_internal_secret,
+            datetime.now(timezone.utc),
+        )
+    except AgentDelegationError as error:
+        raise HTTPException(status_code=401, detail="invalid Agent delegation") from error
+    except RetrievalInputError as error:
+        raise HTTPException(status_code=400, detail="invalid Agent request") from error
+    except RetrievalUnavailableError as error:
+        raise HTTPException(status_code=503, detail="Agent retrieval unavailable") from error
+    except AgentProviderError as error:
+        raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
+    return result.to_dict()
 
 
 @app.get("/api/ai/notes/{memo_id}", response_model=AiNoteResponse)
