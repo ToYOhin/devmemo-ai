@@ -1,0 +1,27 @@
+# Explicit local-only Agent runtime overlay. Do not use this for public or
+# multi-instance deployments. The default docker-compose.yml remains disabled.
+services:
+  memos:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile
+      args:
+        VERSION: ${DEVMEMO_AGENT_VERSION:-local-agent}
+        COMMIT: ${DEVMEMO_AGENT_COMMIT:-local}
+    image: devmemo-ai-memos-agent:local
+    profiles: ["agent"]
+    environment:
+      GOMAXPROCS: "1"
+      AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-false}
+      AI_AGENT_INTERNAL_URL: http://ai-service:8000
+      AI_AGENT_INTERNAL_SECRET: ${AI_AGENT_INTERNAL_SECRET:-}
+
+  ai-service:
+    # The BFF is the only browser entry point in Agent mode.
+    ports: !reset []
+    expose:
+      - "8000"
+    profiles: ["agent"]
+    environment:
+      AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-false}
+      AI_AGENT_INTERNAL_SECRET: ${AI_AGENT_INTERNAL_SECRET:-}
