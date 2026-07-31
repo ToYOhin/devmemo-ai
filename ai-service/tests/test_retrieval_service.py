@@ -48,6 +48,27 @@ def test_retrieval_returns_empty_result_for_empty_index():
     assert result.context == ""
 
 
+def test_authorized_retrieval_filters_before_context_assembly_and_rejects_chunk_indexes():
+    service = _service_with_memos()
+    index_memo(
+        service,
+        MemoIndexDocument.from_memo(
+            "memo-chunk",
+            "TOP SECRET chunk content",
+            {"title": "chunk", "index_version": "memo-chunk-v1"},
+        ),
+    )
+
+    result = RetrievalService(service).retrieve_authorized(
+        "Docker secret",
+        limit=3,
+        visible_memo_ids=frozenset({"memo-docker", "memo-chunk"}),
+    )
+
+    assert [citation.memo_id for citation in result.citations] == ["memo-docker"]
+    assert "TOP SECRET" not in result.context
+
+
 @pytest.mark.parametrize("question", ["", "  "])
 def test_retrieval_rejects_empty_question(question):
     with pytest.raises(RetrievalInputError, match="question must not be empty"):

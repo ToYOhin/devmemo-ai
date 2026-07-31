@@ -1,0 +1,9 @@
+{
+  "version": "devmemo-agent-v1",
+  "method": "POST",
+  "path": "/internal/ai/agent/answer",
+  "timestamp": "1785499200",
+  "secret": "contract-test-secret",
+  "raw_body": "{\"question\":\"Docker port mapping\",\"limit\":3,\"visible_memo_uids\":[\"memo-a\",\"memo-b\"]}",
+  "signature": "sha256=dfba86197d109aa9c2ebc98647eb2946e49f4ef38de542a46ecbcf385259d5f7"
+}
