@@ -2,11 +2,44 @@ package aiagent
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestDelegationMatchesCrossLanguageContractFixture(t *testing.T) {
+	fixturePath := filepath.Join("..", "..", "contracts", "evidence-answer-agent-internal-v1.json")
+	fixtureBytes, err := os.ReadFile(fixturePath)
+	require.NoError(t, err)
+	var fixture struct {
+		Method    string `json:"method"`
+		Path      string `json:"path"`
+		Timestamp string `json:"timestamp"`
+		Secret    string `json:"secret"`
+		RawBody   string `json:"raw_body"`
+		Signature string `json:"signature"`
+	}
+	require.NoError(t, json.Unmarshal(fixtureBytes, &fixture))
+
+	seconds, err := strconv.ParseInt(fixture.Timestamp, 10, 64)
+	require.NoError(t, err)
+	headers, err := SignRequest(fixture.Method, fixture.Path, []byte(fixture.RawBody), time.Unix(seconds, 0), fixture.Secret)
+	require.NoError(t, err)
+	require.Equal(t, fixture.Signature, headers.Signature)
+	require.NoError(t, VerifyRequest(
+		fixture.Method,
+		fixture.Path,
+		[]byte(fixture.RawBody),
+		headers,
+		time.Unix(seconds+30, 0),
+		time.Minute,
+		fixture.Secret,
+	))
+}
 
 func TestDelegatedAnswerRequestIsBoundedAndContentFree(t *testing.T) {
 	request := DelegatedAnswerRequest{

@@ -52,6 +52,31 @@ class InMemoryVectorStore:
         scored.sort(key=lambda result: (-result.score, result.embedding_id))
         return scored[:limit]
 
+    def search_visible_memos(
+        self,
+        query: Sequence[float],
+        visible_memo_ids: frozenset[str],
+        limit: int = 5,
+    ) -> list[VectorSearchResult]:
+        """Search only the Memos authorized by the Memos service boundary."""
+
+        self._validate_vector(query)
+        if limit <= 0:
+            raise ValueError("search limit must be positive")
+
+        scored = [
+            VectorSearchResult(
+                embedding_id=record.embedding_id,
+                memo_id=record.memo_id,
+                score=_cosine_similarity(query, record.vector),
+                metadata=dict(record.metadata),
+            )
+            for record in self._records.values()
+            if record.memo_id in visible_memo_ids
+        ]
+        scored.sort(key=lambda result: (-result.score, result.embedding_id))
+        return scored[:limit]
+
     def delete(self, embedding_id: str) -> bool:
         return self._records.pop(embedding_id, None) is not None
 

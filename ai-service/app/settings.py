@@ -14,6 +14,7 @@ class AiSettings:
     fastembed_cache_dir: str | None = None
     index_on_webhook: bool = False
     agent_enabled: bool = False
+    agent_internal_secret: str | None = None
     index_mode: str = "memo"
     vector_store: str = "memory"
     qdrant_url: str = "http://localhost:6333"
@@ -50,6 +51,9 @@ class AiSettings:
 
         index_on_webhook = parse_env_bool("AI_INDEX_ON_WEBHOOK", default=False)
         agent_enabled = parse_env_bool("AI_AGENT_ENABLED", default=False)
+        agent_internal_secret = os.getenv("AI_AGENT_INTERNAL_SECRET", "").strip() or None
+        if agent_enabled and agent_internal_secret is None:
+            raise ValueError("AI_AGENT_INTERNAL_SECRET is required when AI_AGENT_ENABLED=true")
         index_mode = os.getenv("AI_INDEX_MODE", "memo").strip().lower()
         if index_mode not in {"memo", "chunk"}:
             raise ValueError("AI_INDEX_MODE must be memo or chunk")
@@ -64,6 +68,7 @@ class AiSettings:
             fastembed_cache_dir=fastembed_cache_dir,
             index_on_webhook=index_on_webhook,
             agent_enabled=agent_enabled,
+            agent_internal_secret=agent_internal_secret,
             index_mode=index_mode,
             vector_store=vector_store,
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333").strip(),
