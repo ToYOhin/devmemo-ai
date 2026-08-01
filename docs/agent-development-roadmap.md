@@ -9,7 +9,9 @@
 > lifecycle contracts, the SQLite-only A4-I2 source-outbox transaction proof,
 > the dormant A4-I3 derived-ledger/fake-vector recovery proof, A4-I4
 > authenticated transport contracts, and the A4-I5 synthetic disposable
-> lifecycle integration proof are complete on the Agent feature branch.
+> lifecycle integration proof are complete on the Agent feature branch. R4-I1
+> adds strict provider-neutral grounded-answer result contracts and tests, but
+> they are not connected to the runtime answer path.
 > No lifecycle route, dispatcher, runtime wiring, or production-ready answer
 > path is implemented.
 
@@ -59,7 +61,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Provider output is deliberately discarded after generation | The boundary is safe, but a real Provider cannot yet produce a useful grounded answer | Accept a strict structured Provider result, validate every citation against retrieved evidence, and fail closed on unknown or malformed output |
+| P0 | Provider output is deliberately discarded after generation | R4-I1 proves a strict structured result and server-owned citation mapping in isolation, but the runtime still returns its deterministic fallback | Separately integrate the validator, preserve safe BFF projection, and pass a disposable real-Provider smoke before returning Provider text |
 | P0 | Authorized Agent retrieval works only with the in-memory complete-Memo store | Indexed evidence disappears on restart and the Agent cannot demonstrate durable local RAG | Implement the reviewed A4 lifecycle and prove create/update/delete/restart/rebuild behavior in disposable stores |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
@@ -203,6 +205,10 @@ temporary databases and vector collections.
 
 ### R4 — Grounded Provider answers
 
+**Status:** R4-I1 strict result parsing, server-owned citation mapping, context-
+echo rejection, and safe failure codes are implemented and unit-verified without
+runtime integration. Provider text remains discarded by `EvidenceAnswerAgent`.
+
 **Outcome:** configured Providers can produce useful answers without weakening
 the safe response boundary.
 
@@ -334,11 +340,11 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R4-I1 strict grounded-answer result contracts** next. Define a
-provider-neutral, versioned structured answer schema and pure validation for
-bounded answer text, server-owned citation IDs, unknown/extra fields, context
-echoes, and safe failure mapping. Use only synthetic retrieved evidence and fake
-Provider results; keep the current runtime Provider output discarded. Do not
-connect lifecycle runtime wiring, change defaults, call a real Provider/Qdrant,
-or touch real data. Shared replay storage remains mandatory before any
-multi-instance lifecycle deployment claim.
+Implement **R4-I2 safe grounded-answer runtime integration** next. Generate
+server-owned opaque evidence references, request the R4-I1 structured result,
+validate it before constructing the existing `AgentAnswerResult`, and preserve
+the BFF's safe citation projection. Use synthetic evidence and fake Provider
+outputs only; prove malformed results, unknown citations, context echoes,
+timeouts, and Provider failures retain bounded 502 behavior. Do not call a real
+Provider, connect lifecycle runtime wiring, change defaults, or touch real data.
+A disposable real-Provider smoke remains a later separately authorized gate.

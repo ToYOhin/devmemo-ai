@@ -9,9 +9,11 @@
 > fake-vector crash-recovery proof. A4-I4 adds authenticated lifecycle transport
 > contracts without a route or dispatcher. A4-I5 adds a synthetic disposable
 > outbox-to-ledger integration proof with restart, retry, tombstone,
-> reconciliation, and rebuild-generation coverage. The feature remains disabled
-> by default. No runtime lifecycle wiring, automatic indexing, remote deployment,
-> or general-public availability is delivered.
+> reconciliation, and rebuild-generation coverage. R4-I1 adds a strict
+> provider-neutral grounded-answer result contract without runtime integration.
+> The feature remains disabled by default. No runtime lifecycle wiring,
+> automatic indexing, remote deployment, or general-public availability is
+> delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -193,6 +195,14 @@ LLM provider.
    call, runtime default, or real Memo is involved. The nonce replay store proves
    only a single-process contract; shared multi-instance replay storage remains
    a later runtime gate.
+11. **Strict grounded-answer result contract — complete, unwired.** A standalone
+   domain parser accepts only a versioned bounded answer plus opaque
+   `evidence-*` references. It rejects malformed/duplicate/extra fields,
+   unknown, duplicate, direct, or excessive references, raw-context echoes, and
+   Provider-supplied content or metadata. Final citations are mapped only from
+   server-owned `AgentCitation` values; validation, timeout, and availability
+   failures collapse to fixed content-free codes. The current runtime does not
+   call this validator and continues to discard Provider text.
 
 ## Acceptance criteria for the first Agent path
 
@@ -208,6 +218,27 @@ LLM provider.
 - The explicit Web entry remains opt-in: it sends no request before an open and
   submit action, calls the same-origin Memos BFF only, and renders a reduced
   answer, citation, and trace projection.
+
+## R4 grounded-answer result contract
+
+R4-I1 is a pure contract, not a runtime behavior change. An untrusted Provider
+result contains exactly `version`, bounded `answer`, and one to ten opaque
+`citation_refs`. References use server-issued `evidence-*` tokens and never
+carry Memo IDs, scores, metadata, content, visibility, identity, prompt,
+embedding, secret, or trace fields.
+
+Validation resolves every reference against the already-retrieved server-owned
+`AgentCitation` mapping. Unknown, duplicate, direct Memo, or excessive
+references fail closed. Explicit protected context fragments are normalized and
+checked for verbatim echoes before the answer can be projected. Contract,
+timeout, and Provider failures map only to `invalid_grounded_answer`,
+`provider_timeout`, or `provider_unavailable`; raw exceptions and Provider text
+are not included.
+
+`EvidenceAnswerAgent` does not yet use this contract. It still skips the
+Provider on empty retrieval and discards non-deterministic Provider text after a
+successful call. Runtime integration and a disposable real-Provider smoke are
+separate authorization gates.
 
 ## A4 local RAG lifecycle contract
 
