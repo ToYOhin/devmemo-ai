@@ -1,9 +1,10 @@
 # Evidence Answer Agent
 
 > Status: the A1 local-first, read-only backend is implemented and locally
-> runtime-verified. A2 adds an explicit experimental Web entry, while the
-> feature remains disabled by default. No Agent persistence, remote deployment,
-> or general-public availability is delivered.
+> runtime-verified. A2 adds an explicit experimental Web entry, and A3 has
+> completed a controlled local Provider smoke. The feature remains disabled by
+> default. No Agent persistence, remote deployment, or general-public
+> availability is delivered.
 
 ## Purpose
 
@@ -134,8 +135,11 @@ LLM provider.
    It calls the same-origin Memos BFF with only `question` and `limit`, then
    strictly parses and renders only the safe answer, citations, and sanitized
    step status. It does not expose the AI Service directly or persist a result.
-4. **Controlled provider smoke — not started.** Optionally verify the same path with a
-   locally configured provider. This is not a default Compose or CI requirement.
+4. **Controlled provider smoke — complete.** A disposable local-only runtime
+   verified the existing signed internal path with an opt-in Provider, including
+   successful evidence-backed completion, no-context Provider bypass, and the
+   safe 502 Provider-failure mapping. It used no host-published AI port, no
+   persistent data, and no change to the default Compose configuration.
 
 ## Acceptance criteria for the first Agent path
 
@@ -148,8 +152,15 @@ LLM provider.
   exposing prompts, context, raw exception data, or content.
 - Citations and traces do not contain a `content` field.
 - Existing chat tests remain unchanged and pass.
+- The explicit Web entry remains opt-in: it sends no request before an open and
+  submit action, calls the same-origin Memos BFF only, and renders a reduced
+  answer, citation, and trace projection.
 
 ## Future work excluded from this proposal
+
+**A4 local RAG lifecycle** must first define Memos-owned indexing, reindexing,
+deletion, retry, observability, and rollback semantics for a durable derived
+index. It does not authorize chunk or Qdrant Agent retrieval.
 
 Write tools require separately reviewed authentication and visibility mapping,
 explicit user confirmation, idempotency, audit and rollback semantics, rate
