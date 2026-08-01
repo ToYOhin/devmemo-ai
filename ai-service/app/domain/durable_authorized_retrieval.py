@@ -137,12 +137,17 @@ class DerivedCandidateSnapshot:
     """One content-free repository snapshot with its currently active generation."""
 
     active_generation: str | None
+    snapshot_token: str
     candidates: tuple[DerivedMemoCandidate, ...]
 
     def __post_init__(self) -> None:
         if self.active_generation is not None and (
             not isinstance(self.active_generation, str)
             or not _OPAQUE_ID_PATTERN.fullmatch(self.active_generation)
+        ):
+            raise DerivedRetrievalContractError
+        if not isinstance(self.snapshot_token, str) or not _OPAQUE_ID_PATTERN.fullmatch(
+            self.snapshot_token
         ):
             raise DerivedRetrievalContractError
         if not isinstance(self.candidates, tuple) or any(

@@ -11,8 +11,9 @@
 > 运行时接线和可用于正式产品的回答链路尚未实现。R4-I1 已增加严格、
 > provider-neutral 的 grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider
 > 将其安全接入回答路径，R4-I3 已增加一次性本地 Provider 兼容性 smoke，R5-I1 已增加
-> 尚未接线、经 fake 验证的持久化授权检索契约。持久化 repository adapter、lifecycle route、
-> dispatcher、运行时接线和可用于正式产品的回答链路仍未实现。
+> 尚未接线、经 fake 验证的持久化授权检索契约，R5-I2 已增加尚未接线的一次性 SQLite
+> repository-adapter parity proof。生产正文持久化 adapter、lifecycle route、dispatcher、运行时接线和
+> 可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -46,7 +47,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 检索仅支持内存中的完整 Memo store | R5-I1 已定义 lifecycle-safe 持久 query 边界，但没有 durable adapter 或 runtime 路径调用它，重启后证据仍会消失 | 先证明一次性持久化 repository adapter 与 parity，再单独评审 runtime selection 和 lifecycle 接线 |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I2 已用一次性合成 SQLite adapter 证明 reopen 与 parity，但生产 content persistence/rehydration 和 runtime selection 尚未决定，因此没有持久化回答路径 | 先定义生产正文边界，再单独评审 runtime selection 与 lifecycle 接线 |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -178,11 +179,11 @@ opaque evidence reference，验证后的 answer 只能解析为服务端 citatio
 
 ### R5 — 持久化授权检索与产品路径统一
 
-**状态：** R5-I1 已实现并经 fake 验证，但没有 repository adapter 或运行时接线。它要求有界的
-Memos 授权 UID 集合，在正文加载前过滤无正文 candidate/ledger state，只接受当前 active
-generation 中 A4 已 applied 且 sequence/hash 匹配的 `memo-v1`，并只投影请求内 opaque reference
-与服务端 citation。现有 `EvidenceAnswerAgent`、`RetrievalService`、VectorStore 构造、Memo CRUD
-和 lifecycle runtime 路径均未导入或调用它。
+**状态：** R5-I1 已实现并经 fake 验证。R5-I2 把该 protocol 绑定到显式的一次性 SQLite adapter，
+证明 reopen parity、UID/limit 下推与 service 二次求交、一致的 candidate/ledger read、两阶段间 snapshot
+失效、正文加载前 lifecycle 拒绝、重复/不一致行拒绝和固定 failure 映射。adapter 只保存合成的
+`tmp_path` 数据，不是生产 content-persistence 设计。现有 `EvidenceAnswerAgent`、`RetrievalService`、
+VectorStore 构造、Memo CRUD 和 lifecycle runtime 路径均未导入或调用它。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -250,9 +251,11 @@ generation 中 A4 已 applied 且 sequence/hash 匹配的 `memo-v1`，并只投�
 
 ## 下一推荐切片
 
-下一步实施 **R5-I2 一次性 repository-adapter parity proof**。把 R5-I1 protocol 绑定到临时、
-只含合成数据的派生 store adapter；它必须读取一致的 active-generation/A4-ledger snapshot，并且只在
-授权与 eligibility 选择完成后 materialize 文档。证明 restart/reopen、重复/不一致行拒绝、固定失败
-映射，以及与 R5-I1 fake 的结果 parity。继续保持 `EvidenceAnswerAgent`、当前 `RetrievalService`、
-VectorStore factory/runtime selection、Memo CRUD、dispatcher/worker、真实 Qdrant、Compose 默认值和
-真实数据未接线。正式 content persistence 与共享多实例 replay storage 仍是独立设计闸门。
+下一步实施 **R5-I3 生产 content persistence/rehydration 设计契约**。在不接 runtime、也不使用真实数据
+的前提下，决定 eligible durable candidate 在重启后如何取得完整 `memo-v1` 文档，同时保持 Memos 为
+权威。明确 retention、delete/tombstone 传播、rebuild generation 与 snapshot-token 语义、有界
+failure/redaction、backup 和 discard/rebuild 行为，并定义“派生正文存储”或“认证 Memos rehydration”的
+信任边界。只使用 provider-neutral 契约、decision record 与合成 fixture。继续保持
+`EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore factory/runtime selection、Memo CRUD、
+dispatcher/worker、Qdrant、Compose 默认值、凭据和真实数据未接线。runtime selection 与共享多实例
+replay storage 仍是后续独立授权闸门。

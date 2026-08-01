@@ -27,7 +27,10 @@ class DurableAuthorizedRetrievalRepository(Protocol):
         ...
 
     def load_documents(
-        self, record_keys: tuple[str, ...]
+        self,
+        *,
+        record_keys: tuple[str, ...],
+        snapshot_token: str,
     ) -> tuple[DerivedMemoDocument, ...]:
         ...
 
@@ -68,7 +71,8 @@ class DurableAuthorizedRetrievalService:
             if not eligible:
                 return AuthorizedRetrievalResult(())
             documents = self._repository.load_documents(
-                tuple(candidate.record_key for candidate in eligible)
+                record_keys=tuple(candidate.record_key for candidate in eligible),
+                snapshot_token=snapshot.snapshot_token,
             )
             if not isinstance(documents, tuple):
                 raise TypeError
