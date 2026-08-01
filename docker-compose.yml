@@ -3,6 +3,7 @@ services:
     # v0.29.1 is the repository source baseline; the version tag is not published
     # on Docker Hub, so pin the currently published stable image by digest.
     image: neosmemo/memos:stable@sha256:3e1253477066eb2aefa91145f7f9038bb931ed88c8a3ee05310a933594cdba7d
+    restart: unless-stopped
     # Keep the default local product path within one CPU across Memos + AI.
     cpus: "0.75"
     environment:
@@ -15,6 +16,7 @@ services:
   ai-service:
     build:
       context: ./ai-service
+    restart: unless-stopped
     cpus: "0.25"
     ports:
       - "8000:8000"
@@ -51,6 +53,7 @@ services:
   qdrant:
     # Pinned to the Qdrant 1.18.2 image verified in Phase 3g.
     image: qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c
+    restart: unless-stopped
     cpus: "0.5"
     profiles: ["qdrant"]
     ports:
@@ -59,7 +62,9 @@ services:
       - qdrant-data:/qdrant/storage
 
   ollama:
-    image: ollama/ollama:latest
+    # Keep the optional local-model runtime on an explicit upstream release.
+    image: ollama/ollama:0.32.3
+    restart: unless-stopped
     cpus: "1.0"
     profiles: ["ollama"]
     ports:

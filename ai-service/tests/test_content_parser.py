@@ -1,5 +1,5 @@
 from app.domain.models import BugReport, CodeSnippet
-from app.services.content_parser import parse_memo_content
+from app.services.content_parser import _sections, parse_memo_content
 
 
 def test_parses_code_snippet_frontmatter_and_fence():
@@ -72,3 +72,9 @@ fn main() {}
 def test_empty_or_unmarked_content_is_plain_memo():
     assert parse_memo_content("").kind == "plain"
     assert parse_memo_content("A normal development note").kind == "plain"
+
+
+def test_section_parser_handles_long_non_matching_lines_without_regex_backtracking():
+    long_line = "A" + " " * 20_000
+
+    assert _sections(long_line) == {}

@@ -506,7 +506,7 @@ func (s *APIV1Service) resolveUserAndNotificationIDFromName(ctx context.Context,
 		return nil, 0, err
 	}
 
-	id, err := strconv.Atoi(parts[3])
+	id, err := strconv.ParseInt(parts[3], 10, 32)
 	if err != nil {
 		return nil, 0, errors.Errorf("invalid notification id: %s", parts[3])
 	}
