@@ -4,9 +4,22 @@
 
 保持 Memos upstream，AI 通过 Webhook、HTTP API 和可替换 adapter 接入。每个阶段先做可回滚垂直切片，完成后更新状态、变更、交接和下一阶段 Prompt。
 
+## Agent 扩展路线（进行中）
+
+原有 Phase 0–13 产品路线已完成其定义范围。后续 Evidence Answer Agent 使用独立的
+[Agent 开发路线](agent-development-roadmap.zh-CN.md) 和
+[架构契约](agent-architecture.zh-CN.md)：A4-I1 至 A4-I5 已证明 lifecycle event、
+Memos-owned outbox、AI ledger、认证 transport 与一次性故障恢复；R4-I1 至 R4-I3 已证明
+严格 grounded-answer 契约、安全运行时接入和一次性本地 Provider smoke。
+
+这些证明不等于生命周期已上线。`AI_AGENT_ENABLED=false`、自动索引关闭和现有 Compose
+默认值均保持不变；A4 outbox/ledger 尚未接入 Memo CRUD、dispatcher、worker 或真实
+VectorStore。下一切片是 R5-I1 的纯持久化授权检索契约，不授权运行时接线。
+
 ## Phase 0：开发基础
 
-Go 位于 G:\Go，缓存/工作区位于 G:\GoWorkspace；Docker Desktop 负责本地 Compose 环境；Windows 低并发验证和 CPU 限制已完成。
+Go 工具链应位于 `PATH` 或由 `DEVMEMO_GO` 显式指定；Docker Desktop 负责本地 Compose
+环境；Windows 低并发验证和 CPU 限制已完成。
 
 ## Phase 1：AI 摘要 MVP
 
@@ -354,10 +367,11 @@ Browser follow-up: a fresh tab in the same authenticated Chrome profile now reac
 
 验证：新的 `pnpm lint`、独立 strict tsc、Web 全量低并发 `33 files / 149 passed`、build、Compose config 与 `git diff --check` 通过。没有后端改动，因此未重跑 AI Service 全量或 `verify-devmemo.ps1`。
 
-## 后续选择（无默认实现阶段）
+## 原有产品路线的后续选择
 
 当前已定义的内部工程路线已完成。后续只能在用户明确选择后推进：
 
 1. 正常 Memos 登录会话可用时，对 Phase 11 做只读详情页/系统剪贴板复核；不得提取 token、伪造会话或重跑 Phase 10 route B。
 2. route A 仅在真实受信任 gateway、Memos 可见范围映射和关闭 flag 的回滚条件同时存在时才可评估；`AI_PUBLIC_CHUNK_RETRIEVAL=false` 在此之前保持不变。
-3. 选择一项新的、与当前产品目标相关的受控功能切片；不得因路线图为空而推断授权。
+3. Agent 工作只按独立中英文路线中的当前推荐切片推进；不得因路线图存在后续阶段而推断
+   runtime、数据或发布授权。

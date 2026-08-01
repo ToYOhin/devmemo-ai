@@ -33,6 +33,9 @@ subsequent tool.
   with a low-resource, offline-first baseline.
 - Keep FastEmbed, Qdrant, Ollama, Webhook indexing, and public chunk retrieval
   as explicit opt-ins rather than default behavior.
+- Offer an experimental, read-only Evidence Answer entry through the Memos BFF.
+  It is disabled by default and returns only bounded answers, server-owned
+  citations, and a redacted execution trace.
 
 ## Architecture and data boundaries
 
@@ -54,7 +57,10 @@ Memo detail view
 ```
 
 See [docs/structure.md](docs/structure.md) for repository and runtime
-boundaries, and [docs/api.md](docs/api.md) for API contracts.
+boundaries, and [docs/api.md](docs/api.md) for API contracts. The experimental
+Agent design and remaining delivery gates are documented separately in
+[docs/agent-architecture.md](docs/agent-architecture.md) and
+[docs/agent-development-roadmap.md](docs/agent-development-roadmap.md).
 
 ## Quick start
 
@@ -91,6 +97,7 @@ AI_INDEX_ON_WEBHOOK=false
 AI_INDEX_MODE=memo
 AI_VECTOR_STORE=memory
 AI_PUBLIC_CHUNK_RETRIEVAL=false
+AI_AGENT_ENABLED=false
 ```
 
 - Default Compose does not allow private-network Webhook targets.
@@ -98,6 +105,8 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 - Qdrant and Ollama require explicit Compose profiles.
 - Public chunk retrieval remains disabled. It requires a real trusted gateway,
   Memos visibility mapping, and a verified disable-and-rollback path.
+- The Evidence Answer Agent remains an opt-in experiment. Its lifecycle
+  outbox/ledger proofs are not connected to Memo CRUD or automatic indexing.
 
 For a controlled local Docker development topology where a Memos Webhook must
 target `ai-service`, use the `docker-compose.local-webhook.yml` override
@@ -106,8 +115,9 @@ public or multi-user deployment.
 
 ## Further reading
 
-[README_AI.md](README_AI.md) documents deployment configuration, optional AI
-adapters, and the local Webhook override. Contributions are welcome through
+[README_AI.md](README_AI.md) documents AI Service configuration and optional
+adapters. [docs/operations.md](docs/operations.md) covers deployment, backup,
+restore, and upgrades. Contributions are welcome through
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support, security, and governance

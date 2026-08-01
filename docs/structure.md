@@ -1,11 +1,11 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-07-28
+更新时间：2026-08-01
 
 ## 顶层目录
 
 ```text
-H:\DevMemoAI/
+repository-root/
 ├── cmd/                         # Memos Go 启动入口
 ├── server/                      # Memos HTTP/Connect/API 层
 ├── store/                       # Memos 数据存储与迁移边界
@@ -14,7 +14,7 @@ H:\DevMemoAI/
 ├── web/                         # Memos React + TypeScript 前端
 │   └── src/features/ai/         # DevMemo AI 前端 feature：API、hooks、模板、摘要、Inbox、Context Pack
 ├── ai-service/                  # 独立 FastAPI AI 旁路服务
-├── contracts/                   # 跨语言 provider-neutral contract fixture（当前为 context-pack-v1）
+├── contracts/                   # 跨语言 provider-neutral fixtures（Context Pack、Agent、lifecycle、grounded answer）
 ├── integrations/                # 上游/部署集成脚本与配置
 ├── scripts/                     # Windows 验证、安装、Compose 辅助脚本
 ├── docs/                        # 架构、API、路线、决策、交接和下一阶段 Prompt
@@ -29,7 +29,7 @@ H:\DevMemoAI/
 
 ## 对外文档与部署边界
 
-根目录的 `README.md`、`README_AI.md`、`CONTRIBUTING.md`、`SUPPORT.md`、`GOVERNANCE.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`NOTICE` 与 `UPSTREAM.md` 共同描述 DevMemo AI 的非官方下游身份、部署方式、帮助/贡献入口和安全报告边界。默认 `docker-compose.yml` 不放行私网 Webhook；`docker-compose.local-webhook.yml` 只能由本机受控开发显式叠加，不能作为公共或多用户部署配置。
+根目录的 `README.md`、`README.zh-CN.md`、`README_AI.md`、`README_AI.zh-CN.md`、`CONTRIBUTING.md`、`SUPPORT.md`、`GOVERNANCE.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`NOTICE` 与 `UPSTREAM.md` 共同描述 DevMemo AI 的非官方下游身份、部署方式、帮助/贡献入口和安全报告边界。`docs/operations.md` 与 `docs/operations.zh-CN.md` 记录备份、恢复与升级边界。默认 `docker-compose.yml` 不放行私网 Webhook；`docker-compose.local-webhook.yml` 只能由本机受控开发显式叠加，不能作为公共或多用户部署配置。
 
 ```text
 cmd/server/store/internal/proto
@@ -38,7 +38,10 @@ cmd/server/store/internal/proto
   -> web React frontend
 ```
 
-Memos 仍是 Memo 原始内容、标签、搜索和用户权限的事实来源。本项目不把 AI 字段写入 Memos 数据库，也不修改 `server/`、`store/`、`proto/` 或通用前端数据层来承载 AI 派生状态。
+Memos 仍是 Memo 原始内容、标签、搜索和用户权限的事实来源。Memos BFF 在实验性 Agent
+启用时计算调用者可见范围；dormant lifecycle outbox adapter 位于 `store/`，但尚未接入
+既有 Memo create/update/delete 路径。AI 派生状态不写回 Memo 业务表，`proto/` 与通用前端
+数据层也不承担 AI 派生状态。
 
 ## Web AI feature 结构
 
@@ -49,6 +52,7 @@ web/src/features/ai/
 ├── AiMemoInsights.tsx     # Memo 详情页 AI Inbox：pending/accepted/rejected 审核
 ├── AiMemoContextPack.tsx  # Phase 9d-11：内存 preview/copy、显式来源、预算摘要、复制状态与无障碍反馈
 ├── contextPack.ts         # Phase 9b contract 的 Web provider-neutral adapter
+├── AiMemoEvidenceAnswer.tsx # 实验性只读 Agent 入口；提交前不发请求
 ├── AiMemoTemplate.tsx     # 结构化 Memo 模板展示
 └── AiMemoSummary.tsx      # bounded summary 展示
 ```
@@ -80,7 +84,10 @@ ai-service/
 │   │   ├── retrieval.py             # Citation、RetrievalResult 等 provider-neutral 类型
 │   │   ├── retrieval_evaluation.py  # 离线评估输入/结果类型
 │   │   ├── memo_insight.py          # AI Inbox/Decision Ledger contract
-│   │   └── context_pack.py          # context-pack-v1 contract 与 JSON 输出
+│   │   ├── context_pack.py          # context-pack-v1 contract 与 JSON 输出
+│   │   ├── agent.py                 # search_memos-only Agent 请求/结果契约
+│   │   ├── agent_lifecycle.py       # A4 lifecycle event/ack/state machine
+│   │   └── grounded_answer.py       # 严格 Provider answer/citation reference 契约
 │   ├── services/
 │   │   ├── content_parser.py        # Markdown 模板解析
 │   │   ├── embedding_service.py     # provider -> vector record -> store 编排
@@ -92,7 +99,10 @@ ai-service/
 │   │   ├── offline_chunk_index.py   # 独立 chunk 试验索引
 │   │   ├── chunk_lifecycle.py       # 显式 chunk Webhook create/update/delete 编排
 │   │   ├── public_chunk_retrieval.py # public-chunk-v1 authorization/dedupe/redaction projection
-│   ├── scripts/public_chunk_gateway_contract_smoke.py # local trusted-gateway contract evidence only
+│   │   ├── agent_delegation.py      # answer HMAC purpose/path 与严格 delegated body
+│   │   ├── evidence_answer_agent.py # 授权检索、Provider 校验与安全回答编排
+│   │   ├── agent_lifecycle_processor.py # dormant ledger/vector lifecycle processor
+│   │   ├── agent_lifecycle_transport.py # lifecycle HMAC、replay 与 in-process transport
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
 │   │   ├── ops_security.py          # ops token 与错误脱敏
 │   │   ├── memo_insights.py         # deterministic insight 提取与稳定 ID
@@ -102,7 +112,9 @@ ai-service/
 │       ├── fastembed_embedding.py   # 可选 FastEmbed，第三方类型只在此处
 │       ├── vector_store.py          # InMemoryVectorStore
 │       ├── qdrant_vector_store.py   # 可选 Qdrant adapter
-│       └── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
+│       ├── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
+│       └── agent_lifecycle_ledger.py # dormant AI SQLite lifecycle ledger
+├── scripts/public_chunk_gateway_contract_smoke.py # local trusted-gateway contract evidence only
 ├── scripts/smoke_qdrant.py          # 显式真实 Qdrant smoke
 ├── scripts/devmemory_lifecycle_report.py # local-only read-only diagnostic CLI
 └── tests/                           # AI Service unit/contract/API 测试
@@ -121,7 +133,20 @@ AiSettings.from_env
        └── QdrantVectorStore (explicit AI_VECTOR_STORE=qdrant)
 ```
 
-`app/domain/` 和 provider-neutral service 不依赖 FastAPI、FastEmbed、qdrant-client、httpx 或 sqlite3 类型。第三方 SDK 只在 adapter，SQLite 只在根数据库层和 `chunk_state.py` adapter。
+`app/domain/` 和 provider-neutral service 不依赖 FastAPI、FastEmbed、qdrant-client、httpx 或
+sqlite3 类型。第三方 SDK 只在 adapter；SQLite 只在根数据库层、`chunk_state.py` 和 dormant
+`agent_lifecycle_ledger.py` adapter。
+
+## Evidence Answer Agent 与 lifecycle 边界
+
+浏览器只访问 Memos 的 `POST /api/ai/agent/answer`。Memos 负责认证、可见范围与短时委托；
+AI Service 的固定 internal path 只执行 `search_memos`，并用严格 grounded-answer parser
+验证非 deterministic Provider 输出。citation 由服务端已授权证据映射，公开响应不包含原始
+Memo、prompt/context、embedding、身份、可见范围或 secret。
+
+`contracts/memo-lifecycle-v1.json`、Memos-owned SQLite outbox、AI SQLite ledger、认证
+transport 和一次性 integration proof 已存在，但都保持未接线。它们不会由当前 Memo CRUD、
+AI route、dispatcher、worker、定时器、Qdrant 或默认 Compose 自动调用。
 
 ## 默认完整 Memo 索引
 

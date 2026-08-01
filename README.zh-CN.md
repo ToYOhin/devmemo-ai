@@ -22,6 +22,8 @@ Memo、用户身份和可见性权限的事实来源；独立的 FastAPI AI Serv
 - 默认采用 deterministic provider 与内存检索，适合低资源、离线优先的本地运行。
 - FastEmbed、Qdrant、Ollama、Webhook 索引与公共 chunk retrieval 均为显式 opt-in，
   不作为默认行为。
+- 通过 Memos BFF 提供实验性只读 Evidence Answer 入口；它默认关闭，只返回受限回答、
+  服务端映射的引用和脱敏执行轨迹。
 
 ## 架构与数据边界
 
@@ -43,7 +45,9 @@ Memo 详情页
 ```
 
 完整的目录与运行时边界见 [docs/structure.md](docs/structure.md)，接口契约见
-[docs/api.md](docs/api.md)。
+[docs/api.md](docs/api.md)。实验性 Agent 的设计与剩余交付闸门分别见
+[docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
+[docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。
 
 ## 快速开始
 
@@ -79,6 +83,7 @@ AI_INDEX_ON_WEBHOOK=false
 AI_INDEX_MODE=memo
 AI_VECTOR_STORE=memory
 AI_PUBLIC_CHUNK_RETRIEVAL=false
+AI_AGENT_ENABLED=false
 ```
 
 - 默认 Compose 不允许私有网络 Webhook 目标。
@@ -86,6 +91,8 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 - Qdrant 与 Ollama 只能通过显式 Compose profile 启动。
 - 公共 chunk retrieval 保持关闭；它需要真实的 trusted gateway、Memos visibility
   mapping 以及可验证的关闭与回滚路径。
+- Evidence Answer Agent 仍是显式启用的实验能力；生命周期 outbox/ledger 证明尚未接入
+  Memo CRUD 或自动索引。
 
 如果在受控的本地 Docker 开发拓扑中，确实需要 Memos Webhook 指向 `ai-service`，请使用
 [README_AI.md](README_AI.md) 中记录的 `docker-compose.local-webhook.yml` override。不要
@@ -93,8 +100,9 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 
 ## 延伸阅读
 
-[README_AI.md](README_AI.md) 说明部署配置、可选 AI adapters 与本地 Webhook override。
-欢迎按 [CONTRIBUTING.md](CONTRIBUTING.md) 参与贡献。
+[README_AI.zh-CN.md](README_AI.zh-CN.md) 说明 AI Service 配置与可选 adapters；
+[docs/operations.zh-CN.md](docs/operations.zh-CN.md) 说明部署、备份、恢复与升级。欢迎按
+[CONTRIBUTING.md](CONTRIBUTING.md) 参与贡献。
 
 ## 支持、安全与治理
 
