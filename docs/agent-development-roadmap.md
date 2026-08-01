@@ -14,8 +14,10 @@
 > safely integrates them using synthetic evidence and fake Provider results.
 > R4-I3 adds a disposable local Provider compatibility smoke. R5-I1 adds an
 > unwired, fake-verified durable authorized-retrieval contract, and R5-I2 adds
-> an unwired disposable SQLite repository-adapter parity proof.
-> No production content-persistence adapter, lifecycle route, dispatcher,
+> an unwired disposable SQLite repository-adapter parity proof. R5-I3 selects
+> authenticated current-authority Memos rehydration and request-memory-only
+> content retention through a pure design contract and synthetic fixture.
+> No production rehydration transport, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -64,7 +66,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I2 proves reopen and parity with a disposable synthetic SQLite adapter, but production content persistence/rehydration and runtime selection remain undecided, so no durable path serves answers | Define the production content boundary first, then separately review runtime selection and lifecycle wiring |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I3 selects Memos current-authority rehydration and rejects persistent AI content, but no authenticated transport or runtime selection invokes the contract, so no durable path serves answers | Prove the distinct authenticated rehydration transport, then separately review runtime selection and lifecycle wiring |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -250,7 +252,13 @@ loading, duplicate/inconsistent-row rejection, and fixed failure mapping. The
 adapter stores only synthetic `tmp_path` data and is not a production content-
 persistence design. Existing `EvidenceAnswerAgent`, `RetrievalService`,
 VectorStore construction, Memo CRUD, and lifecycle runtime paths do not import
-or call it.
+or call it. R5-I3 selects Memos current-authority, all-or-nothing rehydration
+with request-memory-only content retention; it rejects persistent AI-side
+complete-Memo content and persistent hybrid caching for the durable Agent path.
+Its exact contract and synthetic fixture bind selection sequence/hash/version
+to the derived snapshot token and a request-local opaque Memos authority
+reference, then fail closed on authority or revision changes.
+No transport, route, repository, runtime secret, or real data is added.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -261,6 +269,9 @@ Scope:
   R2-R4 pass.
 - Preserve Memos visibility resolution and the AI pre-context `memo-v1` filter
   for every store adapter.
+- Re-confirm current visibility and complete-Memo eligibility in Memos before
+  an all-or-nothing rehydration response; retain returned content only in
+  request memory and recheck the derived snapshot before materialization.
 - Route supported legacy AI reads through authenticated Memos BFF contracts, or
   hide panels that are unavailable in Agent mode.
 - Add an explicit, backed-up, opt-in migration/runbook before any real Memo
@@ -356,15 +367,14 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R5-I3 production content persistence/rehydration design contract**
-next. Decide, without runtime wiring or real data, how an eligible durable
-candidate obtains its complete `memo-v1` document after restart while Memos
-remains authoritative. Specify retention, delete/tombstone propagation, rebuild
-generation and snapshot-token semantics, bounded failure/redaction, backup and
-discard/rebuild behavior, and the trust boundary for either derived content
-storage or authenticated Memos rehydration. Use only provider-neutral contracts,
-decision records, and synthetic fixtures. Keep `EvidenceAnswerAgent`, current
-`RetrievalService`, VectorStore factory/runtime selection, Memo CRUD,
-dispatcher/worker, Qdrant, Compose defaults, credentials, and real data unwired.
-Runtime selection and shared multi-instance replay storage remain later,
-separately authorized gates.
+Implement **R5-I4 authenticated content-rehydration transport contract proof**
+next. Bind the R5-I3 exact request/response schema to its distinct internal path
+and HMAC purpose with bounded timestamp, nonce, body digest, request size,
+timeout, all-or-nothing parsing, and content-free failure mapping. Use only an
+in-process fake handler, a bounded process-local replay store, and synthetic
+fixtures; add no HTTP route/client, runtime secret/configuration, automatic
+retry, database, real Memo, or runtime selection. Keep `EvidenceAnswerAgent`,
+current `RetrievalService`, VectorStore factory, Memo CRUD, dispatcher/worker,
+Qdrant, Compose defaults, credentials, and real data unwired. A shared replay
+store remains mandatory before any multi-instance claim, and runtime selection
+remains a later separately authorized gate.

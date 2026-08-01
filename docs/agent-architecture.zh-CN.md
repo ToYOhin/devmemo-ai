@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof；功能仍默认关闭。尚未交付生产正文持久化 adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存；功能仍默认关闭。尚未交付生产 rehydration transport、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -107,6 +107,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 13. **一次性 grounded-answer Provider smoke — 已完成。** 临时、无 volume、无宿主机端口的容器使用合成 complete-Memo 证据与已有本地 Ollama Provider。第一次非 exact 结果被有界 502 fail closed；只澄清 prompt 的纯 JSON 格式后，Provider 产出 exact 结果，验证后的 answer 与服务端 citation 成功返回。同一运行证明空检索零 Provider 调用、不可用 endpoint 返回固定 502。容器已删除，未持久化运行时设置、模型配置或数据。
 14. **持久化授权检索契约 — 已完成、未接线。** R5-I1 定义了有界的 Memos-authority query、无正文 candidate/ledger snapshot、第二阶段完整 Memo materialization、请求内 opaque evidence reference 与服务端 citation 投影。fake repository 证明可见性在加载正文前求交；只有当前 active generation 中，`memo-v1` 记录的序号与 hash 匹配 `applied` A4 ledger 时才符合条件。空/未知 scope、pending/failed/delete 状态、过期序号/hash、旧或未知 generation、缺失 ledger、chunk 版本、重复/冲突记录与 repository failure 全部 fail closed。证明只使用合成内存记录，不修改现有 Agent 或 retrieval runtime。
 15. **一次性 repository-adapter parity proof — 已完成、未接线。** R5-I2 把 R5-I1 边界绑定到显式创建的临时 SQLite store。candidate query 下推 Memos 授权 UID 集合与 limit，service 仍在正文加载前再次执行可见性求交。active generation、无正文 candidate 与 A4 ledger state 在同一个只读事务中读取；基于 revision 的 opaque snapshot token 防止后续正文加载混合不同 store generation。reopen parity、lifecycle 拒绝、重复/不一致行与固定 repository failure 映射只使用 `tmp_path` 和合成记录。该 adapter 仅用于测试，并非生产正文持久化或 rehydration 设计。
+16. **生产正文 rehydration 设计契约 — 已完成、未接线。** R5-I3 为 durable Agent 路径选择认证的 Memos 当前权威 rehydration，而不是 AI 侧持久化完整 Memo 正文或持久 hybrid cache。精确且有界的请求/响应投影绑定 eligible candidate 的 sequence、hash、version 与 R5 snapshot token；update、delete、visibility 丢失、generation/revision 切换、缺失项或响应不一致全部映射为同一个无正文错误。完整正文只存在于认证请求内存。共享 fixture 与纯测试未增加 transport、repository、route、runtime secret、database 或真实数据。
 
 ## A1 验收结果
 
@@ -144,7 +145,7 @@ answer 和一个服务端 citation。空检索未调用 Provider，不可用 end
 通过、prompt 含 opaque reference 且不含身份/metadata、空检索 `200` 且 Provider 调用数为零、
 不可用 endpoint 返回固定正文的 `502`。
 
-## R5 持久化授权检索契约与一次性 adapter 证明
+## R5 持久化授权检索与当前权威正文 rehydration
 
 R5-I1 是 provider-neutral、尚未接线的边界。query 必须携带由 Memos authority 提供、数量有界且
 无重复的完整 Memo UID 集合；空集合不访问 repository，直接返回空结果。repository 分为两阶段：
@@ -177,10 +178,42 @@ candidate/document 行统一映射为 `authorized_retrieval_unavailable`；open�
 transaction failure 不暴露原始细节。临时 schema 不保存 visibility、最终 identity、Provider citation
 metadata、prompt、embedding、secret 或 runtime 配置。
 
-该 SQLite document 表只是一项一次性测试 fixture，不代表生产 content persistence/rehydration 决策。
-`EvidenceAnswerAgent`、`RetrievalService`、VectorStore 构造、A4 runtime route、Memo CRUD、
-dispatcher/worker、Qdrant、Compose 与真实数据仍未改变。生产正文处理与任何 runtime selection 都是
-后续独立授权闸门。
+该 SQLite document 表仍只是一项一次性测试 fixture，不能升级为生产存储。R5-I3 为第一条 durable
+Agent 路径选择 **Memos 当前权威 rehydration**。AI 侧持久化完整 Memo 正文与持久 hybrid cache 均被
+拒绝，因为二者都会重复正文 retention、delete、visibility、backup 与泄露响应责任。此决策仅约束新的
+durable Agent 路径；ADR-017 描述的旧完整 Memo vector metadata 保持不变，但不能成为 R5 的生产权威。
+
+R5 选择 eligible candidate 后，AI 侧只能创建一个有界的 `memo-evidence-rehydration-v1` 请求，其中仅有
+derived snapshot token 和由 Memos 签发、仅请求内使用的 opaque `memos_authority_ref`，以及服务端生成的
+selection reference、Memo UID、source sequence、document hash 和 `memo-v1`。AI 侧不能解释、持久化或记录
+该 reference。未来由 Memos 持有的 handler 必须使用独立 internal path 与认证 purpose，在服务端解析该
+reference 并重新确认
+调用者当前 visibility 和完整 Memo eligibility，并从同一个原子 current-authority snapshot 读取全部请求
+文档。响应只回显 selection reference、精确正文、sequence/hash/version、derived snapshot token 和
+opaque Memos authority token。响应必须 all-or-nothing：缺失、archived、comment、blank、deleted、
+unauthorized、重复、stale 或部分失败都不返回正文。
+
+AI 侧随后必须重新校验原始授权 query、精确 eligible selection、响应映射、sequence/hash/version，且
+derived snapshot token 在 materialization 前仍为当前值。Memos 观察到并发 update/delete 时，会通过
+内容变更或记录缺失使旧 selection 失败；derived revision 或 rebuild-generation 切换会使 token 失效。
+tombstone、pending/failed/conflict quarantine、旧 generation 与 `memo-chunk-v1` 在 rehydration 前仍然
+不 eligible。derived candidate、ledger、vector payload、浏览器、Provider 或响应 metadata 均不能提供
+最终 visibility、identity、正文 authority 或 citation 字段；最终 identity 仍锚定 Memos-authority query，
+citation 仍由服务端构造。
+
+authority reference 与完整正文只保留到请求结束，不得进入 AI ledger、vector payload、日志、metrics、trace、backup 或错误
+正文。Memos 持有正文加密、访问控制、retention、backup、restore 与源数据恢复责任。AI 派生状态不属于
+权威备份，可以丢弃并从 Memos 重建；restore 必须先验证 Memos backup，再在 activation 前完成派生状态
+对账。任何 contract、认证、timeout、replay、部分响应、authority 或 adapter failure 都只映射为
+`authorized_retrieval_unavailable`，不得暴露 raw Memo、question、context、payload、embedding、identity、
+visibility、secret、SQL、endpoint 或原始异常。
+
+下一次 runtime 授权只允许单机、已认证的内部 rehydration transport，要求有界请求、短 timeout、无自动
+重试、无持久正文和合成 dry-run 证明。真实数据 opt-in 还必须验证 Memos backup，提供显式 dry run、
+rollback 和运行后 lifecycle/retrieval reconciliation。多实例继续被阻塞，直到跨宿主 transport 加密，且
+rehydration 与 A4 lifecycle 认证都使用共享 replay protection。R5-I3 不改变 `EvidenceAnswerAgent`、
+`RetrievalService`、VectorStore 构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose
+或真实数据。
 
 ## A4 本地 RAG 生命周期契约
 
