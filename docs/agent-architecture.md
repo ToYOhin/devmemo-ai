@@ -3,9 +3,20 @@
 > Status: the A1 local-first, read-only backend is implemented and locally
 > runtime-verified. A2 adds an explicit experimental Web entry, A3 completed a
 > controlled local Provider smoke, and A4 now defines the local RAG lifecycle
-> contract. The feature remains disabled by default. A4 is design-only: no
-> durable index lifecycle, Agent persistence, remote deployment, or
-> general-public availability is delivered.
+> contract. A4-I1 implements its pure event, acknowledgement, and state-machine
+> rules. A4-I2 adds an SQLite-only dormant source-outbox adapter and temporary-
+> database transaction proof. A4-I3 adds a dormant AI derived-ledger adapter and
+> fake-vector crash-recovery proof. A4-I4 adds authenticated lifecycle transport
+> contracts without a route or dispatcher. A4-I5 adds a synthetic disposable
+> outbox-to-ledger integration proof with restart, retry, tombstone,
+> reconciliation, and rebuild-generation coverage. The feature remains disabled
+> by default. No runtime lifecycle wiring, automatic indexing, remote deployment,
+> or general-public availability is delivered.
+
+Delivery order, current gaps, acceptance gates, and the resume-ready definition
+of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
+This architecture document remains the authority for security and data-flow
+contracts; the roadmap must not relax them.
 
 ## Purpose
 
@@ -145,6 +156,43 @@ LLM provider.
    retry, idempotency, rebuild, observability, and rollback rules below are the
    review baseline for later implementation. No runtime wiring or persistent
    real-Memo derived data is authorized by this design slice.
+6. **Pure lifecycle contracts — complete.** Provider-neutral event and
+   acknowledgement types, immutable replay checks, sequence/idempotency
+   decisions, tombstones, and fail-closed retrieval eligibility are covered by
+   shared fixtures and pure unit tests. No route, database, transport, vector
+   adapter, Compose change, or real data is involved.
+7. **Memos-owned outbox transaction proof — complete for SQLite.** A dormant
+   schema and explicit adapter allocate Memos source sequences and atomically
+   pair synthetic create/update/archive/delete mutations with index/reindex/
+   delete events. Temporary-database tests cover commit, rollback, tombstones,
+   shared fixtures, incremental migration, and the three-attempt bound. Existing
+   Memo CRUD paths do not call the adapter; no transport or automatic indexing
+   is enabled, and MySQL/PostgreSQL adapters are not implemented.
+8. **AI derived-ledger recovery proof — complete, unwired.** A separately
+   constructed SQLite adapter persists only event identity, fingerprint,
+   sequence, operation/hash, tombstone, status, bounded error code, and
+   last-applied metadata. A fake-vector processor test boundary proves
+   reserve-before-mutation, duplicate/stale/conflict handling, both crash replay
+   points, stable upsert, idempotent delete, and fail-closed retrieval. No route,
+   transport, Provider, Qdrant adapter, worker, default, or real-data path calls it.
+9. **Authenticated lifecycle transport contracts — complete, unwired.** A
+   lifecycle-only HMAC purpose, fixed path, and distinct headers bind method,
+   timestamp, nonce, and exact body digest. Python verifies a bounded replay
+   window and exact A4 event/acknowledgement projections; Go produces the same
+   fixture signature and strictly parses content-free acknowledgements. An
+   in-process client/handler maps authentication, validation, ledger, and vector
+   failures without raw details. No HTTP route, client, dispatcher, worker,
+   runtime secret/configuration, default, or real-data path is added.
+10. **Synthetic disposable lifecycle integration proof — complete, test-only.**
+   A process-local harness uses the real SQLite outbox migration, synthetic
+   source mutations, temporary AI ledger/vector databases, lifecycle-only HMAC,
+   and a fake stable vector writer. Tests cover ordered create/update/archive/
+   delete convergence, four interruption points, retry/exhaustion, stale
+   resurrection protection, content-free reconciliation, and rebuild-generation
+   validation. No route, dispatcher, worker, Compose change, Provider/Qdrant
+   call, runtime default, or real Memo is involved. The nonce replay store proves
+   only a single-process contract; shared multi-instance replay storage remains
+   a later runtime gate.
 
 ## Acceptance criteria for the first Agent path
 
@@ -334,19 +382,32 @@ backup policy and then reindexing, never by copying content back from AI state.
 Each later step requires separate authorization before runtime or real-data
 effects:
 
-1. Add provider-neutral event/acknowledgement fixtures and pure state-machine
-   tests for duplicate, stale, conflict, retry, tombstone, and redaction cases.
-   No route, database, Compose, or default changes.
-2. Add a Memos outbox adapter and transaction tests using a temporary test
-   database. Prove create/update/delete atomicity, per-Memo ordering, bounded
-   attempts, and explicit retry without starting a worker.
-3. Add an AI derived lifecycle ledger and fake vector-store integration tests.
-   Prove stable upsert, idempotent delete, crash-between-vector-and-ledger replay,
-   tombstone protection, and no raw snapshot persistence.
-4. Add a synthetic, disposable end-to-end smoke with temporary stores only.
-   Prove backlog/health projections, rebuild generation validation, disabled
-   defaults, no browser-to-AI request, and zero AI host-published ports.
-5. Only after explicit approval, run an opt-in local migration/rebuild against
+1. **Complete:** provider-neutral event/acknowledgement fixtures and pure
+   state-machine tests cover duplicate, stale, conflict, retry, tombstone,
+   quarantine, and redaction cases. They add no route, database, transport,
+   Compose, or default change.
+2. **Complete for SQLite:** a dormant Memos outbox schema and explicit adapter
+   use temporary databases to prove create/update/archive/delete atomicity,
+   per-Memo ordering, tombstones, bounded attempts, and explicit failure
+   recording without a worker. Runtime CRUD integration and other database
+   adapters remain separate gates.
+3. **Complete:** add an AI derived lifecycle ledger and fake vector-store
+   integration tests. They prove stable upsert, idempotent delete, reservation-
+   and vector-finalize crash replay, tombstone protection, safe error redaction,
+   retrieval quarantine, and no raw snapshot persistence. Runtime construction
+   remains a separate gate.
+4. **Complete:** add separately authenticated lifecycle transport contract tests.
+   They prove exact request/acknowledgement projections, domain-separated HMAC,
+   timestamp/nonce/body-digest binding, bounded replay-window enforcement, and
+   safe failure mapping without a route, dispatcher, worker, or existing CRUD
+   integration. Multi-instance replay storage remains a later runtime gate.
+5. **Complete:** a synthetic, disposable process-level integration proof uses
+   temporary stores only. It proves ordered outbox-to-ledger convergence,
+   backlog/high-water/count/digest projections, four interruption points,
+   bounded retry/exhaustion, tombstone protection, and rebuild-generation
+   validation. Existing default/port/browser boundaries remain unchanged and
+   are rechecked separately; no runtime endpoint is introduced.
+6. Only after explicit approval, run an opt-in local migration/rebuild against
    real Memos data with backup, rollback, and post-run deletion verification.
 
 ### Chunk and Qdrant gates
