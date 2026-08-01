@@ -67,6 +67,12 @@ def test_authorized_retrieval_filters_before_context_assembly_and_rejects_chunk_
 
     assert [citation.memo_id for citation in result.citations] == ["memo-docker"]
     assert "TOP SECRET" not in result.context
+    assert result.context.startswith("[evidence-1]\n")
+    assert "memo_id=" not in result.context
+    assert "score=" not in result.context
+    assert result.protected_context_fragments == (
+        "Docker port mapping fixed by changing docker-compose ports.",
+    )
 
 
 @pytest.mark.parametrize("question", ["", "  "])

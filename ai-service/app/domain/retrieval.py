@@ -22,6 +22,7 @@ class RetrievalResult:
 
     context: str
     citations: tuple[Citation, ...]
+    protected_context_fragments: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

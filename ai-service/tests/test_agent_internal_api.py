@@ -10,7 +10,7 @@ from app.adapters.vector_store import InMemoryVectorStore
 from app.services.agent_delegation import INTERNAL_ANSWER_PATH, sign_delegated_request
 from app.services.embedding_service import EmbeddingService
 from app.services.memo_indexing import MemoIndexDocument, index_memo
-from llm import DeterministicProvider
+from llm import DeterministicProvider, LLMResult
 
 
 client = TestClient(main.app)
@@ -88,6 +88,38 @@ def test_internal_agent_route_returns_only_safe_authorized_result(monkeypatch):
     assert "content" not in _keys(payload)
 
 
+def test_internal_agent_route_projects_validated_provider_answer_only(monkeypatch):
+    class GroundedProvider:
+        name = "remote"
+
+        async def generate(self, _prompt):
+            return LLMResult(
+                text=json.dumps(
+                    {
+                        "version": "grounded-answer-result-v1",
+                        "answer": "Compose declares the local port mapping.",
+                        "citation_refs": ["evidence-1"],
+                    },
+                    separators=(",", ":"),
+                ),
+                provider=self.name,
+            )
+
+    body = _body(["memo-visible"])
+    monkeypatch.setattr(main, "settings", _enabled_settings())
+    monkeypatch.setattr(main, "embedding_service", _indexed_service())
+    monkeypatch.setattr(main, "provider", GroundedProvider())
+
+    response = client.post(INTERNAL_ANSWER_PATH, content=body, headers=_signed_headers(body))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["answer"] == "Compose declares the local port mapping."
+    assert payload["citations"][0]["memo_id"] == "memo-visible"
+    assert "citation_refs" not in _keys(payload)
+    assert "version" not in _keys(payload)
+
+
 def test_internal_agent_route_rejects_invalid_signature_before_execution(monkeypatch):
     body = _body(["memo-visible"])
     monkeypatch.setattr(main, "settings", _enabled_settings())
@@ -136,3 +168,16 @@ def test_internal_agent_route_maps_retrieval_and_provider_failures(monkeypatch):
     )
     assert provider_response.status_code == 502
     assert provider_response.json() == {"detail": "Agent provider unavailable"}
+
+    class MalformedProvider:
+        name = "remote"
+
+        async def generate(self, _prompt):
+            return LLMResult(text='{"raw_context":"forbidden"}', provider=self.name)
+
+    monkeypatch.setattr(main, "provider", MalformedProvider())
+    malformed_response = client.post(
+        INTERNAL_ANSWER_PATH, content=body, headers=_signed_headers(body)
+    )
+    assert malformed_response.status_code == 502
+    assert malformed_response.json() == {"detail": "Agent provider unavailable"}

@@ -10,8 +10,9 @@
 > contracts without a route or dispatcher. A4-I5 adds a synthetic disposable
 > outbox-to-ledger integration proof with restart, retry, tombstone,
 > reconciliation, and rebuild-generation coverage. R4-I1 adds a strict
-> provider-neutral grounded-answer result contract without runtime integration.
-> The feature remains disabled by default. No runtime lifecycle wiring,
+> provider-neutral grounded-answer result contract, and R4-I2 integrates it into
+> the non-deterministic answer path using only synthetic evidence and fake
+> Provider tests. The feature remains disabled by default. No runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
 
@@ -195,14 +196,22 @@ LLM provider.
    call, runtime default, or real Memo is involved. The nonce replay store proves
    only a single-process contract; shared multi-instance replay storage remains
    a later runtime gate.
-11. **Strict grounded-answer result contract — complete, unwired.** A standalone
+11. **Strict grounded-answer result contract — complete.** A standalone
    domain parser accepts only a versioned bounded answer plus opaque
    `evidence-*` references. It rejects malformed/duplicate/extra fields,
    unknown, duplicate, direct, or excessive references, raw-context echoes, and
    Provider-supplied content or metadata. Final citations are mapped only from
    server-owned `AgentCitation` values; validation, timeout, and availability
-   failures collapse to fixed content-free codes. The current runtime does not
-   call this validator and continues to discard Provider text.
+   failures collapse to fixed content-free codes. R4-I2 now consumes this
+   contract only through the guarded integration described below.
+12. **Safe grounded-answer runtime integration — complete, fake-verified.**
+   Authorized Agent retrieval now gives the Provider only `evidence-*` labels
+   and raw authorized evidence, never Memo IDs, scores, or citation metadata.
+   Non-deterministic output crosses the answer boundary only after the R4-I1
+   parser, context-echo check, and server-owned citation resolution succeed.
+   Empty retrieval and deterministic answers are unchanged; malformed output,
+   timeout, and failure retain the existing bounded 502 projection. No real
+   Provider, lifecycle runtime, Qdrant, Compose default, or real Memo was used.
 
 ## Acceptance criteria for the first Agent path
 
@@ -219,7 +228,7 @@ LLM provider.
   submit action, calls the same-origin Memos BFF only, and renders a reduced
   answer, citation, and trace projection.
 
-## R4 grounded-answer result contract
+## R4 grounded-answer result contract and integration
 
 R4-I1 is a pure contract, not a runtime behavior change. An untrusted Provider
 result contains exactly `version`, bounded `answer`, and one to ten opaque
@@ -235,10 +244,17 @@ timeout, and Provider failures map only to `invalid_grounded_answer`,
 `provider_timeout`, or `provider_unavailable`; raw exceptions and Provider text
 are not included.
 
-`EvidenceAnswerAgent` does not yet use this contract. It still skips the
-Provider on empty retrieval and discards non-deterministic Provider text after a
-successful call. Runtime integration and a disposable real-Provider smoke are
-separate authorization gates.
+R4-I2 connects this contract only to `EvidenceAnswerAgent`'s non-deterministic
+path. Authorized retrieval replaces internal Memo IDs, scores, and metadata in
+the Provider context with request-local `evidence-*` labels. The validated
+answer may be returned, but each requested reference is resolved back to the
+existing server-owned `AgentCitation`; Provider result fields never pass
+through. Empty retrieval still skips the Provider, and the deterministic answer
+is unchanged. Validation, timeout, and Provider failures continue through the
+existing bounded 502 response.
+
+This integration has been verified only with synthetic evidence and fake
+Provider results. A disposable real-Provider smoke remains a separate gate.
 
 ## A4 local RAG lifecycle contract
 
