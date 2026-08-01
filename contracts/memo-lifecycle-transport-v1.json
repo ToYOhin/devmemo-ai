@@ -1,0 +1,11 @@
+{
+  "version": "memo-lifecycle-transport-v1",
+  "purpose": "devmemo-memo-lifecycle-transport-v1",
+  "method": "POST",
+  "path": "/internal/ai/memo-lifecycle/events",
+  "timestamp": "1785556800",
+  "nonce": "lifecycle-nonce-0001",
+  "secret": "synthetic-lifecycle-secret",
+  "raw_body": "{\"event_id\":\"event-index-1\",\"event_type\":\"memo.index.requested.v1\",\"memo_uid\":\"memo-1\",\"source_sequence\":1,\"index_version\":\"memo-v1\",\"operation\":\"upsert\",\"reason\":\"created\",\"occurred_at\":\"2026-08-01T10:00:00+08:00\",\"document\":\"# Docker\\n\\nPort mapping uses the Memos BFF.\",\"document_hash\":\"4883f541251e7d07c7358c8db311d2a85767ca3b33d47b6842b0c31f105bc8b1\"}",
+  "signature": "sha256=da04f0910a14822e4c4a7c65d0e33cc24d50a946b26fb24064c8e7619d905ad4"
+}

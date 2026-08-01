@@ -1,0 +1,74 @@
+{
+  "version": "memo-lifecycle-v1",
+  "events": [
+    {
+      "event_id": "event-index-1",
+      "event_type": "memo.index.requested.v1",
+      "memo_uid": "memo-1",
+      "source_sequence": 1,
+      "index_version": "memo-v1",
+      "operation": "upsert",
+      "reason": "created",
+      "occurred_at": "2026-08-01T10:00:00+08:00",
+      "document": "# Docker\n\nPort mapping uses the Memos BFF.",
+      "document_hash": "4883f541251e7d07c7358c8db311d2a85767ca3b33d47b6842b0c31f105bc8b1"
+    },
+    {
+      "event_id": "event-reindex-2",
+      "event_type": "memo.reindex.requested.v1",
+      "memo_uid": "memo-1",
+      "source_sequence": 2,
+      "index_version": "memo-v1",
+      "operation": "upsert",
+      "reason": "content_changed",
+      "occurred_at": "2026-08-01T10:05:00+08:00",
+      "document": "# Docker\n\nUpdated port mapping uses the Memos BFF.",
+      "document_hash": "4dc3fda1fd13bc68423b0777878a8eecf8d46befdba6c4d86046aba404f0b25c"
+    },
+    {
+      "event_id": "event-delete-3",
+      "event_type": "memo.delete.requested.v1",
+      "memo_uid": "memo-1",
+      "source_sequence": 3,
+      "index_version": "memo-v1",
+      "operation": "delete",
+      "reason": "deleted",
+      "occurred_at": "2026-08-01T10:10:00+08:00"
+    }
+  ],
+  "acknowledgements": [
+    {
+      "event_id": "event-index-1",
+      "memo_uid": "memo-1",
+      "source_sequence": 1,
+      "index_version": "memo-v1",
+      "status": "applied",
+      "operation": "upsert"
+    },
+    {
+      "event_id": "event-index-1",
+      "memo_uid": "memo-1",
+      "source_sequence": 1,
+      "index_version": "memo-v1",
+      "status": "duplicate",
+      "operation": "upsert"
+    },
+    {
+      "event_id": "event-index-0",
+      "memo_uid": "memo-1",
+      "source_sequence": 1,
+      "index_version": "memo-v1",
+      "status": "stale",
+      "operation": "upsert"
+    },
+    {
+      "event_id": "event-reindex-2",
+      "memo_uid": "memo-1",
+      "source_sequence": 2,
+      "index_version": "memo-v1",
+      "status": "failed",
+      "operation": "upsert",
+      "error_code": "vector_store_unavailable"
+    }
+  ]
+}

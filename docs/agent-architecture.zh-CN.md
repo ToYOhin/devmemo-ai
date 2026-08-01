@@ -1,6 +1,10 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约；功能仍默认关闭。A4 仅完成设计，尚未交付持久索引生命周期、Agent 持久化、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明；功能仍默认关闭。尚未交付运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+
+交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
+[DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
+数据流契约的权威，开发路线不得放宽这些契约。
 
 ## 目标
 
@@ -93,6 +97,11 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 3. **显式实验 UI — 已完成。** Memo 详情页入口有清晰标记，用户展开入口并提交问题前不会发出请求。它仅以 `question` 和 `limit` 调用同源 Memos BFF，然后严格解析并显示安全 answer、citation 与脱敏步骤状态；不直连 AI Service，也不持久化结果。
 4. **受控 provider smoke — 已完成。** 一次可销毁的仅本地运行时验证了既有签名内部路径与显式 opt-in Provider，包括成功的证据回答、空上下文时跳过 Provider，以及安全的 502 Provider 失败映射。该验证没有发布 AI 宿主机端口、没有写入持久数据，也没有更改默认 Compose 配置。
 5. **本地 RAG 生命周期契约 — 设计已完成。** 下文的 Memos-owned 事件、重试、幂等、重建、可观测性与回滚规则是后续实现的评审基线。本设计切片不授权运行时接线或持久化任何真实 Memo 派生数据。
+6. **纯生命周期契约 — 已完成。** Provider-neutral 事件与确认类型、不可变重放校验、序号/幂等决策、tombstone 和 fail-closed 检索资格已有共享 fixture 与纯单元测试。没有增加 route、数据库、transport、vector adapter、Compose 改动或真实数据。
+7. **Memos-owned outbox 事务证明 — SQLite 已完成。** Dormant schema 和显式 adapter 由 Memos 分配源序号，并把合成 create/update/archive/delete 变更与 index/reindex/delete 事件原子配对。临时数据库测试覆盖提交、回滚、tombstone、共享 fixture、增量 migration 和三次 attempt 上限。现有 Memo CRUD 不调用该 adapter；没有启用 transport 或自动索引，也未实现 MySQL/PostgreSQL adapter。
+8. **AI 派生 ledger 恢复证明 — 已完成、未接线。** 独立构造的 SQLite adapter 只持久化 event identity、fingerprint、序号、operation/hash、tombstone、状态、有界错误码和 last-applied 元数据。fake vector processor 测试边界证明了 vector 变更前 reservation、duplicate/stale/conflict、两个崩溃重放点、稳定 upsert、幂等 delete 与 fail-closed retrieval。没有 route、transport、Provider、Qdrant adapter、worker、默认值或真实数据路径调用它。
+9. **认证 lifecycle transport 契约 — 已完成、未接线。** lifecycle-only HMAC purpose、固定 path 与独立 header 绑定 method、timestamp、nonce 和 exact body digest。Python 校验有界 replay window 与严格 A4 event/acknowledgement 投影；Go 产生相同 fixture 签名并严格解析无内容 acknowledgement。in-process client/handler 对 authentication、validation、ledger 和 vector 故障做无 raw detail 的安全映射。没有增加 HTTP route/client、dispatcher、worker、运行时 secret/config、默认值或真实数据路径。
+10. **合成一次性 lifecycle 集成证明 — 已完成、仅测试。** 进程内 harness 使用真实 SQLite outbox migration、合成源 mutation、临时 AI ledger/vector 数据库、lifecycle-only HMAC 与稳定 fake vector writer。测试覆盖按序 create/update/archive/delete、四个中断点、重试/耗尽、过期复活防护、无正文对账与 rebuild generation 校验。没有增加 route、dispatcher、worker、Compose 改动、Provider/Qdrant 调用、运行时默认值或真实 Memo。nonce replay store 只证明单进程契约；共享多实例 replay 存储仍是后续运行时闸门。
 
 ## A1 验收结果
 
@@ -178,11 +187,12 @@ Memos-owned ops 状态公开 event ID、类型、序号、状态、attempts、�
 
 后续每一步在产生运行时或真实数据影响前都需要单独授权：
 
-1. 增加 provider-neutral 事件/确认 fixture 与纯状态机测试，覆盖 duplicate、stale、conflict、retry、tombstone 和脱敏；不增加 route、数据库、Compose 或默认值变更。
-2. 增加 Memos outbox adapter 和临时测试数据库事务测试，证明 create/update/delete 原子性、单 Memo 保序、有界 attempts 与无 worker 的显式重试。
-3. 增加 AI 派生生命周期 ledger 与 fake vector-store 集成测试，证明稳定 upsert、幂等 delete、vector 与 ledger 之间崩溃后的重放、tombstone 保护，以及不持久化 raw snapshot。
-4. 使用纯临时 store 做合成、可销毁的端到端 smoke，证明 backlog/health 投影、重建 generation 校验、默认关闭、无浏览器直连 AI，以及 AI 宿主机发布端口为零。
-5. 只有取得明确批准后，才能在真实 Memos 数据上运行显式 opt-in 的本地迁移/重建；此前必须准备备份、回滚与删除后验证。
+1. **已完成：** provider-neutral 事件/确认 fixture 与纯状态机测试已覆盖 duplicate、stale、conflict、retry、tombstone、quarantine 和脱敏；没有增加 route、数据库、transport、Compose 或默认值变更。
+2. **SQLite 已完成：** dormant Memos outbox schema 和显式 adapter 使用临时数据库证明 create/update/archive/delete 原子性、单 Memo 保序、tombstone、有界 attempts 与无 worker 的显式失败记录。运行时 CRUD 接入和其他数据库 adapter 仍是独立闸门。
+3. **已完成：** 增加 AI 派生生命周期 ledger 与 fake vector-store 集成测试，证明稳定 upsert、幂等 delete、reservation/vector-finalize 两个崩溃点的重放、tombstone 保护、安全错误脱敏、retrieval quarantine，以及不持久化 raw snapshot。运行时构造仍是独立闸门。
+4. **已完成：** 增加独立认证的生命周期 transport 契约测试，证明严格 request/acknowledgement 投影、domain-separated HMAC、timestamp/nonce/body digest 绑定、有界 replay window 和安全失败映射，但不增加 route、dispatcher、worker 或现有 CRUD 接线。多实例 replay store 仍是后续运行时闸门。
+5. **已完成：** 使用纯临时 store 完成合成、可销毁的进程级集成证明，覆盖按序 outbox-to-ledger 收敛、backlog/high-water/count/digest 投影、四个中断点、有界重试/耗尽、tombstone 防护与 rebuild generation 校验。既有默认值、端口和浏览器边界保持不变并另行复核；没有新增运行时 endpoint。
+6. 只有取得明确批准后，才能在真实 Memos 数据上运行显式 opt-in 的本地迁移/重建；此前必须准备备份、回滚与删除后验证。
 
 ### Chunk 与 Qdrant 闸门
 
