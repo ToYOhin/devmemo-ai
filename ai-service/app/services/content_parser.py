@@ -12,8 +12,6 @@ _TYPE_PATTERN = re.compile(
     r"(?:memo[_ -]?type|type)\s*[:=]\s*(code(?:\s*snippet)?|bug(?:\s*report)?)",
     re.IGNORECASE,
 )
-_HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
-_INLINE_FIELD_PATTERN = re.compile(r"^\s*([A-Za-z][A-Za-z _-]*)\s*:\s*(.*?)\s*$")
 _LANGUAGE_ALIASES = {
     "py": "Python",
     "python": "Python",
@@ -117,18 +115,44 @@ def _sections(body: str) -> dict[str, str]:
     sections: dict[str, list[str]] = {}
     current: str | None = None
     for line in body.splitlines():
-        match = _HEADING_PATTERN.match(line)
-        if match:
-            current = _normalize_key(match.group(1))
+        heading = _heading_value(line)
+        if heading is not None:
+            current = _normalize_key(heading)
             sections.setdefault(current, [])
         else:
-            inline = _INLINE_FIELD_PATTERN.match(line)
+            inline = _inline_field(line)
             if inline and not current:
-                sections[_normalize_key(inline.group(1))] = [inline.group(2)]
+                sections[_normalize_key(inline[0])] = [inline[1]]
                 continue
-        if current and not match:
+        if current and heading is None:
             sections[current].append(line)
     return {key: "\n".join(value).strip() for key, value in sections.items()}
+
+
+def _heading_value(line: str) -> str | None:
+    """Parse an ATX heading without a backtracking regular expression."""
+    indent = len(line) - len(line.lstrip(" \t"))
+    if indent > 3:
+        return None
+    candidate = line[indent:]
+    marker_count = len(candidate) - len(candidate.lstrip("#"))
+    if not 1 <= marker_count <= 6 or len(candidate) == marker_count:
+        return None
+    if not candidate[marker_count].isspace():
+        return None
+    value = candidate[marker_count:].strip()
+    return value or None
+
+
+def _inline_field(line: str) -> tuple[str, str] | None:
+    """Parse a simple field line without regex work proportional to backtracking."""
+    candidate = line.strip()
+    key, separator, value = candidate.partition(":")
+    if not separator or not key or not key[0].isalpha():
+        return None
+    if not all(character.isalpha() or character in " _-" for character in key):
+        return None
+    return key, value.strip()
 
 
 def _value(metadata: dict[str, str], sections: dict[str, str], *keys: str) -> str:

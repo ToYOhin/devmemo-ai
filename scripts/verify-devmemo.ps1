@@ -3,22 +3,23 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$go = "G:\Go\bin\go.exe"
-$python = "H:\DevMemoAI\ai-service\.venv\Scripts\python.exe"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$go = if ($env:DEVMEMO_GO) { $env:DEVMEMO_GO } else { (Get-Command go -ErrorAction Stop).Source }
+$python = if ($env:DEVMEMO_PYTHON) {
+    $env:DEVMEMO_PYTHON
+} else {
+    Join-Path $repoRoot "ai-service\.venv\Scripts\python.exe"
+}
 
-if (-not (Test-Path $go)) { throw "Go not found at $go" }
-if (-not (Test-Path $python)) { throw "AI service virtualenv not found at $python" }
+if (-not (Test-Path $go)) { throw "Go not found. Put go on PATH or set DEVMEMO_GO." }
+if (-not (Test-Path $python)) { throw "AI service virtualenv not found. Create ai-service/.venv or set DEVMEMO_PYTHON." }
 
 $env:GOTOOLCHAIN = "local"
-$env:GOPATH = "G:\GoWorkspace"
-$env:GOCACHE = "G:\GoWorkspace\cache"
 $env:GOMAXPROCS = "1"
 $env:DEVMEMO_GO_TEST_P = "1"
-$env:Path = "G:\Go\bin;$env:Path"
 
 & $go version
-$repoRoot = Get-Location
-Push-Location "${repoRoot}\ai-service"
+Push-Location (Join-Path $repoRoot "ai-service")
 & $python -m pytest -q tests
 $pytestExit = $LASTEXITCODE
 Pop-Location
