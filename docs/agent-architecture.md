@@ -13,9 +13,11 @@
 > provider-neutral grounded-answer result contract, and R4-I2 integrates it into
 > the non-deterministic answer path using only synthetic evidence and fake
 > Provider tests. R4-I3 verifies that path with a disposable local Provider
-> smoke. The feature remains disabled by default. No runtime lifecycle wiring,
-> automatic indexing, remote deployment, or general-public availability is
-> delivered.
+> smoke. R5-I1 adds an unwired durable authorized-retrieval contract with a
+> two-stage, content-free candidate boundary and fake repository proof. The
+> feature remains disabled by default. No durable repository adapter, runtime
+> lifecycle wiring, automatic indexing, remote deployment, or general-public
+> availability is delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -221,6 +223,17 @@ LLM provider.
    were returned. The same run proved empty retrieval made zero Provider calls
    and an unavailable endpoint returned the fixed 502 body. The container was
    removed and no runtime setting, model configuration, or data was persisted.
+14. **Durable authorized-retrieval contract — complete, unwired.** R5-I1
+   defines a bounded Memos-authority query, content-free candidate/ledger
+   snapshot, second-stage complete-Memo materialization, request-local opaque
+   evidence references, and a server-owned citation projection. A fake
+   repository proves that visibility is intersected before document loading;
+   only the current active generation whose `memo-v1` record matches an
+   `applied` A4 ledger sequence and hash is eligible. Empty/unknown scope,
+   pending/failed/delete state, stale sequence/hash, old or unknown generation,
+   missing ledger, chunk version, duplicate/conflicting records, and repository
+   failures all fail closed. The proof uses only synthetic in-memory records
+   and does not modify the existing Agent or retrieval runtime.
 
 ## Acceptance criteria for the first Agent path
 
@@ -274,6 +287,41 @@ The retained content-free command summary is: success `200`, answer length `79`,
 one server-owned citation, exact parser passed, opaque reference present,
 identity/metadata absent from the prompt, empty retrieval `200` with zero
 Provider calls, and unavailable endpoint `502` with the fixed body.
+
+## R5-I1 durable authorized-retrieval contract
+
+R5-I1 is a provider-neutral, unwired boundary. Its query carries a bounded,
+duplicate-free set of complete-Memo UIDs supplied by Memos authority; an empty
+set returns an empty result without touching a repository. The repository is
+split into two phases: it first returns only ranked record identity,
+generation, index version, sequence/hash, and joined A4 ledger state, then it
+may load complete synthetic documents only for the records that survived the
+Memos UID intersection and every lifecycle check. The service repeats the UID
+intersection even when an adapter claims to have applied it.
+
+A candidate is eligible only when its generation equals the current active
+generation, its index version is exactly `memo-v1`, and `is_retrieval_eligible`
+confirms that its source sequence and document hash match the latest `applied`
+upsert with no active tombstone or failure quarantine. Missing, applying,
+failed, deleted, stale, old/unknown-generation, chunk, duplicate, or internally
+inconsistent derived records cannot cause document loading or context
+assembly. Unknown authorized UIDs produce no evidence; malformed or duplicate
+query UIDs are rejected by a fixed contract error.
+
+Eligible documents receive request-local `evidence-*` references. Citation
+identity is anchored back to the Memos-authority query and constructed by the
+service from allowlisted fields, never from Provider output or arbitrary store
+metadata. Safe observation exposes only the contract version, result count,
+and opaque references. Repository, document,
+or consistency failures collapse to `authorized_retrieval_unavailable` and do
+not expose Memo text, question context, payload, embedding, identity,
+visibility, secret, citation metadata, or raw exception data.
+
+The only repository implementation is a test fake using synthetic in-memory
+records. `EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction,
+A4 runtime routes, Memo CRUD, dispatcher/worker paths, Qdrant, Compose, and real
+data remain unchanged. A durable repository-adapter parity proof and any
+runtime selection are later, separately authorized gates.
 
 ## A4 local RAG lifecycle contract
 
