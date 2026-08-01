@@ -12,9 +12,10 @@
 > lifecycle integration proof are complete on the Agent feature branch. R4-I1
 > adds strict provider-neutral grounded-answer result contracts, and R4-I2
 > safely integrates them using synthetic evidence and fake Provider results.
-> R4-I3 adds a disposable local Provider compatibility smoke.
-> No lifecycle route, dispatcher, runtime wiring, or production-ready answer
-> path is implemented.
+> R4-I3 adds a disposable local Provider compatibility smoke. R5-I1 adds an
+> unwired, fake-verified durable authorized-retrieval contract.
+> No durable repository adapter, lifecycle route, dispatcher, runtime wiring,
+> or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -62,7 +63,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo store | Indexed evidence disappears on restart and the Agent cannot demonstrate durable local RAG | Implement the reviewed A4 lifecycle and prove create/update/delete/restart/rebuild behavior in disposable stores |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo store | R5-I1 defines the lifecycle-safe durable query boundary, but no durable adapter or runtime path invokes it, so indexed evidence still disappears on restart | Prove a disposable durable repository adapter and parity, then separately review runtime selection and lifecycle wiring |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -240,6 +241,14 @@ data change is required.
 
 ### R5 — Durable authorized retrieval and product-path unification
 
+**Status:** R5-I1 is implemented and fake-verified without a repository adapter
+or runtime wiring. It requires a bounded Memos-authorized UID set, filters
+content-free candidate/ledger state before document loading, accepts only the
+current active generation and A4-applied `memo-v1` sequence/hash, and projects
+request-local opaque references plus server-owned citations. Existing
+`EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction, Memo CRUD,
+and lifecycle runtime paths do not import or call it.
+
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
 
@@ -344,12 +353,12 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R5-I1 durable authorized-retrieval contract** next. Define an
-unwired provider-neutral query boundary that accepts only the Memos-authorized
-complete-Memo UID set and returns only lifecycle-eligible `memo-v1` evidence
-from derived state. Prove with temporary stores and fakes that tombstones,
-failed/pending ledger rows, stale source sequences, wrong rebuild generations,
-unknown visibility, and chunk records fail closed, while eligible results retain
-opaque Provider references and server-owned citations. Do not connect existing
-Agent runtime, Memo CRUD, dispatcher/worker, real Qdrant, Compose defaults, or
-real data. Shared replay storage remains a separate multi-instance gate.
+Implement **R5-I2 disposable repository-adapter parity proof** next. Bind the
+R5-I1 protocol to a temporary, synthetic derived-store adapter that reads one
+consistent active-generation/A4-ledger snapshot and materializes documents only
+after authorization and eligibility selection. Prove restart/reopen behavior,
+duplicate/inconsistent-row rejection, fixed failure mapping, and result parity
+with the R5-I1 fake. Keep `EvidenceAnswerAgent`, current `RetrievalService`,
+VectorStore factory/runtime selection, Memo CRUD, dispatcher/worker, real
+Qdrant, Compose defaults, and real data unwired. Production content persistence
+and shared multi-instance replay storage remain separate design gates.

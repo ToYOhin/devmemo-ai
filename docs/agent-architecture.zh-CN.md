@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke；功能仍默认关闭。尚未交付运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约；功能仍默认关闭。尚未交付持久化 repository adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -105,6 +105,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 11. **严格 grounded-answer 结果契约 — 已完成。** 独立 domain parser 只接受版本化受限 answer 与 opaque `evidence-*` reference；拒绝畸形、重复、额外字段，未知、重复、直接或超量 reference，raw context echo，以及 Provider 提供的正文或 metadata。最终 citation 只能从服务端持有的 `AgentCitation` 映射；validation、timeout 与 availability failure 只映射为固定无正文错误码。R4-I2 仅通过下述受保护集成消费该契约。
 12. **安全 grounded-answer 运行时接入 — 已完成、仅 fake 验证。** Agent 授权检索只向 Provider 提供 `evidence-*` 标签和已授权证据，不提供 Memo ID、score 或 citation metadata。非 deterministic 输出只有通过 R4-I1 parser、context echo 检查和服务端 citation 映射后才能成为回答。空检索和 deterministic 输出不变；畸形输出、timeout 与 failure 继续映射为既有有界 502。没有调用真实 Provider、生命周期 runtime、Qdrant、Compose 默认值或真实 Memo。
 13. **一次性 grounded-answer Provider smoke — 已完成。** 临时、无 volume、无宿主机端口的容器使用合成 complete-Memo 证据与已有本地 Ollama Provider。第一次非 exact 结果被有界 502 fail closed；只澄清 prompt 的纯 JSON 格式后，Provider 产出 exact 结果，验证后的 answer 与服务端 citation 成功返回。同一运行证明空检索零 Provider 调用、不可用 endpoint 返回固定 502。容器已删除，未持久化运行时设置、模型配置或数据。
+14. **持久化授权检索契约 — 已完成、未接线。** R5-I1 定义了有界的 Memos-authority query、无正文 candidate/ledger snapshot、第二阶段完整 Memo materialization、请求内 opaque evidence reference 与服务端 citation 投影。fake repository 证明可见性在加载正文前求交；只有当前 active generation 中，`memo-v1` 记录的序号与 hash 匹配 `applied` A4 ledger 时才符合条件。空/未知 scope、pending/failed/delete 状态、过期序号/hash、旧或未知 generation、缺失 ledger、chunk 版本、重复/冲突记录与 repository failure 全部 fail closed。证明只使用合成内存记录，不修改现有 Agent 或 retrieval runtime。
 
 ## A1 验收结果
 
@@ -141,6 +142,30 @@ answer 和一个服务端 citation。空检索未调用 Provider，不可用 end
 保留的无正文命令摘要为：成功状态 `200`、answer 长度 `79`、一个服务端 citation、exact parser
 通过、prompt 含 opaque reference 且不含身份/metadata、空检索 `200` 且 Provider 调用数为零、
 不可用 endpoint 返回固定正文的 `502`。
+
+## R5-I1 持久化授权检索契约
+
+R5-I1 是 provider-neutral、尚未接线的边界。query 必须携带由 Memos authority 提供、数量有界且
+无重复的完整 Memo UID 集合；空集合不访问 repository，直接返回空结果。repository 分为两阶段：
+第一阶段只返回排序后的 record identity、generation、index version、sequence/hash 与已关联的 A4
+ledger state；只有通过 Memos UID 求交与全部 lifecycle 检查的记录，第二阶段才允许加载完整合成
+Memo 文档。即使 adapter 声称已应用权限条件，service 仍会再次执行 UID 求交。
+
+候选只有同时满足以下条件才 eligible：generation 等于当前 active generation，index version 严格为
+`memo-v1`，且 `is_retrieval_eligible` 确认 source sequence 与 document hash 匹配最近一次
+`applied` upsert，不存在 tombstone 或 failure quarantine。缺失、applying、failed、deleted、stale、
+旧/未知 generation、chunk、重复或内部不一致的派生记录均不得触发正文加载或 context 组装。未知
+授权 UID 不产生证据；畸形或重复 query UID 通过固定 contract error 拒绝。
+
+eligible 文档只获得请求内 `evidence-*` reference。citation identity 必须重新锚定到 Memos-authority
+query，并由 service 使用白名单字段构造，不能来自 Provider 输出或 store 的任意 metadata。安全可观测
+投影只包含契约版本、结果数与 opaque reference。
+repository、document 或一致性故障统一折叠为 `authorized_retrieval_unavailable`，不暴露 Memo 正文、
+问题 context、payload、embedding、identity、visibility、secret、citation metadata 或原始异常。
+
+当前唯一 repository 实现是使用合成内存记录的测试 fake。`EvidenceAnswerAgent`、`RetrievalService`、
+VectorStore 构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose 与真实数据均未
+改变。持久化 repository-adapter parity proof 与任何 runtime selection 都是后续独立授权闸门。
 
 ## A4 本地 RAG 生命周期契约
 
