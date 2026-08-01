@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -13,7 +14,16 @@ import (
 	"github.com/usememos/memos/store"
 )
 
+type memoQueryExecutor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
 func (d *DB) CreateMemo(ctx context.Context, create *store.Memo) (*store.Memo, error) {
+	return createMemo(ctx, d.db, create)
+}
+
+func createMemo(ctx context.Context, executor memoQueryExecutor, create *store.Memo) (*store.Memo, error) {
 	fields := []string{"`uid`", "`creator_id`", "`content`", "`visibility`", "`payload`"}
 	placeholder := []string{"?", "?", "?", "?", "?"}
 	payload := "{}"
@@ -39,7 +49,7 @@ func (d *DB) CreateMemo(ctx context.Context, create *store.Memo) (*store.Memo, e
 	}
 
 	stmt := "INSERT INTO `memo` (" + strings.Join(fields, ", ") + ") VALUES (" + strings.Join(placeholder, ", ") + ") RETURNING `id`, `created_ts`, `updated_ts`, `row_status`"
-	if err := d.db.QueryRowContext(ctx, stmt, args...).Scan(
+	if err := executor.QueryRowContext(ctx, stmt, args...).Scan(
 		&create.ID,
 		&create.CreatedTs,
 		&create.UpdatedTs,
@@ -193,6 +203,10 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 }
 
 func (d *DB) UpdateMemo(ctx context.Context, update *store.UpdateMemo) error {
+	return updateMemo(ctx, d.db, update)
+}
+
+func updateMemo(ctx context.Context, executor memoQueryExecutor, update *store.UpdateMemo) error {
 	set, args := []string{}, []any{}
 	if v := update.UID; v != nil {
 		set, args = append(set, "`uid` = ?"), append(args, *v)
@@ -228,16 +242,20 @@ func (d *DB) UpdateMemo(ctx context.Context, update *store.UpdateMemo) error {
 	args = append(args, update.ID)
 
 	stmt := "UPDATE `memo` SET " + strings.Join(set, ", ") + " WHERE `id` = ?"
-	if _, err := d.db.ExecContext(ctx, stmt, args...); err != nil {
+	if _, err := executor.ExecContext(ctx, stmt, args...); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (d *DB) DeleteMemo(ctx context.Context, delete *store.DeleteMemo) error {
+	return deleteMemo(ctx, d.db, delete)
+}
+
+func deleteMemo(ctx context.Context, executor memoQueryExecutor, delete *store.DeleteMemo) error {
 	where, args := []string{"`id` = ?"}, []any{delete.ID}
 	stmt := "DELETE FROM `memo` WHERE " + strings.Join(where, " AND ")
-	result, err := d.db.ExecContext(ctx, stmt, args...)
+	result, err := executor.ExecContext(ctx, stmt, args...)
 	if err != nil {
 		return err
 	}
