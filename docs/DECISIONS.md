@@ -336,3 +336,23 @@ RC 不能解除公开稳定发布的治理条件：仓库可见性、外部可�
 后续状态更新：Container package 已由具备 GitHub Packages 管理权限的维护者设为 public。
 匿名 `docker buildx imagetools inspect ghcr.io/toyohin/devmemo-ai:stable` 已确认
 linux/amd64、linux/arm64 与 linux/arm/v7 manifests。该发布状态不改变产品运行时默认值。
+
+## ADR-057：R5 durable Agent 正文使用 Memos 当前权威 rehydration
+
+R5-I3 为第一条 durable Agent 检索路径选择认证的 Memos 当前权威 rehydration，不在 AI 侧持久化完整
+Memo 正文，也不引入持久 hybrid cache。R5 eligibility 选择后，独立 purpose/path 的未来服务端 transport
+必须解析由 Memos 签发、AI 不解释且仅请求内使用的 opaque authority reference，重新确认当前 visibility
+与完整 Memo eligibility，并以 all-or-nothing 精确 schema 返回正文；
+AI 侧再校验 selection sequence/hash/version 与仍为当前值的 derived snapshot token。update、delete、
+archive/comment/blank、tombstone、quarantine、旧 generation、部分响应或任何不一致均整体 fail closed。
+
+完整正文只允许存在于认证请求的短时内存，不能进入 AI ledger、vector payload、日志、metrics、trace、
+backup 或错误正文。Memos 继续拥有正文、身份、visibility、retention、加密、backup 与 restore；AI 派生
+状态可丢弃并从 Memos 重建，不能成为第二事实源。最终 identity 仍来自 Memos-authority query，citation
+仍由 R5 service 构造。所有故障只投影为 `authorized_retrieval_unavailable`。
+
+此决策只约束新的 durable Agent 路径，不在本切片迁移或删除 ADR-017 所述旧完整 Memo vector metadata，
+但旧 payload 不得作为 R5 的生产正文、可见性、身份或 citation authority。R5-I3 不实现 transport、route、
+repository、runtime wiring、secret、Compose、database 或真实数据。下一授权最多证明单机认证 transport；
+真实数据接入前必须完成 backup、dry run、rollback 与 reconciliation，多实例前必须增加跨宿主加密和共享
+replay protection。

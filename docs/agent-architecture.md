@@ -16,8 +16,10 @@
 > smoke. R5-I1 adds an unwired durable authorized-retrieval contract with a
 > two-stage, content-free candidate boundary and fake repository proof. R5-I2
 > adds an unwired disposable SQLite repository-adapter parity proof with
-> reopen and snapshot-consistency coverage. The feature remains disabled by
-> default. No production content-persistence adapter, runtime lifecycle wiring,
+> reopen and snapshot-consistency coverage. R5-I3 selects current-authority
+> Memos rehydration through a provider-neutral, unwired design contract; the AI
+> side retains complete content only in request memory. The feature remains
+> disabled by default. No production rehydration transport, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
 
@@ -246,6 +248,16 @@ LLM provider.
    rejection, duplicate/inconsistent rows, and fixed repository failure mapping
    use only `tmp_path` and synthetic records. The adapter is test-only and is
    not a production content-persistence or rehydration design.
+16. **Production content rehydration design contract — complete, unwired.**
+   R5-I3 selects authenticated, current-authority Memos rehydration for the
+   durable Agent path instead of persistent AI-side complete-Memo content or a
+   persistent hybrid cache. Exact bounded request/response projections bind
+   eligible candidate sequence, hash, version, and the R5 snapshot token; any
+   update, delete, visibility loss, generation/revision switch, missing item,
+   or inconsistent response fails as one content-free error. Complete content
+   exists only in authenticated request memory. The shared fixture and pure
+   tests add no transport, repository, route, runtime secret, database, or real
+   data.
 
 ## Acceptance criteria for the first Agent path
 
@@ -300,7 +312,7 @@ one server-owned citation, exact parser passed, opaque reference present,
 identity/metadata absent from the prompt, empty retrieval `200` with zero
 Provider calls, and unavailable endpoint `502` with the fixed body.
 
-## R5 durable authorized-retrieval contract and disposable adapter proof
+## R5 durable authorized retrieval and current-authority content rehydration
 
 R5-I1 is a provider-neutral, unwired boundary. Its query carries a bounded,
 duplicate-free set of complete-Memo UIDs supplied by Memos authority; an empty
@@ -348,12 +360,63 @@ load, or transaction failures expose no raw details. The temporary schema has
 no visibility, final identity, Provider citation metadata, prompt, embedding,
 secret, or runtime configuration fields.
 
-This SQLite document table is a one-time test fixture, not a production
-content-persistence or rehydration decision. `EvidenceAnswerAgent`,
-`RetrievalService`, VectorStore construction, A4 runtime routes, Memo CRUD,
-dispatcher/worker paths, Qdrant, Compose, and real data remain unchanged.
-Production content handling and any runtime selection are later, separately
-authorized gates.
+This SQLite document table remains a one-time test fixture and is not promoted
+to production storage. R5-I3 instead selects **Memos current-authority
+rehydration** for the first durable Agent path. Persistent AI-side complete-
+Memo content and a persistent hybrid cache are rejected because either would
+duplicate content retention, deletion, visibility, backup, and breach-response
+obligations. This decision is scoped to the new durable Agent path: legacy
+complete-Memo vector metadata described by ADR-017 is unchanged and is not a
+production authority for R5.
+
+After R5 selects eligible candidates, the AI side may create one bounded
+`memo-evidence-rehydration-v1` request containing only a derived snapshot token
+and a request-local opaque `memos_authority_ref` issued by Memos, plus each
+server-created selection reference, Memo UID, source sequence, document hash,
+and `memo-v1`. The AI side cannot interpret, persist, or log that reference. A
+future Memos-owned handler must use a distinct internal path and authentication
+purpose, resolve the reference server-side, re-confirm the caller's current visibility
+and complete-Memo eligibility, and read all requested documents from one
+atomic current-authority snapshot. The response echoes only selection
+references plus exact content, sequence/hash/version, the derived snapshot
+token, and an opaque Memos authority token. It is all-or-nothing: missing,
+archived, comment, blank, deleted, unauthorized, duplicate, stale, or partially
+failed items produce no content response.
+
+The AI side must then verify the original authorized query, exact eligible
+selection, response mapping, sequence/hash/version, and that the derived
+snapshot token is still current before materialization. A concurrent update or
+delete observed by Memos changes or removes the response and fails the old
+selection; a derived revision or rebuild-generation switch invalidates the
+token. Tombstones, pending/failed/conflict quarantine, old generations, and
+`memo-chunk-v1` remain ineligible before rehydration. No derived candidate,
+ledger, vector payload, browser, Provider, or response metadata can supply
+final visibility, identity, content authority, or citation fields. Final
+identity remains anchored to the Memos-authority query and citations remain
+server-owned.
+
+The authority reference and complete content are retained only for the request
+lifetime and must not enter
+the AI ledger, vector payload, logs, metrics, traces, backups, or error bodies.
+Memos owns content encryption, access control, retention, backup, restore, and
+source recovery. AI derived state is excluded from authoritative backup and
+may be discarded and rebuilt from Memos; restore requires Memos backup
+verification followed by derived reconciliation before activation. Every
+contract, authentication, timeout, replay, partial-response, authority, or
+adapter failure maps to `authorized_retrieval_unavailable` without raw Memo,
+question, context, payload, embedding, identity, visibility, secret, SQL,
+endpoint, or exception details.
+
+The first runtime authorization is limited to one single-host, authenticated
+internal rehydration transport with bounded requests, short timeouts, no
+automatic retry, no persistent content, and synthetic dry-run proof. A real-
+data opt-in additionally requires verified Memos backup, explicit dry run,
+rollback, and post-run lifecycle/retrieval reconciliation. Multi-instance use
+remains blocked until the transport is encrypted across hosts and both
+rehydration and A4 lifecycle authentication use shared replay protection.
+`EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction, A4 runtime
+routes, Memo CRUD, dispatcher/worker paths, Qdrant, Compose, and real data
+remain unchanged in R5-I3.
 
 ## A4 local RAG lifecycle contract
 

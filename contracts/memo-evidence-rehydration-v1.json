@@ -1,0 +1,34 @@
+{
+  "version": "memo-evidence-rehydration-v1",
+  "request": {
+    "version": "memo-evidence-rehydration-v1",
+    "snapshot_token": "snapshot-synthetic-1",
+    "memos_authority_ref": "authority-ref-synthetic-4",
+    "selections": [
+      {
+        "selection_ref": "rehydration-1",
+        "memo_uid": "memo-visible",
+        "source_sequence": 3,
+        "document_hash": "b56b98dbaf9a594dfe98537a2bd6658173fcd4866dcf0ea3820d9b4e72f9e8af",
+        "index_version": "memo-v1"
+      }
+    ]
+  },
+  "response": {
+    "version": "memo-evidence-rehydration-v1",
+    "snapshot_token": "snapshot-synthetic-1",
+    "authority_token": "authority-synthetic-9",
+    "documents": [
+      {
+        "selection_ref": "rehydration-1",
+        "document": "# Synthetic Memo\n\nMemos remains the current authority.",
+        "source_sequence": 3,
+        "document_hash": "b56b98dbaf9a594dfe98537a2bd6658173fcd4866dcf0ea3820d9b4e72f9e8af",
+        "index_version": "memo-v1"
+      }
+    ]
+  },
+  "failure": {
+    "error_code": "authorized_retrieval_unavailable"
+  }
+}
