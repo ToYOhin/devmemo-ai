@@ -10,7 +10,7 @@
 > 以及 A4-I5 合成一次性 lifecycle 集成证明；lifecycle route、dispatcher、
 > 运行时接线和可用于正式产品的回答链路尚未实现。R4-I1 已增加严格、
 > provider-neutral 的 grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider
-> 将其安全接入回答路径。
+> 将其安全接入回答路径，R4-I3 已增加一次性本地 Provider 兼容性 smoke。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -44,7 +44,6 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 严格 Provider 回答路径尚无接入后的真实 smoke | R4-I2 已在 fake 测试中接受经过校验的结构化 answer 和服务端 citation，但真实配置 Provider 尚未走过该路径 | 在不持久化数据、不改变默认值的环境中完成成功、畸形输出、空检索和有界失败的一次性 Provider smoke |
 | P0 | 授权后的 Agent 检索仅支持内存中的完整 Memo store | 重启后证据消失，无法证明持久化本地 RAG | 实施 A4 生命周期，并在一次性存储中证明创建、更新、删除、重启与重建 |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
@@ -154,7 +153,8 @@ MySQL/PostgreSQL adapter、lifecycle route/dispatcher 与运行时接线均未�
 
 **状态：** R4-I1 严格解析与 R4-I2 安全运行时接入已完成。Provider 的授权上下文只使用
 opaque evidence reference，验证后的 answer 只能解析为服务端 citation；空检索与 deterministic
-输出不变。集成路径已通过 fake 验证，但尚未执行真实 Provider smoke。
+输出不变。R4-I3 已用合成证据和一次性本地 Provider 验证 exact 输出、畸形输出 fail closed、
+空检索跳过与有界 endpoint failure。这仍是单模型兼容性证明，不是质量基准。
 
 **结果：** 已配置 Provider 可以产出有用回答，同时不削弱安全响应边界。
 
@@ -242,8 +242,9 @@ opaque evidence reference，验证后的 answer 只能解析为服务端 citatio
 
 ## 下一推荐切片
 
-下一步实施 **R4-I3 一次性 grounded-answer Provider smoke**。在临时、无 volume、无宿主机
-端口的环境中，使用已有本地 Provider 和纯合成证据运行已接入的结构化回答路径；证明一个有效
-grounded answer、空检索跳过 Provider、畸形或不可用结构化输出的安全处理，以及有界 Provider
-failure。完成后销毁全部临时容器。不得持久化 Memo 派生数据、连接 A4 lifecycle runtime、改变
-Compose 默认值、暴露 8000，或使用真实 Memo、身份、可见性、volume 或 secret 数据。
+下一步实施 **R5-I1 持久化授权检索契约**。定义尚未接线、provider-neutral 的 query boundary，
+只接受 Memos 已授权的 complete-Memo UID 集合，并且只从派生状态返回 lifecycle-eligible 的
+`memo-v1` 证据。使用临时 store 和 fake 证明 tombstone、failed/pending ledger、过期源序号、错误
+rebuild generation、未知 visibility 与 chunk 记录全部 fail closed，同时 eligible 结果保持 opaque
+Provider reference 与服务端 citation。不得连接现有 Agent runtime、Memo CRUD、dispatcher/worker、
+真实 Qdrant、Compose 默认值或真实数据；共享 replay store 仍是多实例独立闸门。

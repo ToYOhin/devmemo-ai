@@ -12,6 +12,7 @@
 > lifecycle integration proof are complete on the Agent feature branch. R4-I1
 > adds strict provider-neutral grounded-answer result contracts, and R4-I2
 > safely integrates them using synthetic evidence and fake Provider results.
+> R4-I3 adds a disposable local Provider compatibility smoke.
 > No lifecycle route, dispatcher, runtime wiring, or production-ready answer
 > path is implemented.
 
@@ -61,7 +62,6 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | The strict Provider answer path has no post-integration real smoke | R4-I2 accepts validated structured answers with server-owned citations in fake tests, but no real configured Provider has exercised this exact path | Pass a disposable real-Provider smoke for success, malformed output, empty retrieval, and bounded failure without persisting data or changing defaults |
 | P0 | Authorized Agent retrieval works only with the in-memory complete-Memo store | Indexed evidence disappears on restart and the Agent cannot demonstrate durable local RAG | Implement the reviewed A4 lifecycle and prove create/update/delete/restart/rebuild behavior in disposable stores |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
@@ -208,8 +208,10 @@ temporary databases and vector collections.
 **Status:** R4-I1 strict parsing and R4-I2 safe runtime integration are complete.
 Authorized Provider context uses opaque evidence references; validated answers
 resolve only to server-owned citations. Empty retrieval and deterministic output
-remain unchanged. The integrated path is fake-verified but has no real Provider
-smoke yet.
+remain unchanged. R4-I3 verified exact output, fail-closed malformed output,
+empty-retrieval skipping, and bounded endpoint failure with synthetic evidence
+and a disposable local Provider. This remains a single-model compatibility
+proof, not a quality benchmark.
 
 **Outcome:** configured Providers can produce useful answers without weakening
 the safe response boundary.
@@ -342,11 +344,12 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R4-I3 disposable grounded-answer Provider smoke** next. Exercise the
-integrated structured-answer path with the already-available local Provider in
-an ephemeral, no-volume, no-host-port environment using only synthetic evidence.
-Prove one valid grounded answer, empty-retrieval Provider skipping, malformed or
-unusable structured output handling, and bounded Provider failure. Destroy all
-temporary containers afterward. Do not persist Memo-derived data, connect A4
-lifecycle runtime, change Compose defaults, expose port 8000, or use real Memo,
-identity, visibility, volume, or secret data.
+Implement **R5-I1 durable authorized-retrieval contract** next. Define an
+unwired provider-neutral query boundary that accepts only the Memos-authorized
+complete-Memo UID set and returns only lifecycle-eligible `memo-v1` evidence
+from derived state. Prove with temporary stores and fakes that tombstones,
+failed/pending ledger rows, stale source sequences, wrong rebuild generations,
+unknown visibility, and chunk records fail closed, while eligible results retain
+opaque Provider references and server-owned citations. Do not connect existing
+Agent runtime, Memo CRUD, dispatcher/worker, real Qdrant, Compose defaults, or
+real data. Shared replay storage remains a separate multi-instance gate.

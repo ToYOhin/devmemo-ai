@@ -12,7 +12,8 @@
 > reconciliation, and rebuild-generation coverage. R4-I1 adds a strict
 > provider-neutral grounded-answer result contract, and R4-I2 integrates it into
 > the non-deterministic answer path using only synthetic evidence and fake
-> Provider tests. The feature remains disabled by default. No runtime lifecycle wiring,
+> Provider tests. R4-I3 verifies that path with a disposable local Provider
+> smoke. The feature remains disabled by default. No runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
 
@@ -212,6 +213,14 @@ LLM provider.
    Empty retrieval and deterministic answers are unchanged; malformed output,
    timeout, and failure retain the existing bounded 502 projection. No real
    Provider, lifecycle runtime, Qdrant, Compose default, or real Memo was used.
+13. **Disposable grounded-answer Provider smoke — complete.** An ephemeral
+   no-volume, no-host-port container used synthetic complete-Memo evidence and
+   the existing local Ollama Provider. The first non-exact result failed closed
+   with the bounded 502 response; a prompt-only JSON-format clarification then
+   produced an exact result whose validated answer and server-owned citation
+   were returned. The same run proved empty retrieval made zero Provider calls
+   and an unavailable endpoint returned the fixed 502 body. The container was
+   removed and no runtime setting, model configuration, or data was persisted.
 
 ## Acceptance criteria for the first Agent path
 
@@ -253,8 +262,18 @@ through. Empty retrieval still skips the Provider, and the deterministic answer
 is unchanged. Validation, timeout, and Provider failures continue through the
 existing bounded 502 response.
 
-This integration has been verified only with synthetic evidence and fake
-Provider results. A disposable real-Provider smoke remains a separate gate.
+R4-I3 additionally verified this integration with synthetic evidence and the
+existing local Ollama Provider in a disposable container. The first response
+that did not satisfy the exact JSON contract was rejected without detail. After
+only clarifying the prompt's JSON-only format, a rerun returned a validated
+answer with one server-owned citation. Empty retrieval made no Provider call,
+and an unavailable endpoint retained the fixed 502 response. The smoke used no
+volume or host port and left no container behind. This is a single-machine,
+single-model compatibility proof, not a quality or production-readiness claim.
+The retained content-free command summary is: success `200`, answer length `79`,
+one server-owned citation, exact parser passed, opaque reference present,
+identity/metadata absent from the prompt, empty retrieval `200` with zero
+Provider calls, and unavailable endpoint `502` with the fixed body.
 
 ## A4 local RAG lifecycle contract
 
