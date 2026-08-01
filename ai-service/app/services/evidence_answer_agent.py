@@ -133,7 +133,10 @@ class EvidenceAnswerAgent:
             "Answer using only the authorized evidence below. Return exactly one JSON "
             "object with fields version, answer, and citation_refs. Set version to "
             '"grounded-answer-result-v1" and cite only the provided evidence-* '
-            "references. Do not include any other fields.\n"
+            "references. Do not include any other fields. Output JSON only, without "
+            "Markdown fences, prefixes, suffixes, or explanation. Example: "
+            '{"version":"grounded-answer-result-v1","answer":"Concise grounded '
+            'answer.","citation_refs":["evidence-1"]}\n'
             f"Question: {question}\n"
             f"Evidence:\n{context}"
         )

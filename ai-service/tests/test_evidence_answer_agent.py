@@ -124,6 +124,8 @@ def test_agent_runs_exactly_one_authorized_search_and_returns_safe_evidence(monk
     assert "memo_id=" not in provider.prompts[0]
     assert "score=" not in provider.prompts[0]
     assert "[evidence-1]" in provider.prompts[0]
+    assert "Output JSON only" in provider.prompts[0]
+    assert '"citation_refs":["evidence-1"]' in provider.prompts[0]
     assert result.answer == "Safe grounded answer."
     assert payload["citations"][0]["memo_id"] == "memo-visible"
     assert payload["trace"]["steps"][0] == {
