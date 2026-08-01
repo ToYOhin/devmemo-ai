@@ -1,5 +1,23 @@
 # DevMemo AI 变更记录
 
+## 2026-08-01：Agent 契约链路与公开维护基线
+
+- Evidence Answer Agent 已完成 A4-I1 至 A4-I5 的 dormant lifecycle 契约/恢复证明，
+  以及 R4-I1 至 R4-I3 的严格 grounded-answer 解析、安全接入和一次性本地 Provider
+  smoke；功能仍默认关闭，未接入 Memo CRUD、dispatcher、worker、自动索引或默认 Compose。
+- 补齐 Memos-owned outbox 所需的同事务 Memo helper，使干净检出可以编译并运行 A4-I2
+  事务测试；没有把 adapter 接入现有 CRUD。
+- AI 容器依赖改为哈希锁定安装；Compose 可选服务固定版本并增加 restart policy；验证脚本
+  移除本机绝对路径。内容 parser 去除可回溯正则，notification ID 收紧为 int32 范围。
+- Web 更新到兼容的 React Router 7.18.2、Mermaid 11.16.0、Vite 8.0.16，并锁定三个
+  transitive overrides。AI 全量 `343 passed`，相关 Go packages 通过，Web lint、
+  `35 files / 153 tests`、production build 与 Compose config 通过。
+- `pnpm audit --prod` 仍报告 React Router RSC mode 的一个 high advisory；项目只使用
+  browser router，不使用 RSC action，且上游修复仅在 8.3.0。跨主版本升级保留为独立审查，
+  本次不宣称依赖审计为零。
+- 新增中英文 AI Service/运维说明和仓库级 `AGENTS.md`，清理公开文档中的本机路径与私有
+  接管记录；本地交接状态和下一阶段 Prompt 继续保持 Git 忽略。
+
 ## 2026-07-27：Phase 13 strict TypeScript lint gate promotion
 
 - 将 `web/package.json` 的 lint TypeScript 子命令提升为 `tsc --noEmit`，删除 `--skipLibCheck`，使 strict TypeScript baseline 成为日常 Web 门禁。
@@ -194,10 +212,6 @@
 - Phase 8 implementation gate：当前没有明确产品/兼容批准，保持 proposal pending approval，不实现公共路由、不启动灰度。
 - 下一阶段：收到明确批准后再执行 Phase 8 implementation slice。
 
-### 单 Agent 接管模式
-- 后续开发统一使用 `H:\DevMemoAI` 主工作树和单一 Agent，停止 Terra/Luna 并行推进，保留 `project4` worktree 作为历史/回滚参考。
-- 记录当时的单 Agent 结构、验证基线与未完成项。
-
 ### Phase 5e：chunk 检索与可观测性收敛
 - 新增 provider-neutral `ChunkIndexStateStats`/`ChunkIndexHealth`，对照 VectorStore 点数与 SQLite 登记状态。
 - 新增只读 GET `/api/ai/index/chunk-health`，显式返回 chunk mode/version、provider、点数、登记 Memo/chunk 数和状态后端；状态异常返回 degraded。
@@ -311,7 +325,7 @@
 
 - Compose 为 AI Service 增加 `ai-model-cache:/app/model-cache`，并新增 `AI_FASTEMBED_CACHE_DIR`；默认 deterministic + memory 不加载模型。
 - 验证 `devmemoai_qdrant-data` 挂载到 `/qdrant/storage`；`docker compose restart qdrant` 后 collection、point 和 payload 恢复成功。
-- FastEmbed 384 维模型在 `H:\DevMemoAI\ai-service\model-cache` 离线加载成功，缓存约 64.07 MB。
+- FastEmbed 384 维模型在 AI Service model-cache volume 中离线加载成功，缓存约 64.07 MB。
 - 首次直接迁移下载因 Hugging Face 代理 `RemoteProtocolError` 失败，随后复用已验证缓存完成离线 smoke；该环境限制已记录。
 - AI Service：62 passed；Qdrant volume restart smoke：通过；Compose config：通过。
 - 未完成：Qdrant health/故障降级边界和镜像版本固定评估，留到 Phase 3g。

@@ -4,7 +4,6 @@
 
 ```powershell
 $env:GOTOOLCHAIN = "local"
-$env:Path = "G:\Go\bin;$env:Path"
 .\scripts\verify-devmemo.ps1
 ai-service/.venv/Scripts/python.exe -m pytest -q ai-service/tests
 docker compose config
@@ -16,7 +15,14 @@ ai-service/.venv/Scripts/python.exe -m uvicorn main:app --app-dir ai-service --p
 
 The default Compose path starts only Memos and AI Service, capped at `0.75` and `0.25` CPU respectively. Qdrant and Ollama are explicit profiles so their resource costs are never part of ordinary deterministic + memory development. `verify-devmemo.ps1` also limits Go verification to one processor and `go test -p 1`; pass `-FullBackend` only when that slower low-CPU check is required.
 
-The reproducible local Go installation is `G:\Go` with `GOPATH=G:\GoWorkspace`. Open a new PowerShell window after changing the user PATH, or set the variables shown above for the current session.
+Install a supported Go toolchain and make `go` available on `PATH`. Create the
+AI virtual environment at `ai-service/.venv` before running the verification
+script. Set `DEVMEMO_GO` or `DEVMEMO_PYTHON` only when the commands are not
+discoverable through `PATH` or the repository virtual environment.
+
+The AI Service container uses the hash-locked `ai-service/requirements.lock.txt`.
+After changing `ai-service/requirements.txt`, regenerate the lock with
+`uv pip compile ai-service/requirements.txt --generate-hashes --output-file ai-service/requirements.lock.txt`.
 
 ## Provider configuration
 

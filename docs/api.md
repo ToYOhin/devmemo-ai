@@ -1,5 +1,28 @@
 # DevMemo AI API
 
+## Experimental Evidence Answer Agent
+
+`POST /api/ai/agent/answer` is an authenticated Memos BFF route and is disabled
+when `AI_AGENT_ENABLED=false`. Its browser request accepts only `question` and
+`limit`; unknown fields—including a caller-supplied visibility scope—are
+rejected. Memos derives the visible complete-Memo UID set from the authenticated
+request and signs a short-lived delegation to the fixed AI Service path
+`POST /internal/ai/agent/answer`.
+
+The internal path is not a browser API. Its HMAC purpose and path are separate
+from other authority, and the AI Service accepts only `search_memos` over the
+delegated `memo-v1` scope. A successful browser response is strictly projected
+to `answer`, `citations`, `provider`, `retrieved_count`, `agent_version`, and a
+bounded `trace`. Citation metadata is server-owned. Raw Memo content, Provider
+body, prompt/context, embeddings, identity, visibility, and secrets are never
+part of this response.
+
+Non-deterministic answers must pass `grounded-answer-result-v1`; empty retrieval
+skips the Provider. Invalid delegation returns 401 internally, while retrieval
+and Provider failures become fixed 503/502 errors without raw exception text.
+The A4 lifecycle outbox/ledger remains dormant and is not connected to Memo
+CRUD, this route, a dispatcher, a worker, or automatic indexing.
+
 ## Phase 12 strict TypeScript baseline（no API change）
 
 Phase 12 only repairs Web compile-time declaration resolution. It adds narrow local type bridges for the installed TanStack Query Devtools, goober, Mermaid/type-fest, React Leaflet, and Leaflet MarkerCluster declarations, plus an explicit project callback signature. No package, lockfile, runtime import, request, response, route, persistence, or authorization behavior changed.
@@ -319,7 +342,7 @@ Errors: invalid question/limit/scope → 422; missing/invalid gateway signature 
 本地 public chunk gateway contract smoke（不是部署 rollout）：
 
 ~~~powershell
-Set-Location H:\DevMemoAI\ai-service
+Set-Location <repository-root>/ai-service
 .\.venv\Scripts\python.exe -m scripts.public_chunk_gateway_contract_smoke
 ~~~
 
@@ -328,7 +351,7 @@ Set-Location H:\DevMemoAI\ai-service
 真实 Qdrant smoke 命令：
 
 ~~~powershell
-Set-Location H:\DevMemoAI\ai-service
+Set-Location <repository-root>/ai-service
 .\.venv\Scripts\python.exe -m scripts.smoke_qdrant
 ~~~
 

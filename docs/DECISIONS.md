@@ -34,7 +34,8 @@ React 只在显式配置时启用 AI query；404、非法响应和网络错误�
 
 ## ADR-009：Windows 使用低并发验证
 
-Go 使用 G:\Go；验证默认使用 GOMAXPROCS=1 和 go test -p 1 ./...；Docker 服务设置 CPU 上限。
+Windows 验证默认使用 `GOMAXPROCS=1` 和 `go test -p 1 ./...`；Go 工具链由 `PATH` 或
+`DEVMEMO_GO` 解析，Docker 服务设置 CPU 上限。
 
 ## ADR-010：摘要由 AI Service HTTP 边界负责
 
@@ -141,12 +142,6 @@ chunk 试验更新必须先 upsert 当前 chunk，再由调用方显式提交旧
 Phase 5e 选择 GET `/api/ai/index/chunk-health`，而不是改变公共 chat 或新增 chunk 查询语义。`ChunkIndexHealth` 合并独立 chunk VectorStore 的点数和 `ChunkIndexStateStore` 的登记计数，并显式返回 `index_mode=chunk`、`index_version=memo-chunk-v1`。状态异常只产生 `degraded`，不触发重建、删除、网络连接或默认模式切换。
 
 SQLite adapter 负责把损坏/不可读状态转换为 bounded detail；domain/service 只使用标准 dataclass/Protocol。Qdrant chunk collection 和 chunk-aware public retrieval 留到 Phase 5f，避免在完整 Memo citation 契约尚未扩展前混合两种索引。
-
-## ADR-030：默认使用单 Agent 推进
-
-DevMemo AI 后续默认只使用 `H:\DevMemoAI` 主工作树和一个 Agent 推进。原因是当前阶段以 provider-neutral 边界、Qdrant collection 隔离、公共 chat citation 兼容和完整验证为主；多个 Agent 同时修改相邻接口会增加重复上下文、token 消耗、Git 冲突和集成验证成本。
-
-单 Agent 仍按 contract-first、实现、测试、显式 smoke、文档、独立 commit 的小步顺序推进。`project4` 下已建立的 Terra/Luna worktree 不删除，但标记为历史/回滚参考，除非用户重新授权，不启动并行开发。
 
 ## ADR-031：Phase 5f 为 chunk 预留独立 Qdrant collection
 
@@ -338,4 +333,6 @@ RC 不能解除公开稳定发布的治理条件：仓库可见性、外部可�
 
 稳定 `v0.1.0` 已在 public 仓库发布，且 GitHub private vulnerability reporting 已启用；这两个状态不能自动改变独立 GHCR Container package 的 visibility。公开镜像发布的完成条件是未登录 Docker 客户端可以 inspect `ghcr.io/toyohin/devmemo-ai:stable` 并看到预期多架构 manifest，而不是仅在 GitHub runner 或认证会话中成功。
 
-当前 package 仍为 private，匿名 registry token 请求返回 401。将 package 改为 public 需要拥有 GitHub Packages 管理权限的会话；不得借用、记录或写入个人 OAuth token 来规避该权限。此限制不影响已发布的 GitHub Release 二进制资产、仓库公开状态或漏洞报告渠道，也不改变产品运行时默认值。
+后续状态更新：Container package 已由具备 GitHub Packages 管理权限的维护者设为 public。
+匿名 `docker buildx imagetools inspect ghcr.io/toyohin/devmemo-ai:stable` 已确认
+linux/amd64、linux/arm64 与 linux/arm/v7 manifests。该发布状态不改变产品运行时默认值。
