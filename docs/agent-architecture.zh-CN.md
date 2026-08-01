@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明；功能仍默认关闭。尚未交付运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加尚未接入运行时的严格 provider-neutral grounded-answer 结果契约；功能仍默认关闭。尚未交付运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -102,6 +102,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 8. **AI 派生 ledger 恢复证明 — 已完成、未接线。** 独立构造的 SQLite adapter 只持久化 event identity、fingerprint、序号、operation/hash、tombstone、状态、有界错误码和 last-applied 元数据。fake vector processor 测试边界证明了 vector 变更前 reservation、duplicate/stale/conflict、两个崩溃重放点、稳定 upsert、幂等 delete 与 fail-closed retrieval。没有 route、transport、Provider、Qdrant adapter、worker、默认值或真实数据路径调用它。
 9. **认证 lifecycle transport 契约 — 已完成、未接线。** lifecycle-only HMAC purpose、固定 path 与独立 header 绑定 method、timestamp、nonce 和 exact body digest。Python 校验有界 replay window 与严格 A4 event/acknowledgement 投影；Go 产生相同 fixture 签名并严格解析无内容 acknowledgement。in-process client/handler 对 authentication、validation、ledger 和 vector 故障做无 raw detail 的安全映射。没有增加 HTTP route/client、dispatcher、worker、运行时 secret/config、默认值或真实数据路径。
 10. **合成一次性 lifecycle 集成证明 — 已完成、仅测试。** 进程内 harness 使用真实 SQLite outbox migration、合成源 mutation、临时 AI ledger/vector 数据库、lifecycle-only HMAC 与稳定 fake vector writer。测试覆盖按序 create/update/archive/delete、四个中断点、重试/耗尽、过期复活防护、无正文对账与 rebuild generation 校验。没有增加 route、dispatcher、worker、Compose 改动、Provider/Qdrant 调用、运行时默认值或真实 Memo。nonce replay store 只证明单进程契约；共享多实例 replay 存储仍是后续运行时闸门。
+11. **严格 grounded-answer 结果契约 — 已完成、未接线。** 独立 domain parser 只接受版本化受限 answer 与 opaque `evidence-*` reference；拒绝畸形、重复、额外字段，未知、重复、直接或超量 reference，raw context echo，以及 Provider 提供的正文或 metadata。最终 citation 只能从服务端持有的 `AgentCitation` 映射；validation、timeout 与 availability failure 只映射为固定无正文错误码。当前运行时不调用 validator，仍继续丢弃 Provider 文本。
 
 ## A1 验收结果
 
@@ -111,6 +112,22 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 - citation 与 trace 不包含 `content`；Memos BFF 严格拒绝未知或不安全的内部响应字段。
 - 既有 chat 契约未修改，相关测试通过。
 - 显式 Web 入口保持 opt-in：展开并提交问题前不会发出请求，只调用同源 Memos BFF，并只渲染收紧后的 answer、citation 与 trace 投影。
+
+## R4 grounded-answer 结果契约
+
+R4-I1 是纯契约，不改变运行时行为。非可信 Provider 结果必须且只能包含 `version`、
+受限 `answer` 与一到十个 opaque `citation_refs`。reference 使用服务端签发的
+`evidence-*` token，不得携带 Memo ID、score、metadata、正文、可见性、身份、prompt、
+embedding、secret 或 trace。
+
+validator 把每个 reference 映射到已检索、由服务端持有的 `AgentCitation`。未知、重复、
+直接 Memo 或超量 reference 均 fail closed；显式受保护 context fragment 经规范化后执行
+verbatim echo 检查。契约、timeout 与 Provider failure 只能映射为
+`invalid_grounded_answer`、`provider_timeout` 或 `provider_unavailable`，不包含原始异常或
+Provider 文本。
+
+`EvidenceAnswerAgent` 尚未调用本契约；空检索仍跳过 Provider，非 deterministic Provider
+成功返回后其文本仍被丢弃。运行时接入与一次性真实 Provider smoke 是后续独立授权闸门。
 
 ## A4 本地 RAG 生命周期契约
 

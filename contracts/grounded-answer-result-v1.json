@@ -1,0 +1,11 @@
+{
+  "contract_version": "grounded-answer-result-v1",
+  "provider_result": {
+    "version": "grounded-answer-result-v1",
+    "answer": "The port mapping is declared in Compose [1].",
+    "citation_refs": ["evidence-1"]
+  },
+  "safe_failure": {
+    "error_code": "invalid_grounded_answer"
+  }
+}

@@ -8,7 +8,8 @@
 > 纯生命周期契约、仅 SQLite 的 A4-I2 源端 outbox 事务证明、dormant 的
 > A4-I3 派生 ledger/fake vector 崩溃恢复证明、A4-I4 认证 transport 契约，
 > 以及 A4-I5 合成一次性 lifecycle 集成证明；lifecycle route、dispatcher、
-> 运行时接线和可用于正式产品的回答链路尚未实现。
+> 运行时接线和可用于正式产品的回答链路尚未实现。R4-I1 已增加严格、
+> provider-neutral 的 grounded-answer 结果契约与测试，但尚未接入运行时回答路径。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -42,7 +43,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | Provider 生成结果当前会被有意丢弃 | 边界安全，但真实 Provider 还不能产出有用的 grounded answer | 接受严格结构化结果；每个 citation 必须映射到已检索证据；未知或畸形输出 fail closed |
+| P0 | Provider 生成结果当前会被有意丢弃 | R4-I1 已独立证明严格结构化结果与服务端 citation 映射，但运行时仍返回 deterministic fallback | 单独接入 validator，保持 BFF 安全投影，并在返回 Provider 文本前通过一次性真实 Provider smoke |
 | P0 | 授权后的 Agent 检索仅支持内存中的完整 Memo store | 重启后证据消失，无法证明持久化本地 RAG | 实施 A4 生命周期，并在一次性存储中证明创建、更新、删除、重启与重建 |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
@@ -150,6 +151,9 @@ MySQL/PostgreSQL adapter、lifecycle route/dispatcher 与运行时接线均未�
 
 ### R4 — 有依据的 Provider 回答
 
+**状态：** R4-I1 的严格结果解析、服务端 citation 映射、context echo 拒绝与安全错误码
+已实现并通过单元测试，尚未接入运行时；`EvidenceAnswerAgent` 仍丢弃 Provider 文本。
+
 **结果：** 已配置 Provider 可以产出有用回答，同时不削弱安全响应边界。
 
 范围：
@@ -236,8 +240,8 @@ MySQL/PostgreSQL adapter、lifecycle route/dispatcher 与运行时接线均未�
 
 ## 下一推荐切片
 
-下一步实施 **R4-I1 严格 grounded-answer 结果契约**。定义 provider-neutral、版本化的
-结构化回答 schema，并用纯校验覆盖受限 answer 文本、服务端持有的 citation ID、未知/额外字段、
-context echo 与安全失败映射。只使用合成检索证据和 fake Provider 结果；当前运行时仍继续丢弃
-Provider 输出。不得连接 lifecycle runtime、改变默认值、调用真实 Provider/Qdrant 或触碰真实数据。
-任何多实例 lifecycle 部署主张前，仍必须实现共享 replay store。
+下一步实施 **R4-I2 安全 grounded-answer 运行时接入**。由服务端生成 opaque evidence
+reference，请求 R4-I1 结构化结果，并在构造既有 `AgentAnswerResult` 前完成校验，同时保持 BFF
+安全 citation 投影。只使用合成证据和 fake Provider 输出；证明畸形结果、未知 citation、context
+echo、timeout 与 Provider failure 继续映射为有界 502。不得调用真实 Provider、连接 lifecycle
+runtime、改变默认值或触碰真实数据。一次性真实 Provider smoke 仍是后续单独授权闸门。
