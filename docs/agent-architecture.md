@@ -14,10 +14,12 @@
 > the non-deterministic answer path using only synthetic evidence and fake
 > Provider tests. R4-I3 verifies that path with a disposable local Provider
 > smoke. R5-I1 adds an unwired durable authorized-retrieval contract with a
-> two-stage, content-free candidate boundary and fake repository proof. The
-> feature remains disabled by default. No durable repository adapter, runtime
-> lifecycle wiring, automatic indexing, remote deployment, or general-public
-> availability is delivered.
+> two-stage, content-free candidate boundary and fake repository proof. R5-I2
+> adds an unwired disposable SQLite repository-adapter parity proof with
+> reopen and snapshot-consistency coverage. The feature remains disabled by
+> default. No production content-persistence adapter, runtime lifecycle wiring,
+> automatic indexing, remote deployment, or general-public availability is
+> delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -234,6 +236,16 @@ LLM provider.
    missing ledger, chunk version, duplicate/conflicting records, and repository
    failures all fail closed. The proof uses only synthetic in-memory records
    and does not modify the existing Agent or retrieval runtime.
+15. **Disposable repository-adapter parity proof — complete, unwired.** R5-I2
+   binds the R5-I1 boundary to one explicitly created temporary SQLite store.
+   Candidate queries push down the Memos-authorized UID set and limit, while
+   the service repeats the visibility intersection before document loading.
+   Active generation, content-free candidate data, and A4 ledger state are read
+   in one read transaction; a revision-backed opaque snapshot token prevents a
+   later document load from mixing store generations. Reopen parity, lifecycle
+   rejection, duplicate/inconsistent rows, and fixed repository failure mapping
+   use only `tmp_path` and synthetic records. The adapter is test-only and is
+   not a production content-persistence or rehydration design.
 
 ## Acceptance criteria for the first Agent path
 
@@ -288,7 +300,7 @@ one server-owned citation, exact parser passed, opaque reference present,
 identity/metadata absent from the prompt, empty retrieval `200` with zero
 Provider calls, and unavailable endpoint `502` with the fixed body.
 
-## R5-I1 durable authorized-retrieval contract
+## R5 durable authorized-retrieval contract and disposable adapter proof
 
 R5-I1 is a provider-neutral, unwired boundary. Its query carries a bounded,
 duplicate-free set of complete-Memo UIDs supplied by Memos authority; an empty
@@ -317,11 +329,31 @@ or consistency failures collapse to `authorized_retrieval_unavailable` and do
 not expose Memo text, question context, payload, embedding, identity,
 visibility, secret, citation metadata, or raw exception data.
 
-The only repository implementation is a test fake using synthetic in-memory
-records. `EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction,
-A4 runtime routes, Memo CRUD, dispatcher/worker paths, Qdrant, Compose, and real
-data remain unchanged. A durable repository-adapter parity proof and any
-runtime selection are later, separately authorized gates.
+R5-I2 adds one reopenable, disposable SQLite implementation of the repository
+protocol. It stores only synthetic proof data in a caller-supplied temporary
+file. Candidate reads push down the authorized UID set and requested limit but
+remain content-free. The active generation, candidate fields, and joined A4
+ledger eligibility inputs are read under one read transaction. The returned
+opaque snapshot token binds the subsequent document load to the same store
+revision and active generation, so a generation switch or any adapter-owned
+write between the two phases fails without returning a partial result.
+
+Tests compare reopened SQLite results with the in-memory fake, including opaque
+reference order, context order, and server-owned citations. They also prove
+that unauthorized document keys are not loaded; pending, failed, quarantined,
+stale, tombstoned, old/unknown-generation, missing-ledger, and chunk rows cause
+zero document loads; duplicate or inconsistent candidate/document rows fail as
+one fixed `authorized_retrieval_unavailable` result; and open, schema, query,
+load, or transaction failures expose no raw details. The temporary schema has
+no visibility, final identity, Provider citation metadata, prompt, embedding,
+secret, or runtime configuration fields.
+
+This SQLite document table is a one-time test fixture, not a production
+content-persistence or rehydration decision. `EvidenceAnswerAgent`,
+`RetrievalService`, VectorStore construction, A4 runtime routes, Memo CRUD,
+dispatcher/worker paths, Qdrant, Compose, and real data remain unchanged.
+Production content handling and any runtime selection are later, separately
+authorized gates.
 
 ## A4 local RAG lifecycle contract
 

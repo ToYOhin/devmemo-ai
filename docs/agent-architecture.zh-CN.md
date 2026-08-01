@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约；功能仍默认关闭。尚未交付持久化 repository adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof；功能仍默认关闭。尚未交付生产正文持久化 adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -106,6 +106,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 12. **安全 grounded-answer 运行时接入 — 已完成、仅 fake 验证。** Agent 授权检索只向 Provider 提供 `evidence-*` 标签和已授权证据，不提供 Memo ID、score 或 citation metadata。非 deterministic 输出只有通过 R4-I1 parser、context echo 检查和服务端 citation 映射后才能成为回答。空检索和 deterministic 输出不变；畸形输出、timeout 与 failure 继续映射为既有有界 502。没有调用真实 Provider、生命周期 runtime、Qdrant、Compose 默认值或真实 Memo。
 13. **一次性 grounded-answer Provider smoke — 已完成。** 临时、无 volume、无宿主机端口的容器使用合成 complete-Memo 证据与已有本地 Ollama Provider。第一次非 exact 结果被有界 502 fail closed；只澄清 prompt 的纯 JSON 格式后，Provider 产出 exact 结果，验证后的 answer 与服务端 citation 成功返回。同一运行证明空检索零 Provider 调用、不可用 endpoint 返回固定 502。容器已删除，未持久化运行时设置、模型配置或数据。
 14. **持久化授权检索契约 — 已完成、未接线。** R5-I1 定义了有界的 Memos-authority query、无正文 candidate/ledger snapshot、第二阶段完整 Memo materialization、请求内 opaque evidence reference 与服务端 citation 投影。fake repository 证明可见性在加载正文前求交；只有当前 active generation 中，`memo-v1` 记录的序号与 hash 匹配 `applied` A4 ledger 时才符合条件。空/未知 scope、pending/failed/delete 状态、过期序号/hash、旧或未知 generation、缺失 ledger、chunk 版本、重复/冲突记录与 repository failure 全部 fail closed。证明只使用合成内存记录，不修改现有 Agent 或 retrieval runtime。
+15. **一次性 repository-adapter parity proof — 已完成、未接线。** R5-I2 把 R5-I1 边界绑定到显式创建的临时 SQLite store。candidate query 下推 Memos 授权 UID 集合与 limit，service 仍在正文加载前再次执行可见性求交。active generation、无正文 candidate 与 A4 ledger state 在同一个只读事务中读取；基于 revision 的 opaque snapshot token 防止后续正文加载混合不同 store generation。reopen parity、lifecycle 拒绝、重复/不一致行与固定 repository failure 映射只使用 `tmp_path` 和合成记录。该 adapter 仅用于测试，并非生产正文持久化或 rehydration 设计。
 
 ## A1 验收结果
 
@@ -143,7 +144,7 @@ answer 和一个服务端 citation。空检索未调用 Provider，不可用 end
 通过、prompt 含 opaque reference 且不含身份/metadata、空检索 `200` 且 Provider 调用数为零、
 不可用 endpoint 返回固定正文的 `502`。
 
-## R5-I1 持久化授权检索契约
+## R5 持久化授权检索契约与一次性 adapter 证明
 
 R5-I1 是 provider-neutral、尚未接线的边界。query 必须携带由 Memos authority 提供、数量有界且
 无重复的完整 Memo UID 集合；空集合不访问 repository，直接返回空结果。repository 分为两阶段：
@@ -163,9 +164,23 @@ query，并由 service 使用白名单字段构造，不能来自 Provider 输�
 repository、document 或一致性故障统一折叠为 `authorized_retrieval_unavailable`，不暴露 Memo 正文、
 问题 context、payload、embedding、identity、visibility、secret、citation metadata 或原始异常。
 
-当前唯一 repository 实现是使用合成内存记录的测试 fake。`EvidenceAnswerAgent`、`RetrievalService`、
-VectorStore 构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose 与真实数据均未
-改变。持久化 repository-adapter parity proof 与任何 runtime selection 都是后续独立授权闸门。
+R5-I2 增加一个可重新打开的一次性 SQLite repository protocol 实现。它只在调用方提供的临时文件中
+保存合成证明数据。candidate read 会下推授权 UID 集合和请求 limit，但仍不读取正文；active
+generation、candidate 字段与关联的 A4 ledger eligibility input 在同一个只读事务内读取。返回的
+opaque snapshot token 把第二阶段正文加载绑定到相同 store revision 与 active generation，因此两阶段
+之间发生 generation 切换或任何 adapter-owned 写入时，只能整体失败，不能返回部分结果。
+
+测试把重新打开后的 SQLite 结果与内存 fake 对比，覆盖 opaque reference 顺序、context 顺序与服务端
+citation。测试还证明：未授权正文 key 不会进入加载请求；pending、failed、quarantine、stale、
+tombstone、旧/未知 generation、缺失 ledger 与 chunk 记录均零正文加载；重复或不一致的
+candidate/document 行统一映射为 `authorized_retrieval_unavailable`；open、schema、query、load 与
+transaction failure 不暴露原始细节。临时 schema 不保存 visibility、最终 identity、Provider citation
+metadata、prompt、embedding、secret 或 runtime 配置。
+
+该 SQLite document 表只是一项一次性测试 fixture，不代表生产 content persistence/rehydration 决策。
+`EvidenceAnswerAgent`、`RetrievalService`、VectorStore 构造、A4 runtime route、Memo CRUD、
+dispatcher/worker、Qdrant、Compose 与真实数据仍未改变。生产正文处理与任何 runtime selection 都是
+后续独立授权闸门。
 
 ## A4 本地 RAG 生命周期契约
 

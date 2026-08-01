@@ -139,8 +139,12 @@ class FakeDurableRepository:
         return self.snapshot
 
     def load_documents(
-        self, record_keys: tuple[str, ...]
+        self,
+        *,
+        record_keys: tuple[str, ...],
+        snapshot_token: str,
     ) -> tuple[DerivedMemoDocument, ...]:
+        assert snapshot_token == self.snapshot.snapshot_token
         self.loaded_keys.append(record_keys)
         if self.fail_documents is not None:
             raise self.fail_documents
@@ -202,7 +206,7 @@ def test_pure_selection_and_projection_create_only_opaque_refs_and_server_citati
 
     eligible = select_eligible_candidates(
         query,
-        DerivedCandidateSnapshot("generation-active", (candidate,)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (candidate,)),
     )
     result = project_authorized_result(query, eligible, (_document(),))
 
@@ -263,7 +267,7 @@ def test_failed_lifecycle_state_helper_is_not_applied():
 
 def test_empty_scope_returns_empty_without_querying_the_repository():
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", (_candidate(),)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (_candidate(),)),
         (_document(),),
     )
     query = AuthorizedRetrievalQuery(
@@ -280,7 +284,7 @@ def test_empty_scope_returns_empty_without_querying_the_repository():
 
 def test_unknown_uid_returns_empty_without_loading_any_document():
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", (_candidate(),)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (_candidate(),)),
         (_document(),),
     )
     query = AuthorizedRetrievalQuery(
@@ -304,7 +308,7 @@ def test_visibility_intersects_before_document_loading_context_or_citation_proje
         lifecycle_state=_applied_state("memo-hidden"),
     )
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", (hidden, visible)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (hidden, visible)),
         (
             DerivedMemoDocument(
                 record_key="record-hidden",
@@ -374,7 +378,7 @@ def _failed_state() -> MemoLifecycleState:
 )
 def test_noneligible_lifecycle_generation_or_index_records_never_load_content(candidate):
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", (candidate,)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (candidate,)),
         (_document(),),
     )
     query = AuthorizedRetrievalQuery(
@@ -389,7 +393,7 @@ def test_noneligible_lifecycle_generation_or_index_records_never_load_content(ca
 
 def test_unknown_active_generation_fails_closed_before_document_loading():
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot(None, (_candidate(),)), (_document(),)
+        DerivedCandidateSnapshot(None, "snapshot-fake", (_candidate(),)), (_document(),)
     )
     query = AuthorizedRetrievalQuery(
         question="Docker ports", limit=3, authorized_memo_uids=("memo-visible",)
@@ -419,7 +423,8 @@ def test_unknown_active_generation_fails_closed_before_document_loading():
 )
 def test_duplicate_or_conflicting_candidates_map_to_fixed_failure_before_content(candidates):
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", candidates), (_document(),)
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", candidates),
+        (_document(),),
     )
     query = AuthorizedRetrievalQuery(
         question="Docker ports", limit=3, authorized_memo_uids=("memo-visible",)
@@ -438,7 +443,7 @@ def test_duplicate_or_conflicting_candidates_map_to_fixed_failure_before_content
 @pytest.mark.parametrize("failure_stage", ["candidates", "documents"])
 def test_repository_failures_use_one_bounded_content_free_mapping(failure_stage):
     repository = FakeDurableRepository(
-        DerivedCandidateSnapshot("generation-active", (_candidate(),)),
+        DerivedCandidateSnapshot("generation-active", "snapshot-fake", (_candidate(),)),
         (_document(),),
     )
     raw_detail = (
