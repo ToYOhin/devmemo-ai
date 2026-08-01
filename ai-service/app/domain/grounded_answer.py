@@ -1,9 +1,4 @@
-"""Strict provider-neutral contract for a future grounded Agent answer.
-
-The current EvidenceAnswerAgent does not call this module. It defines the
-untrusted Provider result that a later runtime slice may validate before any
-Provider text is allowed to cross the existing safe response boundary.
-"""
+"""Strict provider-neutral contract for a grounded Agent answer."""
 
 from __future__ import annotations
 

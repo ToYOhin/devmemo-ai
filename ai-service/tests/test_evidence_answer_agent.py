@@ -12,10 +12,10 @@ from app.services.agent_delegation import (
     sign_delegated_request,
 )
 from app.services.embedding_service import EmbeddingService
-from app.services.evidence_answer_agent import EvidenceAnswerAgent
+from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.retrieval_service import RetrievalService
-from llm import LLMResult
+from llm import DeterministicProvider, LLMResult
 
 
 class RecordingProvider:
@@ -26,14 +26,31 @@ class RecordingProvider:
 
     async def generate(self, prompt: str) -> LLMResult:
         self.prompts.append(prompt)
-        return LLMResult(text="Safe answer [1].", provider=self.name)
+        return LLMResult(
+            text=json.dumps(
+                {
+                    "version": "grounded-answer-result-v1",
+                    "answer": "Safe grounded answer.",
+                    "citation_refs": ["evidence-1"],
+                },
+                separators=(",", ":"),
+            ),
+            provider=self.name,
+        )
 
 
 class EchoingProvider(RecordingProvider):
     async def generate(self, prompt: str) -> LLMResult:
         self.prompts.append(prompt)
         return LLMResult(
-            text="Docker ports use the host mapping declared in Compose. [1]",
+            text=json.dumps(
+                {
+                    "version": "grounded-answer-result-v1",
+                    "answer": "Docker ports use the host mapping declared in Compose.",
+                    "citation_refs": ["evidence-1"],
+                },
+                separators=(",", ":"),
+            ),
             provider=self.name,
         )
 
@@ -103,6 +120,11 @@ def test_agent_runs_exactly_one_authorized_search_and_returns_safe_evidence(monk
     assert calls == 1
     assert len(provider.prompts) == 1
     assert "TOP SECRET" not in provider.prompts[0]
+    assert "memo-visible" not in provider.prompts[0]
+    assert "memo_id=" not in provider.prompts[0]
+    assert "score=" not in provider.prompts[0]
+    assert "[evidence-1]" in provider.prompts[0]
+    assert result.answer == "Safe grounded answer."
     assert payload["citations"][0]["memo_id"] == "memo-visible"
     assert payload["trace"]["steps"][0] == {
         "index": 1,
@@ -135,13 +157,92 @@ def test_agent_rejects_an_invalid_delegation_before_retrieval_or_provider():
     assert provider.prompts == []
 
 
-def test_agent_never_projects_provider_text_to_the_safe_answer():
+def test_agent_rejects_provider_raw_context_echo():
     agent, _ = _agent_with_memos()
     provider = EchoingProvider()
     agent._provider = provider
     body, headers, now = _delegated_call(["memo-visible"])
 
-    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
 
     assert len(provider.prompts) == 1
+    assert error.value.error_code == "invalid_grounded_answer"
+    assert str(error.value) == "Agent provider unavailable"
+
+
+def test_agent_deterministic_answer_behavior_is_unchanged():
+    agent, _ = _agent_with_memos()
+    agent._provider = DeterministicProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
     assert result.answer == "Found 1 authorized Memo source(s) relevant to the question [1]."
+    assert [citation.memo_id for citation in result.citations] == ["memo-visible"]
+
+
+@pytest.mark.parametrize(
+    ("provider_result", "expected_code"),
+    [
+        (LLMResult(text="not-json", provider="ollama"), "invalid_grounded_answer"),
+        (
+            LLMResult(
+                text=json.dumps(
+                    {
+                        "version": "grounded-answer-result-v1",
+                        "answer": "Unknown source.",
+                        "citation_refs": ["evidence-unknown"],
+                    }
+                ),
+                provider="ollama",
+            ),
+            "invalid_grounded_answer",
+        ),
+    ],
+)
+def test_agent_rejects_malformed_or_unknown_provider_results(
+    provider_result, expected_code
+):
+    class FixedProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            return provider_result
+
+    agent, _ = _agent_with_memos()
+    agent._provider = FixedProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert error.value.error_code == expected_code
+    assert str(error.value) == "Agent provider unavailable"
+
+
+@pytest.mark.parametrize(
+    ("provider_error", "expected_code"),
+    [
+        (TimeoutError("raw endpoint timeout"), "provider_timeout"),
+        (OSError("raw upstream secret"), "provider_unavailable"),
+    ],
+)
+def test_agent_maps_provider_failures_to_bounded_codes(
+    provider_error, expected_code
+):
+    class BrokenProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            raise provider_error
+
+    agent, _ = _agent_with_memos()
+    agent._provider = BrokenProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert error.value.error_code == expected_code
+    assert str(provider_error) not in str(error.value)

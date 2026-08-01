@@ -72,6 +72,7 @@ class RetrievalService:
 
         citations: list[Citation] = []
         context_blocks: list[str] = []
+        protected_context_fragments: list[str] = []
         for index, result in enumerate(results, start=1):
             metadata = dict(result.metadata)
             content = str(metadata.pop("content", "")).strip()
@@ -83,11 +84,22 @@ class RetrievalService:
                     metadata=metadata,
                 )
             )
-            context_blocks.append(
-                _format_context_block(index, result.memo_id, result.score, metadata, content)
-            )
+            if visible_memo_ids is None:
+                context_blocks.append(
+                    _format_context_block(
+                        index, result.memo_id, result.score, metadata, content
+                    )
+                )
+            else:
+                context_blocks.append(_format_agent_context_block(index, content))
+                if content:
+                    protected_context_fragments.append(content)
 
-        return RetrievalResult(context="\n\n".join(context_blocks), citations=tuple(citations))
+        return RetrievalResult(
+            context="\n\n".join(context_blocks),
+            citations=tuple(citations),
+            protected_context_fragments=tuple(protected_context_fragments),
+        )
 
 
 def _format_context_block(
@@ -102,3 +114,7 @@ def _format_context_block(
     if title:
         header += f" title={title}"
     return f"{header}\n{content or '(memo content unavailable)'}"
+
+
+def _format_agent_context_block(index: int, content: str) -> str:
+    return f"[evidence-{index}]\n{content or '(memo content unavailable)'}"

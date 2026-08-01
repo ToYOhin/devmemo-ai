@@ -14,6 +14,13 @@ from app.domain.agent import (
     SearchMemosToolCall,
     VisibleMemoEvidence,
 )
+from app.domain.grounded_answer import (
+    GroundedAnswerContractError,
+    GroundedAnswerFailureCode,
+    map_grounded_answer_failure,
+    parse_provider_grounded_answer,
+    validate_grounded_answer,
+)
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationHeaders,
@@ -25,6 +32,10 @@ from app.services.retrieval_service import RetrievalService
 
 class AgentProviderError(RuntimeError):
     """Raised when the configured answer provider cannot complete safely."""
+
+    def __init__(self, error_code: GroundedAnswerFailureCode) -> None:
+        self.error_code = error_code
+        super().__init__("Agent provider unavailable")
 
 
 class EvidenceAnswerAgent:
@@ -86,13 +97,18 @@ class EvidenceAnswerAgent:
                 trace=AgentTrace(terminal_state="no_context", steps=(search_step,)),
             )
 
-        answer = await self._answer(request.question, retrieved.context, citations)
+        answer, answer_citations = await self._answer(
+            request.question,
+            retrieved.context,
+            citations,
+            retrieved.protected_context_fragments,
+        )
         return AgentAnswerResult(
             answer=answer,
-            citations=citations,
+            citations=answer_citations,
             visibility=visibility,
             provider=_provider_name(self._provider),
-            retrieved_count=len(citations),
+            retrieved_count=len(answer_citations),
             trace=AgentTrace(
                 terminal_state="answered",
                 steps=(
@@ -107,25 +123,40 @@ class EvidenceAnswerAgent:
         question: str,
         context: str,
         citations: tuple[AgentCitation, ...],
-    ) -> str:
+        protected_context_fragments: tuple[str, ...],
+    ) -> tuple[str, tuple[AgentCitation, ...]]:
         fallback = f"Found {len(citations)} authorized Memo source(s) relevant to the question [1]."
         if _provider_name(self._provider) == "deterministic":
-            return fallback
+            return fallback, citations
 
         prompt = (
-            "Answer the question using only the authorized knowledge-base context below. "
-            "Cite sources with [1], [2] in context order.\n"
+            "Answer using only the authorized evidence below. Return exactly one JSON "
+            "object with fields version, answer, and citation_refs. Set version to "
+            '"grounded-answer-result-v1" and cite only the provided evidence-* '
+            "references. Do not include any other fields.\n"
             f"Question: {question}\n"
-            f"Context:\n{context}"
+            f"Evidence:\n{context}"
         )
+        evidence_by_reference = {
+            f"evidence-{index}": citation
+            for index, citation in enumerate(citations, start=1)
+        }
         try:
-            await self._provider.generate(prompt)
+            provider_result = await self._provider.generate(prompt)
+            if not isinstance(provider_result.text, str):
+                raise GroundedAnswerContractError
+            parsed = parse_provider_grounded_answer(
+                provider_result.text.encode("utf-8")
+            )
+            validated = validate_grounded_answer(
+                parsed,
+                evidence_by_reference,
+                protected_context_fragments=protected_context_fragments,
+            )
         except Exception as error:
-            raise AgentProviderError("Agent provider unavailable") from error
-        # A provider receives authorized internal context, but its untrusted text
-        # is never projected to the browser. This preserves the no-raw-Memo
-        # response boundary while retaining an explicit provider failure signal.
-        return fallback
+            failure = map_grounded_answer_failure(error)
+            raise AgentProviderError(failure.error_code) from error
+        return validated.answer, validated.citations
 
 
 def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCitation:

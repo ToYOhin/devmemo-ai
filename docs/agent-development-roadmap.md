@@ -10,8 +10,8 @@
 > the dormant A4-I3 derived-ledger/fake-vector recovery proof, A4-I4
 > authenticated transport contracts, and the A4-I5 synthetic disposable
 > lifecycle integration proof are complete on the Agent feature branch. R4-I1
-> adds strict provider-neutral grounded-answer result contracts and tests, but
-> they are not connected to the runtime answer path.
+> adds strict provider-neutral grounded-answer result contracts, and R4-I2
+> safely integrates them using synthetic evidence and fake Provider results.
 > No lifecycle route, dispatcher, runtime wiring, or production-ready answer
 > path is implemented.
 
@@ -61,7 +61,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Provider output is deliberately discarded after generation | R4-I1 proves a strict structured result and server-owned citation mapping in isolation, but the runtime still returns its deterministic fallback | Separately integrate the validator, preserve safe BFF projection, and pass a disposable real-Provider smoke before returning Provider text |
+| P0 | The strict Provider answer path has no post-integration real smoke | R4-I2 accepts validated structured answers with server-owned citations in fake tests, but no real configured Provider has exercised this exact path | Pass a disposable real-Provider smoke for success, malformed output, empty retrieval, and bounded failure without persisting data or changing defaults |
 | P0 | Authorized Agent retrieval works only with the in-memory complete-Memo store | Indexed evidence disappears on restart and the Agent cannot demonstrate durable local RAG | Implement the reviewed A4 lifecycle and prove create/update/delete/restart/rebuild behavior in disposable stores |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
@@ -205,9 +205,11 @@ temporary databases and vector collections.
 
 ### R4 — Grounded Provider answers
 
-**Status:** R4-I1 strict result parsing, server-owned citation mapping, context-
-echo rejection, and safe failure codes are implemented and unit-verified without
-runtime integration. Provider text remains discarded by `EvidenceAnswerAgent`.
+**Status:** R4-I1 strict parsing and R4-I2 safe runtime integration are complete.
+Authorized Provider context uses opaque evidence references; validated answers
+resolve only to server-owned citations. Empty retrieval and deterministic output
+remain unchanged. The integrated path is fake-verified but has no real Provider
+smoke yet.
 
 **Outcome:** configured Providers can produce useful answers without weakening
 the safe response boundary.
@@ -340,11 +342,11 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R4-I2 safe grounded-answer runtime integration** next. Generate
-server-owned opaque evidence references, request the R4-I1 structured result,
-validate it before constructing the existing `AgentAnswerResult`, and preserve
-the BFF's safe citation projection. Use synthetic evidence and fake Provider
-outputs only; prove malformed results, unknown citations, context echoes,
-timeouts, and Provider failures retain bounded 502 behavior. Do not call a real
-Provider, connect lifecycle runtime wiring, change defaults, or touch real data.
-A disposable real-Provider smoke remains a later separately authorized gate.
+Implement **R4-I3 disposable grounded-answer Provider smoke** next. Exercise the
+integrated structured-answer path with the already-available local Provider in
+an ephemeral, no-volume, no-host-port environment using only synthetic evidence.
+Prove one valid grounded answer, empty-retrieval Provider skipping, malformed or
+unusable structured output handling, and bounded Provider failure. Destroy all
+temporary containers afterward. Do not persist Memo-derived data, connect A4
+lifecycle runtime, change Compose defaults, expose port 8000, or use real Memo,
+identity, visibility, volume, or secret data.
