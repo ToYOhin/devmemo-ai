@@ -1,10 +1,11 @@
 # Evidence Answer Agent
 
 > Status: the A1 local-first, read-only backend is implemented and locally
-> runtime-verified. A2 adds an explicit experimental Web entry, and A3 has
-> completed a controlled local Provider smoke. The feature remains disabled by
-> default. No Agent persistence, remote deployment, or general-public
-> availability is delivered.
+> runtime-verified. A2 adds an explicit experimental Web entry, A3 completed a
+> controlled local Provider smoke, and A4 now defines the local RAG lifecycle
+> contract. The feature remains disabled by default. A4 is design-only: no
+> durable index lifecycle, Agent persistence, remote deployment, or
+> general-public availability is delivered.
 
 ## Purpose
 
@@ -140,6 +141,10 @@ LLM provider.
    successful evidence-backed completion, no-context Provider bypass, and the
    safe 502 Provider-failure mapping. It used no host-published AI port, no
    persistent data, and no change to the default Compose configuration.
+5. **Local RAG lifecycle contract — design complete.** The Memos-owned event,
+   retry, idempotency, rebuild, observability, and rollback rules below are the
+   review baseline for later implementation. No runtime wiring or persistent
+   real-Memo derived data is authorized by this design slice.
 
 ## Acceptance criteria for the first Agent path
 
@@ -156,11 +161,205 @@ LLM provider.
   submit action, calls the same-origin Memos BFF only, and renders a reduced
   answer, citation, and trace projection.
 
-## Future work excluded from this proposal
+## A4 local RAG lifecycle contract
 
-**A4 local RAG lifecycle** must first define Memos-owned indexing, reindexing,
-deletion, retry, observability, and rollback semantics for a durable derived
-index. It does not authorize chunk or Qdrant Agent retrieval.
+This section is an implementation contract, not an enabled feature. The current
+generic Memos Webhook path is not the A4 transport: its Memos-side dispatch uses
+a bounded in-process queue that can drop work, while the existing AI-side
+`webhook_events` table proves only receipt at the consumer. It also stores the
+received payload for legacy retry. A4 requires Memos to own the durable delivery
+record and requires the AI lifecycle consumer to persist no raw Memo snapshot.
+
+### Authority and persistence boundary
+
+- Memos owns the canonical Memo, its identity, normal/archived/deleted state,
+  comment relationship, and current visibility. A lifecycle event is a command
+  to rebuild derived state; it is never a second source of truth.
+- Memos writes each lifecycle event to a durable Memos-owned outbox in the same
+  database transaction as the source mutation. A delete cannot commit without
+  its tombstone event, and an event cannot describe a mutation that rolled back.
+  After acknowledgement, an audited retention rule may remove the raw snapshot
+  from the outbox while retaining bounded delivery metadata.
+- The AI Service may persist only rebuildable state: stable vector IDs and
+  vectors, `memo_uid`, `index_version`, the highest accepted and last applied
+  source sequences, document hash, operation, rebuild generation, status, and
+  bounded timestamps or error summaries. It must not persist the raw Memo
+  snapshot, identity, visibility mapping, prompt, context, secret, or Agent
+  trace.
+- The raw complete-Memo snapshot may exist only in the authenticated internal
+  request and process memory long enough to derive the vector. It must not be
+  written to the AI lifecycle ledger, logs, metrics, traces, or ops responses.
+- The existing answer delegation HMAC, Memos visibility resolver, and
+  pre-context `memo-v1` filter remain unchanged. Lifecycle transport
+  authentication is a separate implementation gate and must not widen or reuse
+  browser authority.
+
+### Versioned event envelope
+
+Memos produces exactly three A4 event types:
+
+| Event type | Meaning | Snapshot |
+| --- | --- | --- |
+| `memo.index.requested.v1` | First eligible representation | Complete current `memo-v1` document |
+| `memo.reindex.requested.v1` | Eligible representation changed or an operator requested repair | Complete current `memo-v1` document |
+| `memo.delete.requested.v1` | Memo was deleted or became ineligible | Tombstone only; no content |
+
+Every event contains an opaque immutable `event_id`, `memo_uid`, a
+Memos-generated monotonically increasing `source_sequence`, `index_version`
+fixed to `memo-v1`, `occurred_at`, and a controlled `reason`. Index/reindex also
+contains a complete normalized document and its SHA-256 `document_hash`; delete
+contains no document. Visibility and user identity are never event fields.
+Unknown event types, fields, index versions, missing hashes, or mismatched hashes
+are rejected before embedding.
+
+`source_sequence` is allocated by Memos in the source transaction and is the
+ordering token; user-settable timestamps are not revisions. Retries reuse the
+same event ID, sequence, and immutable payload. A newly requested reindex always
+gets a new event ID and higher sequence, even when its document hash is
+unchanged.
+
+Delivery is at-least-once and source-sequenced per Memo. After the Memos
+transaction commits, an initial delivery may be attempted without making the
+Memo mutation depend on AI availability. Failure leaves the outbox row
+retryable. Memos must attempt pending rows in source order, but an older failed
+event must not block a newer reindex or delete; the sequence guard makes the
+older retry stale after the newer event is accepted. The first implementation
+provides only bounded, explicit operator retry: one initial attempt plus at
+most two retries. It adds no background worker or automatic indexing default.
+
+### AI consumer state machine and idempotency
+
+The AI consumer compares an event with the persisted highest-accepted and
+last-applied state for the same `memo_uid` and `index_version` before using
+content:
+
+- a lower sequence is acknowledged as `stale` and cannot change the vector;
+- the same applied event ID, sequence, operation, and hash is acknowledged as
+  `duplicate`; the same `applying` or `failed` event resumes its idempotent
+  operation;
+- the same sequence with conflicting identity, operation, or hash is a hard
+  contract error and remains retry-visible;
+- a higher sequence is first reserved durably as `applying`, immediately making
+  every older vector for that Memo ineligible for retrieval; it then applies an
+  upsert or idempotent delete, records the last-applied state, and acknowledges
+  `applied`;
+- an embedding/store or finalization failure is `failed`; it retains the
+  accepted sequence for safe retry, does not advance the last-applied sequence,
+  keeps older vectors retrieval-ineligible, and never returns raw exception or
+  Memo data.
+
+The complete-Memo vector ID remains the stable hash-derived ID already used by
+`EmbeddingService`. Repeated upsert replaces that one record; repeated delete is
+a successful no-op. The derived ledger reserves the event before vector
+mutation and finalizes it afterwards. A crash between those steps safely
+repeats the same stable upsert or delete; failure to reserve performs no vector
+mutation. Each vector carries the applied source sequence and document hash,
+and retrieval accepts it only when both match an `applied` ledger row. A delete
+records a derived tombstone sequence even when no vector was present,
+preventing an older delayed upsert from resurrecting content.
+
+The internal acknowledgement is a strict projection of `event_id`,
+`memo_uid`, `source_sequence`, `index_version`, `status` (`applied`,
+`duplicate`, `stale`, or `failed`), `operation`, and an optional bounded error
+code. It contains no document, hash, provider output, prompt, context, embedding,
+visibility, identity, or secret.
+
+### Default `memo-v1` policy
+
+- One normal, non-comment Memo with non-blank Markdown maps to one complete
+  `memo-v1` vector. The stable Memo UID is the identity; no chunk is eligible.
+- Create emits index. A change to content or indexed metadata emits reindex.
+  Restoring an archived Memo to normal also emits reindex. An explicit repair
+  action reads a fresh canonical snapshot from Memos and emits reindex; the
+  browser never supplies the snapshot.
+- Delete, archive, transition to a comment, or transition to blank content emits
+  delete. These rules also remove legacy entries for comments or other
+  ineligible records during rebuild.
+- Visibility-only changes do not copy visibility into the index and do not
+  authorize retrieval. The existing Memos resolver computes the caller's fresh
+  normal complete-Memo UID capability on every answer, and the AI Service still
+  filters before context assembly.
+- `AI_INDEX_ON_WEBHOOK=false`, `AI_INDEX_MODE=memo`, the memory vector store,
+  deterministic providers, and `AI_AGENT_ENABLED=false` remain the defaults.
+
+### Rebuild, recovery, and deletion propagation
+
+A single-Memo repair is an explicit reindex event. A full rebuild is an
+operator-approved, Memos-driven operation with a unique `rebuild_generation`:
+
+1. keep the Agent disabled or pause answer traffic;
+2. capture a Memos outbox high-water sequence and canonical eligible-Memo count;
+3. create an empty derived generation and replay fresh `memo-v1` snapshots from
+   Memos, never from the old vector store or AI ledger;
+4. consume through the captured high-water point, then apply later queued
+   events in sequence;
+5. compare eligible count, indexed-state count, high-water sequence, and a
+   manifest digest derived from Memo UID plus document hash;
+6. activate the new generation only when all checks pass, then retain or discard
+   the old derived generation according to the reviewed retention policy.
+
+This generation swap removes orphaned vectors without treating a vector-store
+scan as authority. A Memos restore is verified first; the AI index is then
+discarded and rebuilt from that restored source. Restoring only AI-derived state
+must never resurrect a deleted Memo. No real volume deletion or rebuild is part
+of A4 design acceptance.
+
+### Observability and operational gates
+
+Memos-owned ops state exposes event ID, type, sequence, status, attempts,
+bounded last error, timestamps, pending/failed/exhausted counts, oldest pending
+age, and the produced/acknowledged high-water marks. AI-owned ops state exposes
+applied/duplicate/stale/failed counts, last applied sequence, index version,
+generation, provider/store health, indexed-state/vector counts, and bounded
+errors. Both sides correlate by event ID and expose no payload or Memo content.
+
+An index may be called synchronized only when pending, failed, and exhausted
+counts are zero; the acknowledged high-water mark reaches the captured source
+high-water mark; store health and provider dimension match `memo-v1`; and the
+eligible count and manifest digest match. Any failed or exhausted event, a
+growing/aged backlog, count or digest mismatch, wrong version/dimension, stale
+delete, content-bearing ops output, or citation outside the Memos-provided scope
+blocks rollout and raises an operator-visible degraded state.
+
+Rollback first disables `AI_AGENT_ENABLED` and pauses lifecycle delivery; it
+does not change Memos data or visibility. Revert the lifecycle consumer or
+provider configuration, discard the suspect derived generation, and rebuild
+from Memos before re-enabling. A scope leak, stale resurrection, or raw-content
+exposure requires immediate disablement and derived-index quarantine. A delete
+is recovered only by restoring the authoritative Memo through the normal Memos
+backup policy and then reindexing, never by copying content back from AI state.
+
+### Minimum implementation and validation plan
+
+Each later step requires separate authorization before runtime or real-data
+effects:
+
+1. Add provider-neutral event/acknowledgement fixtures and pure state-machine
+   tests for duplicate, stale, conflict, retry, tombstone, and redaction cases.
+   No route, database, Compose, or default changes.
+2. Add a Memos outbox adapter and transaction tests using a temporary test
+   database. Prove create/update/delete atomicity, per-Memo ordering, bounded
+   attempts, and explicit retry without starting a worker.
+3. Add an AI derived lifecycle ledger and fake vector-store integration tests.
+   Prove stable upsert, idempotent delete, crash-between-vector-and-ledger replay,
+   tombstone protection, and no raw snapshot persistence.
+4. Add a synthetic, disposable end-to-end smoke with temporary stores only.
+   Prove backlog/health projections, rebuild generation validation, disabled
+   defaults, no browser-to-AI request, and zero AI host-published ports.
+5. Only after explicit approval, run an opt-in local migration/rebuild against
+   real Memos data with backup, rollback, and post-run deletion verification.
+
+### Chunk and Qdrant gates
+
+A4 does not enable chunk or Qdrant Agent retrieval. That route remains blocked
+until the complete-Memo lifecycle has durable Memos-owned delivery, demonstrated
+delete/retry/rebuild behavior, scope-safe observability, and a tested rollback;
+chunk has a separate version and collection plus stable delete/tombstone rules;
+offline evaluation and dual-path migration meet reviewed quality gates; and a
+trusted Memos gateway enforces current visibility before context assembly. The
+`search_memos` Agent continues to accept only complete `memo-v1` evidence.
+
+## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,
 explicit user confirmation, idempotency, audit and rollback semantics, rate
