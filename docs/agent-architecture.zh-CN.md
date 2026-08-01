@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，但功能仍默认关闭；尚未交付 Agent 持久化、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke；功能仍默认关闭，尚未交付 Agent 持久化、远程部署或通用公开可用性。
 
 ## 目标
 
@@ -91,7 +91,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 1. **契约与 feature gate — 已完成。** 严格 `AI_AGENT_ENABLED` 解析与 provider-neutral domain type 已有序列化测试。
 2. **只读证据 Agent 与认证 BFF — 已完成。** `EvidenceAnswerAgent`、签名内部路由、Memos BFF、可见性过滤与定向集成测试已实现。
 3. **显式实验 UI — 已完成。** Memo 详情页入口有清晰标记，用户展开入口并提交问题前不会发出请求。它仅以 `question` 和 `limit` 调用同源 Memos BFF，然后严格解析并显示安全 answer、citation 与脱敏步骤状态；不直连 AI Service，也不持久化结果。
-4. **受控 provider smoke — 未开始。** 可选地用维护者本地配置的 provider 验证同一路径；这不是默认 Compose 或 CI 要求。
+4. **受控 provider smoke — 已完成。** 一次可销毁的仅本地运行时验证了既有签名内部路径与显式 opt-in Provider，包括成功的证据回答、空上下文时跳过 Provider，以及安全的 502 Provider 失败映射。该验证没有发布 AI 宿主机端口、没有写入持久数据，也没有更改默认 Compose 配置。
 
 ## A1 验收结果
 
@@ -100,7 +100,10 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 - 空检索不调用 provider；检索与 provider 失败分别映射为安全的 503 与 502。
 - citation 与 trace 不包含 `content`；Memos BFF 严格拒绝未知或不安全的内部响应字段。
 - 既有 chat 契约未修改，相关测试通过。
+- 显式 Web 入口保持 opt-in：展开并提交问题前不会发出请求，只调用同源 Memos BFF，并只渲染收紧后的 answer、citation 与 trace 投影。
 
 ## 后续工作不包含在 A1 内
+
+**A4 本地 RAG 生命周期**必须先定义由 Memos 持有的索引、重索引、删除、重试、可观测性与回滚语义，以支持可重建的派生索引；它不授权启用 chunk 或 Qdrant Agent 检索。
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。
