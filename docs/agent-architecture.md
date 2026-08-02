@@ -18,8 +18,10 @@
 > adds an unwired disposable SQLite repository-adapter parity proof with
 > reopen and snapshot-consistency coverage. R5-I3 selects current-authority
 > Memos rehydration through a provider-neutral, unwired design contract; the AI
-> side retains complete content only in request memory. The feature remains
-> disabled by default. No production rehydration transport, runtime lifecycle wiring,
+> side retains complete content only in request memory. R5-I4 proves the
+> domain-separated request/response HMAC, freshness, exact parsing, and bounded
+> process-local replay contract entirely in process. The feature remains
+> disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
 
@@ -258,6 +260,16 @@ LLM provider.
    exists only in authenticated request memory. The shared fixture and pure
    tests add no transport, repository, route, runtime secret, database, or real
    data.
+17. **Authenticated content-rehydration transport proof — complete, unwired.**
+   R5-I4 binds the exact R5-I3 request to a rehydration-only method/path,
+   transport version, timestamp, nonce, and body digest. A separate response
+   HMAC binds status, response timestamp, original request nonce, derived
+   snapshot token, and body digest before exact parsing. Bounded process-local
+   request and response replay stores, a single-call fake authority handler,
+   fixed signed failure projection, and a shared synthetic fixture cover
+   tampering, expiry, replay, timeout, partial output, and authority mismatch.
+   This is integrity/authentication proof only: it adds no HTTP adapter,
+   runtime secret, persistence, remote confidentiality claim, or real data.
 
 ## Acceptance criteria for the first Agent path
 
@@ -407,16 +419,34 @@ adapter failure maps to `authorized_retrieval_unavailable` without raw Memo,
 question, context, payload, embedding, identity, visibility, secret, SQL,
 endpoint, or exception details.
 
-The first runtime authorization is limited to one single-host, authenticated
-internal rehydration transport with bounded requests, short timeouts, no
-automatic retry, no persistent content, and synthetic dry-run proof. A real-
-data opt-in additionally requires verified Memos backup, explicit dry run,
-rollback, and post-run lifecycle/retrieval reconciliation. Multi-instance use
-remains blocked until the transport is encrypted across hosts and both
-rehydration and A4 lifecycle authentication use shared replay protection.
+R5-I4 proves that transport boundary without opening a network connection. The
+request canonical form contains the rehydration-only purpose, transport
+version, fixed `POST` path, decimal timestamp, nonce, and SHA-256 body digest.
+Verification enforces a 60-second window, a 32 KiB request bound, exact JSON
+without duplicate keys, and one process-local nonce consumption before the
+authority callback. The callback runs at most once and must return the atomic
+Memos current-authority snapshot; timeout, authority, or schema failure becomes
+only a signed `503` body with `authorized_retrieval_unavailable`.
+
+The response uses a separate response-only HMAC purpose and header namespace.
+Its canonical form binds transport version, method/path, response timestamp,
+original request nonce, derived snapshot token, status (`200` or `503`), and
+the exact body digest. The AI-side parser verifies that signature and freshness
+before exact JSON parsing, then rechecks every selection reference,
+sequence/hash/version and consumes a separate client-side replay entry. The
+contract fixes a five-second future client timeout and no automatic retry; the
+in-process proof maps a synthetic `TimeoutError` but does not implement an HTTP
+timer. Neither success nor failure responses contain `memos_authority_ref`.
+
+Both replay stores are deliberately bounded and process-local. HMAC proves
+integrity and peer possession of the scoped secret, not content
+confidentiality. Cross-host or multi-instance use remains blocked until there
+is encrypted transport, shared replay protection, key rotation, and a separate
+threat review. A real-data opt-in additionally requires verified Memos backup,
+explicit dry run, rollback, and post-run lifecycle/retrieval reconciliation.
 `EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction, A4 runtime
 routes, Memo CRUD, dispatcher/worker paths, Qdrant, Compose, and real data
-remain unchanged in R5-I3.
+remain unchanged in R5-I4.
 
 ## A4 local RAG lifecycle contract
 

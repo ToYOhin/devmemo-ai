@@ -17,7 +17,9 @@
 > an unwired disposable SQLite repository-adapter parity proof. R5-I3 selects
 > authenticated current-authority Memos rehydration and request-memory-only
 > content retention through a pure design contract and synthetic fixture.
-> No production rehydration transport, lifecycle route, dispatcher,
+> R5-I4 adds an unwired in-process proof for domain-separated request/response
+> HMAC, freshness, exact parsing, and bounded process-local replay.
+> No HTTP rehydration adapter, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -66,7 +68,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I3 selects Memos current-authority rehydration and rejects persistent AI content, but no authenticated transport or runtime selection invokes the contract, so no durable path serves answers | Prove the distinct authenticated rehydration transport, then separately review runtime selection and lifecycle wiring |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I4 proves authenticated request/response integrity and single-process replay, but there is no cross-language Memos adapter, HTTP route/client, shared replay store, or runtime selection, so no durable path serves answers | Prove Memos-side cross-language parity, then separately authorize the single-host adapter and runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -258,7 +260,12 @@ complete-Memo content and persistent hybrid caching for the durable Agent path.
 Its exact contract and synthetic fixture bind selection sequence/hash/version
 to the derived snapshot token and a request-local opaque Memos authority
 reference, then fail closed on authority or revision changes.
-No transport, route, repository, runtime secret, or real data is added.
+R5-I4 adds a distinct request and response HMAC contract, strict timestamps,
+body digests, exact parsing, a single-call in-process authority handler, fixed
+signed failures, and bounded process-local request/client replay stores. The
+shared fixture and pure tests cover tampering, replay, timeout, partial output,
+and selection mismatch. No HTTP adapter, route, repository, runtime secret, or
+real data is added; HMAC is not claimed as cross-host confidentiality.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -367,14 +374,13 @@ review, and explicit authorization.
 
 ## Recommended next slice
 
-Implement **R5-I4 authenticated content-rehydration transport contract proof**
-next. Bind the R5-I3 exact request/response schema to its distinct internal path
-and HMAC purpose with bounded timestamp, nonce, body digest, request size,
-timeout, all-or-nothing parsing, and content-free failure mapping. Use only an
-in-process fake handler, a bounded process-local replay store, and synthetic
-fixtures; add no HTTP route/client, runtime secret/configuration, automatic
-retry, database, real Memo, or runtime selection. Keep `EvidenceAnswerAgent`,
-current `RetrievalService`, VectorStore factory, Memo CRUD, dispatcher/worker,
-Qdrant, Compose defaults, credentials, and real data unwired. A shared replay
-store remains mandatory before any multi-instance claim, and runtime selection
-remains a later separately authorized gate.
+Implement **R5-I5 cross-language Memos transport parity proof** next. Add only
+provider-neutral Go canonical request verification and response signing/parsing
+against `memo-evidence-rehydration-transport-v1.json`, with exact bounded
+payload validation and fixed content-free errors. Do not add an HTTP route or
+client, runtime secret/configuration, authority lookup, automatic retry,
+database, real Memo, or runtime selection. Keep `EvidenceAnswerAgent`, current
+`RetrievalService`, VectorStore factory, Memo CRUD, dispatcher/worker, Qdrant,
+Compose defaults, credentials, and real data unwired. A single-host HTTP
+adapter remains a later authorization; encrypted transport and shared replay
+storage remain mandatory before any multi-instance claim.

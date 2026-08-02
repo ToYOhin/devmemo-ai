@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存；功能仍默认关闭。尚未交付生产 rehydration transport、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约；功能仍默认关闭。尚未交付 HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -108,6 +108,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 14. **持久化授权检索契约 — 已完成、未接线。** R5-I1 定义了有界的 Memos-authority query、无正文 candidate/ledger snapshot、第二阶段完整 Memo materialization、请求内 opaque evidence reference 与服务端 citation 投影。fake repository 证明可见性在加载正文前求交；只有当前 active generation 中，`memo-v1` 记录的序号与 hash 匹配 `applied` A4 ledger 时才符合条件。空/未知 scope、pending/failed/delete 状态、过期序号/hash、旧或未知 generation、缺失 ledger、chunk 版本、重复/冲突记录与 repository failure 全部 fail closed。证明只使用合成内存记录，不修改现有 Agent 或 retrieval runtime。
 15. **一次性 repository-adapter parity proof — 已完成、未接线。** R5-I2 把 R5-I1 边界绑定到显式创建的临时 SQLite store。candidate query 下推 Memos 授权 UID 集合与 limit，service 仍在正文加载前再次执行可见性求交。active generation、无正文 candidate 与 A4 ledger state 在同一个只读事务中读取；基于 revision 的 opaque snapshot token 防止后续正文加载混合不同 store generation。reopen parity、lifecycle 拒绝、重复/不一致行与固定 repository failure 映射只使用 `tmp_path` 和合成记录。该 adapter 仅用于测试，并非生产正文持久化或 rehydration 设计。
 16. **生产正文 rehydration 设计契约 — 已完成、未接线。** R5-I3 为 durable Agent 路径选择认证的 Memos 当前权威 rehydration，而不是 AI 侧持久化完整 Memo 正文或持久 hybrid cache。精确且有界的请求/响应投影绑定 eligible candidate 的 sequence、hash、version 与 R5 snapshot token；update、delete、visibility 丢失、generation/revision 切换、缺失项或响应不一致全部映射为同一个无正文错误。完整正文只存在于认证请求内存。共享 fixture 与纯测试未增加 transport、repository、route、runtime secret、database 或真实数据。
+17. **认证 content-rehydration transport 证明 — 已完成、未接线。** R5-I4 把 R5-I3 精确请求绑定到 rehydration-only method/path、transport version、timestamp、nonce 和 body digest；独立 response HMAC 在精确解析前绑定 status、响应 timestamp、原请求 nonce、derived snapshot token 与 body digest。有界 process-local request/response replay store、单次调用 fake authority handler、固定签名 failure 投影与共享合成 fixture 覆盖篡改、过期、重放、timeout、部分输出和 authority mismatch。本证明只覆盖认证与完整性，没有增加 HTTP adapter、runtime secret、持久化、远程保密性主张或真实数据。
 
 ## A1 验收结果
 
@@ -208,12 +209,24 @@ authority reference 与完整正文只保留到请求结束，不得进入 AI le
 `authorized_retrieval_unavailable`，不得暴露 raw Memo、question、context、payload、embedding、identity、
 visibility、secret、SQL、endpoint 或原始异常。
 
-下一次 runtime 授权只允许单机、已认证的内部 rehydration transport，要求有界请求、短 timeout、无自动
-重试、无持久正文和合成 dry-run 证明。真实数据 opt-in 还必须验证 Memos backup，提供显式 dry run、
-rollback 和运行后 lifecycle/retrieval reconciliation。多实例继续被阻塞，直到跨宿主 transport 加密，且
-rehydration 与 A4 lifecycle 认证都使用共享 replay protection。R5-I3 不改变 `EvidenceAnswerAgent`、
-`RetrievalService`、VectorStore 构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose
-或真实数据。
+R5-I4 在不打开网络连接的情况下证明该 transport 边界。request canonical form 包含 rehydration-only
+purpose、transport version、固定 `POST` path、十进制 timestamp、nonce 和 SHA-256 body digest。
+verification 执行 60 秒时效窗口、32 KiB request 上限、无重复 key 的 exact JSON，并在 authority callback
+前消费一次 process-local nonce。callback 最多执行一次且必须返回原子 Memos current-authority snapshot；
+timeout、authority 或 schema failure 只成为签名的 `503 authorized_retrieval_unavailable`。
+
+response 使用独立的 response-only HMAC purpose 与 header namespace。canonical form 绑定 transport
+version、method/path、响应 timestamp、原请求 nonce、derived snapshot token、status（`200` 或 `503`）和
+exact body digest。AI 侧先验证签名与时效，再 exact parse，并重新核对每个 selection reference、
+sequence/hash/version，最后消费独立 client-side replay entry。契约固定未来 client timeout 为五秒且不自动
+重试；进程内证明只映射合成 `TimeoutError`，没有实现 HTTP timer。success/failure response 均不含
+`memos_authority_ref`。
+
+两侧 replay store 都明确有界且仅限单进程。HMAC 证明完整性和对 scoped secret 的持有，不提供正文
+保密性。跨宿主或多实例继续被阻塞，直到具备加密 transport、shared replay protection、密钥轮换和独立
+威胁评审。真实数据 opt-in 还必须验证 Memos backup，提供显式 dry run、rollback 和运行后
+lifecycle/retrieval reconciliation。R5-I4 不改变 `EvidenceAnswerAgent`、`RetrievalService`、VectorStore
+构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose 或真实数据。
 
 ## A4 本地 RAG 生命周期契约
 

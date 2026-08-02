@@ -1,0 +1,22 @@
+{
+  "version": "memo-evidence-rehydration-transport-v1",
+  "request_purpose": "devmemo-agent-evidence-rehydration-v1",
+  "response_purpose": "devmemo-agent-evidence-rehydration-response-v1",
+  "method": "POST",
+  "path": "/internal/ai/agent/evidence/rehydrate",
+  "secret": "synthetic-rehydration-secret",
+  "request": {
+    "timestamp": "1785643200",
+    "nonce": "rehydration-nonce-0001",
+    "raw_body": "{\"version\":\"memo-evidence-rehydration-v1\",\"snapshot_token\":\"snapshot-synthetic-1\",\"memos_authority_ref\":\"authority-ref-synthetic-4\",\"selections\":[{\"selection_ref\":\"rehydration-1\",\"memo_uid\":\"memo-visible\",\"source_sequence\":3,\"document_hash\":\"b56b98dbaf9a594dfe98537a2bd6658173fcd4866dcf0ea3820d9b4e72f9e8af\",\"index_version\":\"memo-v1\"}]}",
+    "signature": "sha256=4f9506c513798f406e54c34d178b39d938e5df05c9d7e19e4d1e96144ec9fec0"
+  },
+  "response": {
+    "timestamp": "1785643230",
+    "request_nonce": "rehydration-nonce-0001",
+    "snapshot_token": "snapshot-synthetic-1",
+    "status": 200,
+    "raw_body": "{\"version\":\"memo-evidence-rehydration-v1\",\"snapshot_token\":\"snapshot-synthetic-1\",\"authority_token\":\"authority-synthetic-9\",\"documents\":[{\"selection_ref\":\"rehydration-1\",\"document\":\"# Synthetic Memo\\n\\nMemos remains the current authority.\",\"source_sequence\":3,\"document_hash\":\"b56b98dbaf9a594dfe98537a2bd6658173fcd4866dcf0ea3820d9b4e72f9e8af\",\"index_version\":\"memo-v1\"}]}",
+    "signature": "sha256=7f14441be18d4793984c5b61c8e602f1f04114d9b4229c17cce4b7c0f8dc451a"
+  }
+}
