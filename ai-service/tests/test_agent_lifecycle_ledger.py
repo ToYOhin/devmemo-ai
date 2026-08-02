@@ -92,6 +92,50 @@ def _delete_event(sequence: int, **overrides: object) -> MemoLifecycleEvent:
     return MemoLifecycleEvent.from_dict(payload)
 
 
+def test_sqlite_ledger_owns_generation_and_monotonic_snapshot_revision(tmp_path):
+    database = tmp_path / "lifecycle-ledger.db"
+    ledger = SQLiteMemoLifecycleLedger(database)
+
+    initial = ledger.read_snapshot_authority()
+    assert initial.active_generation is None
+    assert initial.revision == 0
+    assert SQLiteMemoLifecycleLedger(database).read_snapshot_authority() == initial
+
+    selected = ledger.select_active_generation("generation-a")
+    assert selected.active_generation == "generation-a"
+    assert selected.revision == 1
+    assert ledger.select_active_generation("generation-a") == selected
+
+    event = _event()
+    ledger.reserve(event)
+    reserved = ledger.read_snapshot_authority()
+    assert reserved.revision == 2
+    assert reserved.snapshot_token != selected.snapshot_token
+
+    ledger.complete(event)
+    completed = ledger.read_snapshot_authority()
+    assert completed.revision == 3
+    assert completed.snapshot_token != reserved.snapshot_token
+
+    assert ledger.reserve(event).decision == "duplicate"
+    assert ledger.read_snapshot_authority() == completed
+
+    retry = _event(2)
+    ledger.reserve(retry)
+    before_failure = ledger.read_snapshot_authority()
+    ledger.fail(retry, "vector_store_unavailable")
+    failed = ledger.read_snapshot_authority()
+    assert failed.revision == before_failure.revision + 1
+    assert failed.snapshot_token != before_failure.snapshot_token
+
+
+def test_sqlite_ledger_rejects_invalid_active_generation(tmp_path):
+    ledger = SQLiteMemoLifecycleLedger(tmp_path / "lifecycle-ledger.db")
+
+    with pytest.raises(ValueError, match="active generation"):
+        ledger.select_active_generation("contains spaces")
+
+
 def test_sqlite_ledger_persists_reservation_without_raw_document(tmp_path):
     database = tmp_path / "lifecycle-ledger.db"
     ledger = SQLiteMemoLifecycleLedger(database)

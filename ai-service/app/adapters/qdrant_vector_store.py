@@ -91,6 +91,36 @@ class QdrantVectorStore:
         points = getattr(response, "points", response)
         return [_to_search_result(point) for point in points]
 
+    def search_visible_memos(
+        self,
+        query: Sequence[float],
+        visible_memo_ids: frozenset[str],
+        limit: int = 5,
+    ) -> list[VectorSearchResult]:
+        """Push the Memos-owned UID scope into Qdrant before ranking."""
+
+        self._validate_vector(query)
+        if limit <= 0:
+            raise ValueError("search limit must be positive")
+        if not visible_memo_ids:
+            return []
+        response = self.client.query_points(
+            collection_name=self.collection_name,
+            query=list(query),
+            query_filter=self.models.Filter(
+                must=[
+                    self.models.FieldCondition(
+                        key="memo_id",
+                        match=self.models.MatchAny(any=sorted(visible_memo_ids)),
+                    )
+                ]
+            ),
+            limit=limit,
+            with_payload=True,
+        )
+        points = getattr(response, "points", response)
+        return [_to_search_result(point) for point in points]
+
     def delete(self, embedding_id: str) -> bool:
         if not embedding_id:
             raise ValueError("embedding_id must not be empty")

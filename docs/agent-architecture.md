@@ -39,8 +39,10 @@
 > Memos-owned authority capability from the authenticated BFF path and carries
 > only its opaque ref inside the signed delegation. R5-I13 adds injected durable
 > candidate-to-rehydration orchestration with snapshot recheck and request-memory
-> materialization. No real adapter/runtime selection or public availability is
-> delivered.
+> materialization. R5-I14 adds a content-free vector/lifecycle adapter, a ledger-
+> owned active-generation revision, authorized UID query pushdown, and strict
+> default-disabled lifespan ownership. The durable runtime is still disconnected
+> from the answer Agent and has no public availability.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -378,6 +380,16 @@ LLM provider.
    current snapshot token, materializes reverified documents only in request
    memory, and projects the existing authorized result. Empty scopes/candidates
    make no call; every mismatch/failure is content-free and has no fallback.
+29. **Content-free durable runtime selection — complete, disconnected.** R5-I14
+   makes the A4 SQLite ledger own an active rebuild generation and monotonic
+   snapshot revision, changing the opaque token in the same transaction as each
+   lifecycle transition. A vector adapter pushes the exact authorized Memo UID
+   set into ranking, accepts only strict `memo-v1` sequence/hash/generation
+   metadata, joins applied ledger state, and rejects duplicate, malformed,
+   content-bearing, stale, deleted, quarantined, or racing results. The existing
+   rehydration opt-in constructs the repository/orchestrator in lifespan state
+   only for memo-mode Qdrant selection; disabled startup constructs nothing.
+   Neither `EvidenceAnswerAgent` nor an endpoint selects it yet.
 
 ## Acceptance criteria for the first Agent path
 
@@ -742,6 +754,20 @@ materialization cross-check. Any client failure, changed snapshot, partial or
 mismatched response fails as `authorized retrieval unavailable`, never loading
 derived raw content. Empty authorized/candidate scopes return empty without a
 client call. No endpoint or `EvidenceAnswerAgent` uses this orchestrator yet.
+
+R5-I14 binds that orchestrator to the production vector and lifecycle
+boundaries without persisting Memo content. The A4 SQLite ledger stores only a
+single active generation and monotonic revision beside its existing derived
+state; reserve, complete, and fail transitions advance the revision in the same
+transaction. The repository embeds the question, pushes the exact authorized
+UID set into in-memory or Qdrant ranking, and joins each content-free result to
+the ledger. It accepts only current-generation `memo-v1` metadata whose sequence
+and hash match an applied upsert. Missing, duplicate, unauthorized, stale,
+deleted, quarantined, content-bearing, or concurrently changing state fails
+closed. The existing `AI_AGENT_REHYDRATION_ENABLED` opt-in owns the repository
+and orchestrator in FastAPI lifespan state only when memo-mode Qdrant is
+selected. The memory default is unchanged, and the answer Agent remains
+disconnected until R5-I15.
 
 ## A4 local RAG lifecycle contract
 

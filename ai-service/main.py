@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from database import (
     begin_webhook_retry,
+    database_path,
     delete_memo_ai_state,
     get_ai_note,
     get_memo_insights,
@@ -54,6 +55,9 @@ from app.services.agent_delegation import (
     AgentDelegationHeaders,
 )
 from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
+from app.services.durable_rehydration_runtime import (
+    build_durable_rehydration_orchestrator,
+)
 from app.services.evidence_rehydration_http_client import (
     evidence_rehydration_client_lifespan,
 )
@@ -180,9 +184,19 @@ settings = AiSettings.from_env()
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     async with evidence_rehydration_client_lifespan(settings) as client:
         application.state.evidence_rehydration_client = client
+        application.state.durable_rehydration_orchestrator = None
         try:
+            application.state.durable_rehydration_orchestrator = (
+                build_durable_rehydration_orchestrator(
+                    settings,
+                    embedding_service,
+                    client,
+                    database=database_path(),
+                )
+            )
             yield
         finally:
+            application.state.durable_rehydration_orchestrator = None
             application.state.evidence_rehydration_client = None
 
 

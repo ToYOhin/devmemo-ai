@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加 lifespan-owned Python client；R5-I12 已私有委托 Memos-owned capability；R5-I13 已增加带 snapshot recheck 与 request-memory materialization 的 injected durable orchestration。尚未选择真实 adapter/runtime，也未形成可用于正式产品的 durable 回答链路。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加 lifespan-owned Python client；R5-I12 已私有委托 Memos-owned capability；R5-I13 已增加带 snapshot recheck 与 request-memory materialization 的 injected durable orchestration；R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation/revision、授权 UID 查询下推和严格默认关闭的 lifespan ownership。durable runtime 仍未连接回答 Agent，也未公开可用。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -120,6 +120,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 26. **AI 侧 rehydration client lifespan — 已完成、未连接 answer path。** R5-I11C 只在启用的 AI Service lifespan 内构造 Python client，并在 shutdown 清空 state、确定关闭 transport。注入的 async transport 不重试；client 固定五秒 timeout、拒绝 redirect 与非精确 response envelope、有界流式读取、先验签再解析，并独占一份 process-local response replay store。对象只暴露在 `app.state`，没有 endpoint 或 `EvidenceAnswerAgent` 调用它。
 27. **认证 capability delegation bridge — 已完成、未连接 client。** R5-I12 让 enabled Memos runtime 从认证 BFF path 一次读取 caller 与精确可见完整 Memo UID scope，对非空 scope 签发一个 opaque capability，并只把 ref 加入既有 signed internal answer request。空 current scope 不签发 capability，保留正常 no-context 行为。浏览器 request 与 safe response 均不包含 authority ref；disabled 模式保留原 memory delegation body。
 28. **durable rehydration orchestration — 已完成、未选择 runtime。** R5-I13 只接受 verified delegation、content-free candidate repository 与 I11C client protocol。它先过滤 candidate，再调用 client 一次，重新读取 current snapshot token，只在 request memory materialize 重新验证的 documents，并复用现有 authorized result。空 scope/candidate 不调用；所有 mismatch/failure 均为 content-free 且无 fallback。
+29. **无正文 durable runtime selection — 已完成、未连接回答路径。** R5-I14 让 A4 SQLite ledger 持有 active rebuild generation 与单调 snapshot revision，并在每次 lifecycle transition 的同一事务中改变 opaque token。vector adapter 把精确授权 Memo UID 集合下推到排序，只接受严格的 `memo-v1` sequence/hash/generation metadata，连接 applied ledger state，并拒绝重复、格式错误、含正文、stale、delete、quarantine 或并发变化结果。既有 rehydration opt-in 只在 memo-mode Qdrant selection 下于 lifespan state 构造 repository/orchestrator；disabled 启动不构造任何对象。`EvidenceAnswerAgent` 和 endpoint 仍未选择它。
 
 ## A1 验收结果
 
@@ -357,6 +358,14 @@ query，content-free candidates 在一次 rehydration request 前完成过滤。
 新的 repository snapshot token 并执行既有 materialization cross-check。client failure、snapshot change、partial 或
 mismatch 全部映射 `authorized retrieval unavailable`，绝不读取 derived raw content。空 authorized/candidate scope
 直接返回空结果且不调用 client。当前 endpoint 与 `EvidenceAnswerAgent` 均未使用该 orchestrator。
+
+R5-I14 在不持久化 Memo 正文的前提下，把该 orchestrator 绑定到生产 vector 与 lifecycle 边界。A4 SQLite ledger
+仅在既有派生状态旁保存一个 active generation 和单调 revision；reserve、complete、fail 在各自状态事务中推进
+revision。repository 对问题生成 embedding，把精确授权 UID 集合下推到内存/Qdrant 排序，并把每个无正文结果
+连接到 ledger。只有 current-generation `memo-v1` metadata 的 sequence/hash 与 applied upsert 匹配时才输出；
+缺失、重复、越权、stale、delete、quarantine、含正文或并发变化均 fail closed。既有
+`AI_AGENT_REHYDRATION_ENABLED` 只在 memo-mode Qdrant 被选择时于 FastAPI lifespan 持有 repository 和
+orchestrator。memory 默认值不变，回答 Agent 继续留待 R5-I15 接线。
 
 ## A4 本地 RAG 生命周期契约
 

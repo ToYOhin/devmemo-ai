@@ -30,6 +30,19 @@ class FakeModels:
     class PointIdsList:
         points: list[str]
 
+    @dataclass
+    class MatchAny:
+        any: list[str]
+
+    @dataclass
+    class FieldCondition:
+        key: str
+        match: object
+
+    @dataclass
+    class Filter:
+        must: list[object]
+
 
 @dataclass
 class FakeScoredPoint:
@@ -42,6 +55,7 @@ class FakeQdrantClient:
     def __init__(self):
         self.collections: dict[str, object] = {}
         self.points: dict[str, FakeModels.PointStruct] = {}
+        self.last_query_filter: object | None = None
 
     def collection_exists(self, collection_name):
         return collection_name in self.collections
@@ -54,14 +68,22 @@ class FakeQdrantClient:
         for point in points:
             self.points[point.id] = point
 
-    def query_points(self, collection_name, query, limit, with_payload):
+    def query_points(
+        self, collection_name, query, limit, with_payload, query_filter=None
+    ):
         assert collection_name in self.collections
         assert with_payload is True
+        self.last_query_filter = query_filter
+        visible_ids = None
+        if query_filter is not None:
+            visible_ids = set(query_filter.must[0].match.any)
         return SimpleNamespace(
             points=[
                 FakeScoredPoint(point.id, 0.91, point.payload)
-                for point in list(self.points.values())[:limit]
+                for point in self.points.values()
+                if visible_ids is None or point.payload["memo_id"] in visible_ids
             ]
+            [:limit]
         )
 
     def delete(self, collection_name, points_selector, wait):
@@ -87,6 +109,21 @@ def test_qdrant_adapter_maps_upsert_search_and_delete_without_network():
     assert results[0].metadata == {"title": "Docker"}
     assert store.delete("embedding-a") is True
     assert store.search((1.0, 0.0)) == []
+
+
+def test_qdrant_adapter_pushes_authorized_memo_scope_into_query():
+    client = FakeQdrantClient()
+    store = QdrantVectorStore(client, FakeModels, 2, "devmemo-test")
+    store.upsert(VectorRecord("embedding-a", "memo-a", (1.0, 0.0), {}))
+    store.upsert(VectorRecord("embedding-b", "memo-b", (1.0, 0.0), {}))
+
+    results = store.search_visible_memos(
+        (1.0, 0.0), frozenset({"memo-b"}), limit=1
+    )
+
+    assert [result.memo_id for result in results] == ["memo-b"]
+    assert client.last_query_filter.must[0].key == "memo_id"
+    assert client.last_query_filter.must[0].match.any == ["memo-b"]
 
 
 def test_qdrant_adapter_creates_the_configured_collection_with_cosine_dimension():
