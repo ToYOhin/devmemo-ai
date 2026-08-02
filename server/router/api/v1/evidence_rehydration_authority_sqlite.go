@@ -21,9 +21,9 @@ const maxSQLiteEvidenceAuthorityUIDs = 10
 var errSQLiteEvidenceAuthorityUnavailable = errors.New("authorized retrieval unavailable")
 
 // sqliteEvidenceCurrentAuthorityReader is a dormant, single-host adapter for
-// the R5-I6 protocol. It is deliberately not registered with an HTTP route or
-// runtime factory. The future handler remains responsible for supplying the
-// already-issued opaque authority token; this reader does not issue one.
+// the R5-I6 protocol. The opt-in Memos runtime constructs it only after a
+// verified request consumes an already-issued opaque authority capability;
+// this reader does not issue one.
 type sqliteEvidenceCurrentAuthorityReader struct {
 	ctx                 context.Context
 	db                  *sql.DB

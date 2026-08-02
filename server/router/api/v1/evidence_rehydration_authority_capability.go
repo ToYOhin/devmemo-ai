@@ -60,8 +60,8 @@ type evidenceAuthorityCapabilityGrant struct {
 }
 
 // evidenceAuthorityCapabilityResolution is Memos-private and has no JSON
-// projection. A future separately authorized handler may use it to reconstruct
-// a server-owned auth context and the existing two-field R5-I6 binding.
+// projection. The rehydration composition uses it to reconstruct a server-owned
+// auth context and the existing two-field R5-I6 binding.
 type evidenceAuthorityCapabilityResolution struct {
 	callerID           int32
 	authorizedMemoUIDs []string

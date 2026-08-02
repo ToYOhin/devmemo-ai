@@ -29,12 +29,13 @@ type APIV1Service struct {
 	v1pb.UnimplementedShortcutServiceServer
 	v1pb.UnimplementedIdentityProviderServiceServer
 
-	Secret                  string
-	Profile                 *profile.Profile
-	Store                   *store.Store
-	MarkdownService         markdown.Service
-	SSEHub                  *SSEHub
-	NotificationEmailSender notification.EmailSender
+	Secret                     string
+	Profile                    *profile.Profile
+	Store                      *store.Store
+	MarkdownService            markdown.Service
+	SSEHub                     *SSEHub
+	NotificationEmailSender    notification.EmailSender
+	evidenceRehydrationRuntime *evidenceRehydrationMemosRuntime
 
 	// thumbnailSemaphore limits concurrent thumbnail generation to prevent memory exhaustion
 	thumbnailSemaphore       *semaphore.Weighted
@@ -95,6 +96,9 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 		}
 	}
 	if err := s.registerConfiguredAgentRoutes(echoServer); err != nil {
+		return err
+	}
+	if err := s.registerConfiguredEvidenceRehydrationRoute(echoServer); err != nil {
 		return err
 	}
 

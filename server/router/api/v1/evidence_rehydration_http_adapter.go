@@ -21,7 +21,8 @@ const (
 )
 
 type evidenceRehydrationHTTPHandler struct {
-	composition *evidenceRehydrationComposition
+	currentComposition  *evidenceRehydrationComposition
+	previousComposition *evidenceRehydrationComposition
 }
 
 type evidenceRehydrationHTTPClient struct {
@@ -32,12 +33,18 @@ type evidenceRehydrationHTTPClient struct {
 }
 
 func newEvidenceRehydrationHTTPHandler(
-	composition *evidenceRehydrationComposition,
+	currentComposition *evidenceRehydrationComposition,
+	previousComposition ...*evidenceRehydrationComposition,
 ) (*evidenceRehydrationHTTPHandler, error) {
-	if composition == nil {
+	if currentComposition == nil || len(previousComposition) > 1 ||
+		(len(previousComposition) == 1 && previousComposition[0] == nil) {
 		return nil, errEvidenceRehydrationCompositionUnavailable
 	}
-	return &evidenceRehydrationHTTPHandler{composition: composition}, nil
+	handler := &evidenceRehydrationHTTPHandler{currentComposition: currentComposition}
+	if len(previousComposition) == 1 {
+		handler.previousComposition = previousComposition[0]
+	}
+	return handler, nil
 }
 
 func newEvidenceRehydrationHTTPClient(
@@ -143,7 +150,7 @@ func (client *evidenceRehydrationHTTPClient) rehydrate(
 }
 
 func (handler *evidenceRehydrationHTTPHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if handler == nil || handler.composition == nil || !validEvidenceRehydrationHTTPRequest(request) {
+	if handler == nil || handler.currentComposition == nil || !validEvidenceRehydrationHTTPRequest(request) {
 		writeUnverifiedEvidenceRehydrationHTTPResponse(writer)
 		return
 	}
@@ -168,18 +175,28 @@ func (handler *evidenceRehydrationHTTPHandler) ServeHTTP(writer http.ResponseWri
 		return
 	}
 
-	result, err := handler.composition.handleContext(
+	requestHeaders := aiagent.EvidenceRehydrationRequestHeaders{
+		Signature: mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationSignatureHeader),
+		Timestamp: mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationTimestampHeader),
+		Nonce:     mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationNonceHeader),
+		Version:   mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationVersionHeader),
+	}
+	result, err := handler.currentComposition.handleContext(
 		request.Context(),
 		request.Method,
 		request.URL.Path,
 		body,
-		aiagent.EvidenceRehydrationRequestHeaders{
-			Signature: mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationSignatureHeader),
-			Timestamp: mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationTimestampHeader),
-			Nonce:     mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationNonceHeader),
-			Version:   mustSingleEvidenceRehydrationHTTPHeader(request.Header, aiagent.EvidenceRehydrationVersionHeader),
-		},
+		requestHeaders,
 	)
+	if err != nil && request.Context().Err() == nil && handler.previousComposition != nil {
+		result, err = handler.previousComposition.handleContext(
+			request.Context(),
+			request.Method,
+			request.URL.Path,
+			body,
+			requestHeaders,
+		)
+	}
 	if err != nil || request.Context().Err() != nil {
 		writeUnverifiedEvidenceRehydrationHTTPResponse(writer)
 		return

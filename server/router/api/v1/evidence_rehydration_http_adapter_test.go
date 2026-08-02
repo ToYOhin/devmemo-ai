@@ -51,6 +51,91 @@ func TestEvidenceRehydrationHTTPHandlerProjectsExactSignedFailure(t *testing.T) 
 	require.Equal(t, evidenceRehydrationCompositionFailureBody, response.Body.String())
 }
 
+func TestEvidenceRehydrationHTTPHandlerUsesMatchingKeyForResponse(t *testing.T) {
+	const previousSecret = "synthetic-r5-i11b-previous-secret"
+	tests := []struct {
+		name       string
+		secret     string
+		statusCode int
+	}{
+		{name: "current success", secret: r5I9Secret, statusCode: http.StatusOK},
+		{name: "previous success", secret: previousSecret, statusCode: http.StatusOK},
+		{name: "current signed failure", secret: r5I9Secret, statusCode: http.StatusServiceUnavailable},
+		{name: "previous signed failure", secret: previousSecret, statusCode: http.StatusServiceUnavailable},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			harness := newR5I9Harness(t, "memo-r5-i11b-keyring")
+			previousComposition, err := newEvidenceRehydrationComposition(
+				previousSecret,
+				60*time.Second,
+				harness.clock,
+				harness.replay,
+				harness.registry,
+				harness.readerFactory.newReader,
+			)
+			require.NoError(t, err)
+			handler, err := newEvidenceRehydrationHTTPHandler(harness.composition, previousComposition)
+			require.NoError(t, err)
+			if test.statusCode == http.StatusServiceUnavailable {
+				harness.reader.err = errors.New("synthetic matching-key reader failure")
+			}
+
+			grant, err := harness.registry.issue(r5I8AuthenticatedContext(17))
+			require.NoError(t, err)
+			requestValue := r5I9Request(grant.memosAuthorityRef, "memo-r5-i11b-keyring")
+			body, headers := r5I9PrepareRequest(
+				t,
+				requestValue,
+				"r5-i11b-keyring-nonce-0001",
+				harness.clock.now,
+				test.secret,
+			)
+			response := httptest.NewRecorder()
+
+			handler.ServeHTTP(response, newR5I10HTTPRequest(body, headers))
+
+			require.Equal(t, test.statusCode, response.Code)
+			_, err = aiagent.VerifyEvidenceRehydrationResponse(
+				response.Body.Bytes(),
+				response.Code,
+				aiagent.EvidenceRehydrationResponseHeaders{
+					Signature:    response.Header().Get(aiagent.EvidenceRehydrationResponseSignatureHeader),
+					Timestamp:    response.Header().Get(aiagent.EvidenceRehydrationResponseTimestampHeader),
+					RequestNonce: response.Header().Get(aiagent.EvidenceRehydrationResponseNonceHeader),
+					Version:      response.Header().Get(aiagent.EvidenceRehydrationResponseVersionHeader),
+				},
+				harness.clock.now,
+				60*time.Second,
+				headers.Nonce,
+				requestValue,
+				test.secret,
+			)
+			require.NoError(t, err)
+			otherSecret := previousSecret
+			if test.secret == previousSecret {
+				otherSecret = r5I9Secret
+			}
+			_, err = aiagent.VerifyEvidenceRehydrationResponse(
+				response.Body.Bytes(),
+				response.Code,
+				aiagent.EvidenceRehydrationResponseHeaders{
+					Signature:    response.Header().Get(aiagent.EvidenceRehydrationResponseSignatureHeader),
+					Timestamp:    response.Header().Get(aiagent.EvidenceRehydrationResponseTimestampHeader),
+					RequestNonce: response.Header().Get(aiagent.EvidenceRehydrationResponseNonceHeader),
+					Version:      response.Header().Get(aiagent.EvidenceRehydrationResponseVersionHeader),
+				},
+				harness.clock.now,
+				60*time.Second,
+				headers.Nonce,
+				requestValue,
+				otherSecret,
+			)
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestEvidenceRehydrationHTTPHandlerRejectsUnverifiedEnvelopesBeforeComposition(t *testing.T) {
 	tests := []struct {
 		name   string
