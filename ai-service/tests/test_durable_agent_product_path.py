@@ -24,7 +24,10 @@ from app.services.agent_delegation import (
 from app.services.durable_rehydration_orchestrator import (
     DurableRehydrationOrchestrator,
 )
+from app.services.embedding_service import EmbeddingService
 from app.services.evidence_answer_agent import EvidenceAnswerAgent
+from app.services.memo_indexing import MemoIndexDocument, index_memo
+from app.services.retrieval_service import RetrievalService
 from llm import DeterministicProvider
 
 
@@ -140,3 +143,48 @@ def test_disposable_single_host_durable_agent_product_path(tmp_path):
     assert payload["citations"][0]["memo_id"] == "memo-visible"
     assert payload["citations"][0]["metadata"]["index_version"] == "memo-v1"
     assert "content" not in _keys(payload)
+
+    memory_provider = DeterministicEmbeddingProvider()
+    memory_service = EmbeddingService(
+        memory_provider, InMemoryVectorStore(memory_provider.dimension)
+    )
+    index_memo(
+        memory_service,
+        MemoIndexDocument.from_memo("memo-visible", DOCUMENT, {"title": "Docker"}),
+    )
+    memory_agent = EvidenceAnswerAgent(
+        RetrievalService(memory_service), DeterministicProvider()
+    )
+    memory_body = json.dumps(
+        {
+            "question": "Docker ports",
+            "limit": 3,
+            "visible_memo_uids": ["memo-visible"],
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    memory_headers = sign_delegated_request(
+        "POST",
+        INTERNAL_ANSWER_PATH,
+        memory_body,
+        timestamp,
+        "synthetic-agent-secret",
+    )
+    memory_result = asyncio.run(
+        memory_agent.run_delegated(
+            memory_body,
+            memory_headers,
+            "synthetic-agent-secret",
+            datetime.fromtimestamp(timestamp + 30, timezone.utc),
+        )
+    )
+
+    assert memory_result.answer == result.answer
+    assert memory_result.retrieved_count == result.retrieved_count == 1
+    assert memory_result.trace.terminal_state == result.trace.terminal_state
+    assert [item.memo_id for item in memory_result.citations] == [
+        item.memo_id for item in result.citations
+    ]
+    assert [item.metadata.index_version for item in memory_result.citations] == [
+        item.metadata.index_version for item in result.citations
+    ]

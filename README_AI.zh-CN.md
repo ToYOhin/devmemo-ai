@@ -83,10 +83,12 @@ dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
 [docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。
 
-R5-I1 至 R5-I7 的持久化检索工作同样只是未接线的安全证明：它定义授权 candidate 选择、
-当前权威正文 rehydration、认证 request/response 契约，以及只用临时合成数据验证的单机
-SQLite authority reader。它没有增加浏览器或 HTTP rehydration API，没有启用持久化 Agent
-回答，也没有授权真实数据索引；正文、身份与 visibility 的最终权威仍属于 Memos。
+R5-I1 至 R5-I15 的持久化检索工作已形成默认关闭的单机实现，并完成 disposable synthetic
+产品路径证明。它包括授权 candidate 选择、当前权威正文 rehydration、internal authenticated
+HTTP contract、lifecycle/snapshot filtering，以及无 legacy fallback 的 opt-in answer-path selection。
+它不公开浏览器 rehydration API，也不授权真实数据索引。lifecycle dispatch、rebuild activation、
+真实 Qdrant/Memos、重启对账与认证浏览器验收仍是独立闸门。正文、身份与 visibility 的最终权威
+仍属于 Memos；详见 [R5 验收记录](docs/r5-acceptance.zh-CN.md)。
 
 ## 本地开发与验证
 

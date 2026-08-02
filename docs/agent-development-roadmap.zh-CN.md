@@ -26,7 +26,8 @@
 > 与 signed delegation 内的 opaque ref，R5-I13 已增加带 snapshot recheck 的 injected durable candidate/
 > rehydration orchestration，R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation revision、
 > 授权 UID 查询下推与默认关闭的 lifespan ownership，R5-I15 已在 verified answer path 无 fallback 地选择该
-> owned runtime，并完成 disposable synthetic 单机流程证明。真实 Docker/认证浏览器验收仍未验证。
+> owned runtime，并完成 disposable synthetic 单机流程证明；R5-I16 已完成逐项审计：代码与 synthetic 产品行为
+> 完成，lifecycle activation 与真实 Docker/认证浏览器验收仍未验证。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -60,7 +61,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | durable Agent 回答路径仍缺真实运行时验收 | R5-I15 已在既有 opt-in 下选择 lifespan-owned durable orchestrator，并证明无 fallback 的 disposable 单机流程；lifecycle dispatch/rebuild activation、真实 Qdrant/Memos、重启对账和认证浏览器证据仍未验证 | 完成 R5 验收审计，再为 disposable Docker/浏览器运行时证明取得明确授权；多实例前必须提供 shared atomic state |
+| P0 | durable Agent 回答路径仍缺真实运行时验收 | R5-I16 已证明代码/synthetic 边界，并记录 lifecycle dispatch/rebuild activation、真实 Qdrant/Memos、重启对账和认证浏览器证据仍不可用 | 单独评审 lifecycle activation，再为 disposable Docker/浏览器运行时证明取得明确授权；多实例前必须提供 shared atomic state |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -295,6 +296,8 @@ retrieval。临时 SQLite、内存 vector 与 fake-client 证明已到达完整�
 
 验收条件：
 
+当前证据与运行时授权限制记录在 [R5 验收记录](r5-acceptance.zh-CN.md)。
+
 - 跨用户和 private/public 可见性测试中，未授权 citation 与未授权上下文组装均为零。
 - 浏览器不请求 AI Service，且不向宿主机发布 AI 端口。
 - memory store 与选定持久化 adapter 在文档容差内返回等价的授权结果。
@@ -350,9 +353,9 @@ retrieval。临时 SQLite、内存 vector 与 fake-client 证明已到达完整�
 
 ## 下一授权闸门
 
-R5-I15 已把 lifespan-owned durable orchestrator 接入 verified answer path，并完成无 legacy fallback 的
-disposable synthetic 产品证明。下一项窄范围闸门是 R5-I16：逐项审计 R5 验收条件，运行最终本地回归与安全扫描，
-记录 rollback 和剩余 runtime 缺口，并准备 disposable Docker/认证浏览器验证的明确授权清单。获得独立授权并
-采集证据前，不得宣称真实运行时验收完成。
+R5-I16 已完成证据审计、最终本地门禁、parity tolerance、rollback 和 disposable runtime 授权清单，详见
+[R5 验收记录](r5-acceptance.zh-CN.md)。下一闸门不是隐含批准的新代码切片：lifecycle activation 需要单独设计
+评审；Docker、临时账号/Memo/volume/secret、本地 Qdrant、重启、清理和认证浏览器运行也需要明确授权。两个
+缺口均解决并采集证据前，不得宣称真实运行时验收完成。
 真实 Docker/浏览器验收要等 answer path 接通后另行取得 runtime 授权；多实例前仍需加密 transport 与 shared
 atomic replay/capability storage。

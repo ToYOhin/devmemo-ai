@@ -38,7 +38,9 @@
 > generation revision, authorized UID query pushdown, and default-disabled
 > lifespan ownership. R5-I15 selects that owned runtime in the verified answer
 > path without fallback and proves a disposable synthetic single-host flow.
-> Real Docker/authenticated-browser acceptance remains unverified.
+> R5-I16 records the requirement-by-requirement completion audit: code and
+> synthetic product behavior are complete, while lifecycle activation and real
+> Docker/authenticated-browser acceptance remain unverified.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -86,7 +88,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Durable Agent answer path lacks real runtime acceptance | R5-I15 now selects the lifespan-owned durable orchestrator under the existing opt-in and proves a disposable single-host flow without fallback; lifecycle dispatch/rebuild activation, live Qdrant/Memos, restart reconciliation, and authenticated browser evidence remain unverified | Complete the R5 acceptance audit, then obtain explicit authorization for disposable Docker/browser runtime proof; require shared atomic state before multi-instance use |
+| P0 | Durable Agent answer path lacks real runtime acceptance | R5-I16 proves the code/synthetic boundary and records that lifecycle dispatch/rebuild activation, live Qdrant/Memos, restart reconciliation, and authenticated browser evidence remain unavailable | Separately review lifecycle activation, then obtain explicit authorization for disposable Docker/browser runtime proof; require shared atomic state before multi-instance use |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -425,6 +427,9 @@ Scope:
 
 Acceptance:
 
+Current evidence and runtime authorization limits are tracked in the
+[R5 Acceptance Record](r5-acceptance.md).
+
 - Cross-user and private/public visibility tests show zero unauthorized
   citations and zero unauthorized context assembly.
 - No browser request targets the AI Service and no AI host port is published.
@@ -513,12 +518,12 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I15 has connected the lifespan-owned durable orchestrator to the verified
-answer path and completed the disposable synthetic product proof without legacy
-fallback. The next narrow gate is R5-I16: audit every R5 acceptance criterion,
-run the final local regressions and safety scans, document rollback and remaining
-runtime gaps, and prepare the explicit authorization checklist for disposable
-Docker/authenticated-browser verification. Do not claim real runtime acceptance
-until that separate authorization is granted and evidence is captured.
+R5-I16 has completed the evidence audit, final local gates, documented parity
+tolerance, rollback, and the disposable runtime authorization checklist in the
+[R5 Acceptance Record](r5-acceptance.md). The next gate is not another implied
+code slice: lifecycle activation needs separate design review, and Docker,
+temporary accounts/Memos/volumes/secrets, local Qdrant, restart, cleanup, and an
+authenticated browser run require explicit authorization. Do not claim real
+runtime acceptance until both gaps are resolved and evidence is captured.
 Docker/browser proof remains later; encrypted transport and shared atomic
 replay/capability storage remain mandatory before multi-instance use.
