@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-08-01
+更新时间：2026-08-02
 
 ## 顶层目录
 
@@ -87,7 +87,9 @@ ai-service/
 │   │   ├── context_pack.py          # context-pack-v1 contract 与 JSON 输出
 │   │   ├── agent.py                 # search_memos-only Agent 请求/结果契约
 │   │   ├── agent_lifecycle.py       # A4 lifecycle event/ack/state machine
-│   │   └── grounded_answer.py       # 严格 Provider answer/citation reference 契约
+│   │   ├── grounded_answer.py       # 严格 Provider answer/citation reference 契约
+│   │   ├── durable_authorized_retrieval.py # R5 两阶段授权 candidate/materialization 契约
+│   │   └── evidence_rehydration.py  # R5 当前 Memos authority 正文 rehydration 契约
 │   ├── services/
 │   │   ├── content_parser.py        # Markdown 模板解析
 │   │   ├── embedding_service.py     # provider -> vector record -> store 编排
@@ -103,6 +105,8 @@ ai-service/
 │   │   ├── evidence_answer_agent.py # 授权检索、Provider 校验与安全回答编排
 │   │   ├── agent_lifecycle_processor.py # dormant ledger/vector lifecycle processor
 │   │   ├── agent_lifecycle_transport.py # lifecycle HMAC、replay 与 in-process transport
+│   │   ├── durable_authorized_retrieval.py # R5 未接线 repository protocol/service
+│   │   ├── evidence_rehydration_transport.py # R5 request/response HMAC 与 process-local replay 证明
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
 │   │   ├── ops_security.py          # ops token 与错误脱敏
 │   │   ├── memo_insights.py         # deterministic insight 提取与稳定 ID
@@ -113,7 +117,8 @@ ai-service/
 │       ├── vector_store.py          # InMemoryVectorStore
 │       ├── qdrant_vector_store.py   # 可选 Qdrant adapter
 │       ├── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
-│       └── agent_lifecycle_ledger.py # dormant AI SQLite lifecycle ledger
+│       ├── agent_lifecycle_ledger.py # dormant AI SQLite lifecycle ledger
+│       └── disposable_sqlite_authorized_retrieval.py # R5 仅测试的临时 SQLite parity adapter
 ├── scripts/public_chunk_gateway_contract_smoke.py # local trusted-gateway contract evidence only
 ├── scripts/smoke_qdrant.py          # 显式真实 Qdrant smoke
 ├── scripts/devmemory_lifecycle_report.py # local-only read-only diagnostic CLI
@@ -147,6 +152,15 @@ Memo、prompt/context、embedding、身份、可见范围或 secret。
 `contracts/memo-lifecycle-v1.json`、Memos-owned SQLite outbox、AI SQLite ledger、认证
 transport 和一次性 integration proof 已存在，但都保持未接线。它们不会由当前 Memo CRUD、
 AI route、dispatcher、worker、定时器、Qdrant 或默认 Compose 自动调用。
+
+R5-I1 至 R5-I6 的持久化授权检索边界分布在 AI Service 的
+`durable_authorized_retrieval.py`、`evidence_rehydration.py`、对应未接线 service/临时 adapter，
+以及 Go `internal/aiagent/evidence_rehydration_transport.go` 与
+`evidence_rehydration_authority.go`。跨语言 fixture 位于
+`contracts/memo-evidence-rehydration-v1.json` 和
+`contracts/memo-evidence-rehydration-transport-v1.json`。当前只有纯对象、内存 fake 和临时 SQLite
+证明；真实 Memos Store/visibility reader、HTTP、runtime secret/config、replay 接线和 Agent runtime
+selection 均未实现。
 
 ## 默认完整 Memo 索引
 
