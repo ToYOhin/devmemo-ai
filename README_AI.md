@@ -99,12 +99,15 @@ automatic indexing, Qdrant, or default Compose. Read
 [docs/agent-development-roadmap.md](docs/agent-development-roadmap.md) before
 attempting any runtime rollout.
 
-The durable retrieval work through R5-I7 is also an unwired safety proof. It
-defines authorized candidate selection, current-authority content rehydration,
-authenticated request/response contracts, and a single-host SQLite authority
-reader tested only with temporary synthetic data. It does not add a browser or
-HTTP rehydration API, enable persistent Agent answers, or authorize real-data
-indexing. Memos remains the final content, identity, and visibility authority.
+The durable retrieval work through R5-I15 is a default-disabled single-host
+implementation with a disposable synthetic product-path proof. It includes
+authorized candidate selection, current-authority content rehydration, an
+internal authenticated HTTP contract, lifecycle/snapshot filtering, and opt-in
+answer-path selection without legacy fallback. It does not expose a browser
+rehydration API or authorize real-data indexing. Lifecycle dispatch, rebuild
+activation, live Qdrant/Memos, restart reconciliation, and authenticated browser
+acceptance remain separate gates. Memos remains the final content, identity, and
+visibility authority; see the [R5 Acceptance Record](docs/r5-acceptance.md).
 
 ## Local development and verification
 

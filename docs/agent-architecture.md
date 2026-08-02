@@ -43,8 +43,9 @@
 > owned active-generation revision, authorized UID query pushdown, and strict
 > default-disabled lifespan ownership. R5-I15 makes the verified answer Agent
 > select that owned orchestrator under the same opt-in, with no legacy fallback,
-> and proves the disposable synthetic single-host product path. Real runtime and
-> browser acceptance remain unverified.
+> and proves the disposable synthetic single-host product path. R5-I16 records
+> the completion audit and authorization checklist; real lifecycle activation,
+> runtime, and browser acceptance remain unverified.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
