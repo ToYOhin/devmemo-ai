@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,12 +24,15 @@ const (
 	signatureVersion = "devmemo-agent-v1"
 )
 
+var delegatedMemosAuthorityRefPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{31,63}$`)
+
 // DelegatedAnswerRequest contains no identity or raw Memo content. Memos derives
 // the visible Memo UID capability from its authenticated request context.
 type DelegatedAnswerRequest struct {
-	Question        string   `json:"question"`
-	Limit           int      `json:"limit"`
-	VisibleMemoUIDs []string `json:"visible_memo_uids"`
+	Question          string   `json:"question"`
+	Limit             int      `json:"limit"`
+	VisibleMemoUIDs   []string `json:"visible_memo_uids"`
+	MemosAuthorityRef string   `json:"memos_authority_ref,omitempty"`
 }
 
 // Validate checks the small, fixed internal request contract.
@@ -50,6 +54,9 @@ func (r DelegatedAnswerRequest) Validate() error {
 			return errors.New("visible_memo_uids must not contain duplicates")
 		}
 		seen[normalizedUID] = struct{}{}
+	}
+	if r.MemosAuthorityRef != "" && !delegatedMemosAuthorityRefPattern.MatchString(r.MemosAuthorityRef) {
+		return errors.New("memos_authority_ref must be an opaque Memos capability")
 	}
 	return nil
 }

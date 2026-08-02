@@ -63,6 +63,43 @@ func TestAgentBFFUsesAuthenticatedMemosVisibilityAndSafeProjection(t *testing.T)
 	require.NotContains(t, response.Body.String(), "content")
 }
 
+func TestAgentBFFDelegatesMemosOwnedRehydrationCapabilityWithoutBrowserProjection(t *testing.T) {
+	ctx := context.Background()
+	testStore := teststore.NewTestingStore(ctx, t)
+	t.Cleanup(func() { _ = testStore.Close() })
+	service := &APIV1Service{Store: testStore, Secret: "test-secret"}
+	caller := createAgentVisibilityUser(t, ctx, testStore, "agent-bff-rehydration-caller")
+	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-rehydration-private", caller.ID, store.Private)
+	runtime, err := newEvidenceRehydrationMemosRuntime(
+		service,
+		aiagent.EvidenceRehydrationRuntimeConfig{
+			Enabled:       true,
+			CurrentSecret: r5I11BCurrentSecret,
+		},
+	)
+	require.NoError(t, err)
+	service.evidenceRehydrationRuntime = runtime
+	executor := &recordingAgentExecutor{
+		response: validAgentAnswerResponse("agent-bff-rehydration-private"),
+	}
+	echoServer := echo.New()
+	service.registerAgentRoutes(echoServer, aiagent.Config{Enabled: true}, executor)
+
+	request := httptest.NewRequest(http.MethodPost, aiagent.BrowserAnswerPath, http.NoBody)
+	request.Body = io.NopCloser(strings.NewReader(`{"question":"capability bridge","limit":3}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", bearerToken(t, caller))
+	response := httptest.NewRecorder()
+	echoServer.ServeHTTP(response, request)
+
+	require.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, 1, executor.calls)
+	require.Equal(t, []string{"agent-bff-rehydration-private"}, executor.delegated.VisibleMemoUIDs)
+	require.True(t, evidenceAuthorityCapabilityOpaquePattern.MatchString(executor.delegated.MemosAuthorityRef))
+	require.NotContains(t, response.Body.String(), "memos_authority_ref")
+	require.NotContains(t, response.Body.String(), executor.delegated.MemosAuthorityRef)
+}
+
 func TestAgentBFFRejectsBrowserScopeAndUnauthenticatedRequests(t *testing.T) {
 	ctx := context.Background()
 	testStore := teststore.NewTestingStore(ctx, t)

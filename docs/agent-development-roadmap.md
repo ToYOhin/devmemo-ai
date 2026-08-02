@@ -31,9 +31,10 @@
 > Go/Python configuration for a dedicated current/previous rehydration keyring
 > and one AI-side Memos origin. R5-I11B adds fixed-order matching-key handling
 > and opt-in registration on the existing Memos listener. R5-I11C adds the
-> AI-side Python HTTP client and deterministic lifespan shutdown. No new
-> listener, Agent answer-path wiring, or production-ready durable answer path is
-> implemented.
+> AI-side Python HTTP client and deterministic lifespan shutdown. R5-I12 adds
+> Memos-owned capability issuance and an opaque ref inside signed delegation.
+> The Python client is still not called, so no production-ready durable answer
+> path is implemented.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -81,7 +82,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I11C now provides the opt-in Memos route and owned Python client lifespan, but no capability issuance or durable runtime selection connects them to the answer path; process-local replay/capability state also remains single-instance only | Connect the reviewed single-host durable runtime selection without changing defaults; require shared atomic state before multi-instance use |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I12 now issues and privately delegates a Memos-owned capability, but no durable candidate orchestration or client call connects it to the answer Agent; process-local replay/capability state also remains single-instance only | Connect the reviewed single-host durable runtime selection without changing defaults; require shared atomic state before multi-instance use |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -370,6 +371,12 @@ response, verifies exact signed 200/503 before parsing, and owns one process-
 local response replay store. Shutdown closes the owned client/transport and
 clears `app.state`; disabled mode creates none. No endpoint or answer Agent uses
 the client yet.
+R5-I12 extends the existing signed answer delegation with an optional opaque
+Memos authority ref. Enabled BFF requests obtain the current authenticated UID
+scope and capability together from the process-local registry, delegate that
+exact scope once, and never project the ref to the browser. Empty scope creates
+no capability and preserves no-context behavior. Python validates the private
+field but does not call the rehydration client yet.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -478,13 +485,13 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I11C has completed the Python HTTP client/replay lifespan and deterministic
-transport shutdown while remaining disconnected from `EvidenceAnswerAgent` and
-all endpoints. The next narrow R5 gate is single-host durable runtime selection:
-issue the Memos-owned capability from the authenticated answer path, call the
-owned Python client only for the reviewed durable adapter, and retain existing
-memory/default behavior. It must be separately verified without Compose defaults,
-real data, or multi-instance claims. Real browser/Docker acceptance remains a
-later explicit runtime authorization gate after this answer path is connected.
+R5-I12 has completed Memos-owned capability issuance and private signed
+delegation without browser projection or a client call. The next narrow R5 gate
+is single-host durable orchestration: obtain content-free candidates from the
+reviewed adapter, call the lifespan-owned Python client once, materialize only
+the reverified request-memory documents, and retain existing memory/default
+behavior. It must be separately verified without Compose defaults, real data,
+or multi-instance claims. Real browser/Docker acceptance remains a later
+explicit runtime authorization gate after this answer path is connected.
 Docker/browser proof remains later; encrypted transport and shared atomic
 replay/capability storage remain mandatory before multi-instance use.

@@ -579,3 +579,19 @@ I11C 不把 client 注入 `EvidenceAnswerAgent`、endpoint、当前 `RetrievalSe
 或 Compose 默认值，也不发起真实网络请求。下一窄切片必须单独决定并验证 authenticated answer path 的
 Memos-owned capability issuance 与 durable runtime selection；在此之前 route/client 均保持 opt-in dormant，
 真实 Docker/浏览器验收仍受独立 runtime 授权闸门约束。
+
+## ADR-068：R5 authority capability 只经既有 signed answer delegation 传给 AI
+
+R5-I12 不新增浏览器字段或内部 endpoint。`AI_AGENT_REHYDRATION_ENABLED=true` 时，认证后的 Memos BFF 从
+I11B process-local registry 一次取得 current caller 的精确可见完整 Memo UID scope 与 capability；非空 scope
+只把 opaque `memos_authority_ref` 和同一 UID 副本加入既有 HMAC-signed Memos-to-AI answer body。浏览器不能提供
+该 ref，安全 response 也不得投影它。disabled 模式继续发送原三字段 delegation body。
+
+authority ref 必须符合 registry 真实派生 token 的 32-64 位 base64url-compatible opaque 形状，而不是 R5
+selection 使用的 `rehydration-N` ref。Python 在验签和 exact JSON parsing 后校验该形状，但 I12 不调用 lifespan
+client。空 current scope 不创建 capability、委托空 UID 且保留既有 no-context；scope/registry/entropy/capacity
+失败统一映射现有安全 BFF unavailable。已签发但下游失败的 capability 仅存活到固定 TTL，不自动 retry。
+
+该桥接仍为单进程、默认关闭，不增加 listener、port、secret、持久化、真实数据或多实例主张。下一窄切片才可
+把 content-free durable candidates、一次 Python rehydration call、snapshot recheck 与 request-memory materialization
+接入 Agent；在那之前 `EvidenceAnswerAgent` 仍使用原 memory retrieval。

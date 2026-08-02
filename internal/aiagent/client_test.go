@@ -29,6 +29,7 @@ func TestClientSignsCapabilityAndProjectsOnlyTheSafeResponseContract(t *testing.
 		body, err := io.ReadAll(request.Body)
 		require.NoError(t, err)
 		require.NotContains(t, string(body), "content")
+		require.Contains(t, string(body), `"memos_authority_ref":"authority-ref-synthetic-0000000001"`)
 		require.NoError(t, VerifyRequest(
 			request.Method,
 			request.URL.Path,
@@ -45,9 +46,10 @@ func TestClientSignsCapabilityAndProjectsOnlyTheSafeResponseContract(t *testing.
 	})
 
 	response, err := client.Answer(context.Background(), DelegatedAnswerRequest{
-		Question:        "Docker ports",
-		Limit:           3,
-		VisibleMemoUIDs: []string{"memo-a"},
+		Question:          "Docker ports",
+		Limit:             3,
+		VisibleMemoUIDs:   []string{"memo-a"},
+		MemosAuthorityRef: "authority-ref-synthetic-0000000001",
 	})
 
 	require.NoError(t, err)

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -40,7 +41,7 @@ func (s *APIV1Service) registerAgentRoutes(router agentRouteRegistrar, config ai
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"detail": "invalid Agent request"})
 		}
-		visibleMemoUIDs, err := s.resolveAgentVisibleMemoUIDs(ctx)
+		visibleMemoUIDs, memosAuthorityRef, err := s.resolveAgentDelegationScope(ctx)
 		if err != nil {
 			if status.Code(err) == codes.Unauthenticated {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
@@ -48,15 +49,28 @@ func (s *APIV1Service) registerAgentRoutes(router agentRouteRegistrar, config ai
 			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "Agent service unavailable"})
 		}
 		response, err := executor.Answer(ctx, aiagent.DelegatedAnswerRequest{
-			Question:        request.Question,
-			Limit:           request.Limit,
-			VisibleMemoUIDs: visibleMemoUIDs,
+			Question:          request.Question,
+			Limit:             request.Limit,
+			VisibleMemoUIDs:   visibleMemoUIDs,
+			MemosAuthorityRef: memosAuthorityRef,
 		})
 		if err != nil {
 			return c.JSON(agentErrorStatus(err), map[string]string{"detail": agentErrorDetail(err)})
 		}
 		return c.JSON(http.StatusOK, response)
 	})
+}
+
+func (s *APIV1Service) resolveAgentDelegationScope(ctx context.Context) ([]string, string, error) {
+	if s.evidenceRehydrationRuntime == nil || s.evidenceRehydrationRuntime.capabilities == nil {
+		uids, err := s.resolveAgentVisibleMemoUIDs(ctx)
+		return uids, "", err
+	}
+	grant, uids, err := s.evidenceRehydrationRuntime.capabilities.issueForDelegation(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	return uids, grant.memosAuthorityRef, nil
 }
 
 func (s *APIV1Service) registerConfiguredAgentRoutes(router agentRouteRegistrar) error {

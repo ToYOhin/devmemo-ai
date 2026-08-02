@@ -43,9 +43,10 @@ func TestDelegationMatchesCrossLanguageContractFixture(t *testing.T) {
 
 func TestDelegatedAnswerRequestIsBoundedAndContentFree(t *testing.T) {
 	request := DelegatedAnswerRequest{
-		Question:        "Why did the Docker port mapping fail?",
-		Limit:           3,
-		VisibleMemoUIDs: []string{"memo-a", "memo-b"},
+		Question:          "Why did the Docker port mapping fail?",
+		Limit:             3,
+		VisibleMemoUIDs:   []string{"memo-a", "memo-b"},
+		MemosAuthorityRef: "authority-ref-synthetic-0000000001",
 	}
 
 	require.NoError(t, request.Validate())
@@ -53,6 +54,12 @@ func TestDelegatedAnswerRequestIsBoundedAndContentFree(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, string(payload), "\"content\"")
 	require.NotContains(t, string(payload), "user_id")
+	require.Contains(t, string(payload), `"memos_authority_ref":"authority-ref-synthetic-0000000001"`)
+
+	request.MemosAuthorityRef = ""
+	payload, err = json.Marshal(request)
+	require.NoError(t, err)
+	require.NotContains(t, string(payload), "memos_authority_ref")
 }
 
 func TestDelegatedAnswerRequestRejectsInvalidScope(t *testing.T) {
@@ -61,6 +68,7 @@ func TestDelegatedAnswerRequestRejectsInvalidScope(t *testing.T) {
 		{Question: "question", Limit: 11},
 		{Question: "question", Limit: 1, VisibleMemoUIDs: []string{""}},
 		{Question: "question", Limit: 1, VisibleMemoUIDs: []string{"memo-a", "memo-a"}},
+		{Question: "question", Limit: 1, MemosAuthorityRef: "authority-controlled"},
 	}
 
 	for _, request := range tests {
