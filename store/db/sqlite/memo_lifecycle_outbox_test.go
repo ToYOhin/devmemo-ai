@@ -355,3 +355,102 @@ func TestMemoLifecycleOutboxBoundsExplicitDeliveryFailures(t *testing.T) {
 	require.Len(t, events, 1)
 	require.Equal(t, store.MaxMemoLifecycleDeliveryAttempts, events[0].Attempts)
 }
+
+func TestMemoLifecycleRebuildPreparesOnlyEligibleCompleteMemos(t *testing.T) {
+	ctx := context.Background()
+	testStore := newMemoLifecycleTestStore(t)
+	parent, err := testStore.store.CreateMemo(ctx, &store.Memo{
+		UID: "r5-rebuild-parent", CreatorID: 1, Content: "parent document", Visibility: store.Private,
+	})
+	require.NoError(t, err)
+	comment, err := testStore.store.CreateMemo(ctx, &store.Memo{
+		UID: "r5-rebuild-comment", CreatorID: 1, Content: "comment document", Visibility: store.Private,
+	})
+	require.NoError(t, err)
+	_, err = testStore.store.UpsertMemoRelation(ctx, &store.MemoRelation{
+		MemoID: comment.ID, RelatedMemoID: parent.ID, Type: store.MemoRelationComment,
+	})
+	require.NoError(t, err)
+	_, err = testStore.store.CreateMemo(ctx, &store.Memo{
+		UID: "r5-rebuild-blank", CreatorID: 1, Content: "   ", Visibility: store.Private,
+	})
+	require.NoError(t, err)
+
+	manifest, err := testStore.adapter.PrepareMemoLifecycleRebuild(
+		ctx, "generation-r5", lifecycleOccurredAt,
+	)
+	require.NoError(t, err)
+	pending, err := testStore.adapter.ListPendingMemoLifecycleOutboxEvents(ctx, 100)
+	require.NoError(t, err)
+
+	documentHash := fmt.Sprintf("%x", sha256.Sum256([]byte("parent document")))
+	manifestBody, err := json.Marshal([][2]string{{"r5-rebuild-parent", documentHash}})
+	require.NoError(t, err)
+	require.Equal(t, "generation-r5", manifest.Generation)
+	require.Equal(t, 1, manifest.EligibleCount)
+	require.Equal(
+		t, fmt.Sprintf("%x", sha256.Sum256(manifestBody)), manifest.ManifestDigest,
+	)
+	require.Len(t, pending, 1)
+	require.Equal(t, "r5-rebuild-parent", pending[0].MemoUID)
+	require.Equal(t, store.MemoLifecycleEventReindex, pending[0].EventType)
+	require.Equal(t, "repair", pending[0].Reason)
+}
+
+func TestMemoLifecycleRebuildSupersedesKnownDeletedMemoWithTombstone(t *testing.T) {
+	ctx := context.Background()
+	testStore := newMemoLifecycleTestStore(t)
+	memo := createLifecycleMemo(
+		t, ctx, testStore, "r5-rebuild-deleted", "event-before-delete",
+	)
+	require.NoError(t, testStore.store.DeleteMemo(ctx, &store.DeleteMemo{ID: memo.ID}))
+
+	manifest, err := testStore.adapter.PrepareMemoLifecycleRebuild(
+		ctx, "generation-r5", lifecycleOccurredAt,
+	)
+	require.NoError(t, err)
+	pending, err := testStore.adapter.ListPendingMemoLifecycleOutboxEvents(ctx, 100)
+	require.NoError(t, err)
+
+	require.Zero(t, manifest.EligibleCount)
+	require.Len(t, pending, 2)
+	require.Equal(t, int64(2), pending[1].SourceSequence)
+	require.Equal(t, store.MemoLifecycleOperationDelete, pending[1].Operation)
+	require.Equal(t, "deleted", pending[1].Reason)
+}
+
+func TestMemoLifecycleAcknowledgementSupersedesOlderExhaustedEvent(t *testing.T) {
+	ctx := context.Background()
+	testStore := newMemoLifecycleTestStore(t)
+	createLifecycleMemo(t, ctx, testStore, "r5-rebuild-repair", "event-exhausted")
+	for range store.MaxMemoLifecycleDeliveryAttempts {
+		_, err := testStore.adapter.RecordMemoLifecycleDeliveryFailure(
+			ctx, "event-exhausted", "transport_unavailable",
+		)
+		require.NoError(t, err)
+	}
+	_, err := testStore.adapter.PrepareMemoLifecycleRebuild(
+		ctx, "generation-r5", lifecycleOccurredAt,
+	)
+	require.NoError(t, err)
+	pending, err := testStore.adapter.ListPendingMemoLifecycleOutboxEvents(ctx, 100)
+	require.NoError(t, err)
+	require.Len(t, pending, 1)
+
+	acknowledged, err := testStore.adapter.AcknowledgeMemoLifecycleOutboxEvent(
+		ctx, pending[0].EventID,
+	)
+	require.NoError(t, err)
+	backlog, err := testStore.adapter.ReadMemoLifecycleBacklog(ctx)
+	require.NoError(t, err)
+	events, err := testStore.adapter.ListMemoLifecycleOutboxEvents(
+		ctx, "r5-rebuild-repair",
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, store.MemoLifecycleOutboxAcknowledged, acknowledged.Status)
+	require.Equal(t, &store.MemoLifecycleBacklog{}, backlog)
+	require.Len(t, events, 2)
+	require.Equal(t, store.MemoLifecycleOutboxAcknowledged, events[0].Status)
+	require.Equal(t, store.MemoLifecycleOutboxAcknowledged, events[1].Status)
+}

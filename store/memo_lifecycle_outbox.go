@@ -85,6 +85,18 @@ type MemoLifecycleOutboxEvent struct {
 	UpdatedTs      int64
 }
 
+type MemoLifecycleRebuildManifest struct {
+	Generation     string
+	EligibleCount  int
+	ManifestDigest string
+}
+
+type MemoLifecycleBacklog struct {
+	Pending   int
+	Failed    int
+	Exhausted int
+}
+
 // MemoLifecycleOutboxStore is an explicit adapter boundary, not part of Driver.
 // No existing Memo CRUD path calls these methods in A4-I2.
 type MemoLifecycleOutboxStore interface {
@@ -92,6 +104,10 @@ type MemoLifecycleOutboxStore interface {
 	UpdateMemoWithLifecycleEvent(context.Context, *UpdateMemo, *MemoLifecycleEventRequest) (*MemoLifecycleOutboxEvent, error)
 	DeleteMemoWithLifecycleEvent(context.Context, *DeleteMemo, *MemoLifecycleEventRequest) (*MemoLifecycleOutboxEvent, error)
 	ListMemoLifecycleOutboxEvents(context.Context, string) ([]*MemoLifecycleOutboxEvent, error)
+	PrepareMemoLifecycleRebuild(context.Context, string, time.Time) (*MemoLifecycleRebuildManifest, error)
+	ListPendingMemoLifecycleOutboxEvents(context.Context, int) ([]*MemoLifecycleOutboxEvent, error)
+	AcknowledgeMemoLifecycleOutboxEvent(context.Context, string) (*MemoLifecycleOutboxEvent, error)
+	ReadMemoLifecycleBacklog(context.Context) (*MemoLifecycleBacklog, error)
 	RecordMemoLifecycleDeliveryFailure(context.Context, string, string) (*MemoLifecycleOutboxEvent, error)
 }
 
