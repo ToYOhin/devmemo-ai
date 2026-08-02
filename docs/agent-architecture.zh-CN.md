@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约，R5-I5 已基于同一合成 fixture 完成 Go/Python canonical 与 exact payload parity，R5-I6 已定义纯 Go current-authority reader 边界并用内存 fake 证明 all-or-nothing 投影；功能仍默认关闭。尚未交付真实 Memos Store reader、HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约，R5-I5 已基于同一合成 fixture 完成 Go/Python canonical 与 exact payload parity，R5-I6 已定义纯 Go current-authority reader 边界并用内存 fake 证明 all-or-nothing 投影，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库 parity/race 证明；功能仍默认关闭。尚未交付 authority capability issuer/resolver、HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -111,6 +111,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 17. **认证 content-rehydration transport 证明 — 已完成、未接线。** R5-I4 把 R5-I3 精确请求绑定到 rehydration-only method/path、transport version、timestamp、nonce 和 body digest；独立 response HMAC 在精确解析前绑定 status、响应 timestamp、原请求 nonce、derived snapshot token 与 body digest。有界 process-local request/response replay store、单次调用 fake authority handler、固定签名 failure 投影与共享合成 fixture 覆盖篡改、过期、重放、timeout、部分输出和 authority mismatch。本证明只覆盖认证与完整性，没有增加 HTTP adapter、runtime secret、持久化、远程保密性主张或真实数据。
 18. **跨语言 Memos transport parity — 已完成、未接线。** R5-I5 新增 provider-neutral Go request verifier 与 response-only signer/parser，共享合成 fixture 逐字节固定两套 HMAC canonical form。嵌套 exact JSON parsing 对重复、未知、部分、超限、非法 UTF-8、携带 identity、stale 或不一致 payload 统一返回无正文错误。Go 证明没有新增 route/client、replay store、authority lookup、runtime secret/configuration、持久化、网络或真实数据。
 19. **Memos current-authority adapter 契约 — 已完成、未接线。** R5-I6 只接受已经验证的 `EvidenceRehydrationRequest` 与 Memos 内部 opaque 认证上下文绑定。一次调用的 reader protocol 必须返回同一个原子 snapshot，其中 authority reference、context binding、revision、authority token、当前 visibility、完整 Memo 类型、normal 行状态、current lifecycle 状态、sequence、hash 与 `memo-v1` 全部一致。纯 fake 测试证明 UID 精确一一对应、由请求拥有 selection 顺序、响应不投影 identity/visibility，并对 update/delete、部分、重复、stale、混合 snapshot 与 adapter failure 整体拒绝。没有接入真实 Store、visibility resolver、route、replay、HMAC、runtime 配置、持久化、网络或数据。
+20. **真实单机 SQLite current-authority reader — 已完成、未接线。** R5-I7 只从 Memos 内部认证 context 取得 caller identity，复用共享 Memo visibility scope，并通过一个 SQLite 只读 snapshot 读取当前 normal caller、受限请求 UID、comment relation、完整正文与最新 A4 source event。最新 delete、未知 version、stale document、不合格 Memo、缺失行或读取期间任意并发提交都使整批失败。adapter 没有注册 HTTP/runtime，也不主张真实数据或多实例安全。
 
 ## A1 验收结果
 
@@ -249,6 +250,19 @@ reference、citation metadata 与 store metadata 均不投影。缺失、多余�
 deleted、tombstone、已变化、畸形或混合行全部只返回 `authorized_retrieval_unavailable`，不返回部分正文。
 该证明只使用内存 fake，不证明真实 Store transaction 原子性。真实 Memos Store reader、HTTP handler/client、
 replay 接线、runtime secret/config 与 AI runtime selection 均需分别授权。
+
+R5-I7 提供第一个真实 reader 实现，但严格限制为 SQLite 且仍未接线。constructor 只从 Memos authentication
+context 取得 caller ID；R5 request 与 opaque binding 不能携带或覆盖 identity/visibility。reader 复用
+`ListMemos` 的认证 visibility scope，在专用 SQLite connection 上开启一个只读 transaction。该 transaction
+确认 caller 仍是 normal user，并通过受限 requested-UID CTE 只选择 normal、非 comment、非空且当前可见的
+Memo。每个 Memo 必须关联它最新的 outbox event；该 event 必须仍是 `memo-v1` upsert，且其 source document
+等于当前 Memos 正文。最终返回正文只来自 Memos；outbox metadata 不能授权 visibility、identity 或 citation。
+
+reader 在 transaction 前后检查 SQLite `data_version`；读取期间任何提交——包括正文 update、delete 或
+visibility change——都会使整个 snapshot 失效。UID、sequence、hash、version、请求顺序与响应投影仍由
+R5-I6 精确重查。临时 SQLite 测试覆盖 visibility parity、comment/archive/blank/tombstone、source 缺失或
+不一致、并发变化与固定错误。本证明只覆盖现有 SQLite schema 和单机进程，不证明 MySQL/PostgreSQL parity，
+也不增加 capability issuer、route/client、HMAC/replay 接线、runtime 配置、真实数据或多实例支持。
 
 ## A4 本地 RAG 生命周期契约
 

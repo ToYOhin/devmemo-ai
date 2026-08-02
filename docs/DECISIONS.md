@@ -412,3 +412,26 @@ identity、visibility、authority reference、citation 或 store metadata。所�
 本阶段的 reader 实现仅为测试内存 fake，因此只证明契约和 fail-closed projection，不证明真实 Store
 transaction 原子性。真实 Memos Store reader、visibility resolver 接线、HTTP handler/client、HMAC/replay
 运行时接线、secret/config、AI runtime selection、数据库、网络与真实数据均未加入，必须分别授权。
+
+## ADR-061：首个真实 current-authority reader 限定为未接线的单机 SQLite snapshot
+
+R5-I7 把 R5-I6 protocol 绑定到现有 Memos authentication context 与 SQLite Store，但不注册 HTTP route、
+runtime factory 或 answer path。caller ID 只能由 `auth.GetUserID` 从 Memos 内部 context 取得；request、query、
+derived metadata 与 opaque binding 都不能提供或覆盖 caller identity。reader 复用 `ListMemos` 的共享
+visibility scope，并在 transaction 内重新确认 caller user row 仍为 normal。
+
+reader 使用专用 SQLite connection 的只读 transaction。受限 requested-UID CTE 下推最多十个 UID，并在
+同一 snapshot 中读取 Memo row、comment relation、正文，以及该 UID 按 outbox id 排序的最新 A4 source event。
+只有 normal、非 comment、非空、当前可见的完整 Memo，以及最新 operation 为 upsert、version 为 `memo-v1`、
+source document 等于当前 Memo 正文的记录才能返回。sequence/hash/version 与 UID 一一对应仍由 R5-I6 再次
+验证；正文权威来自 `memo.content`，outbox 不能提供 visibility、identity 或 citation。
+
+transaction 前后的 SQLite `PRAGMA data_version` 必须相同。任何其他 connection 在读取期间提交 update、delete、
+archive、comment、blank 或 visibility 变化，都会使整批固定失败；这允许保守拒绝无关并发写，不能接受混合或
+过期内容。open/schema/query/transaction/consistency failure 均只映射为
+`authorized_retrieval_unavailable`，不包含正文、identity、visibility、authority ref、SQL 或原始异常。
+
+该证明只使用临时 SQLite 和合成数据，不证明 MySQL/PostgreSQL、HTTP、真实数据或多实例。authority token
+仍由未来单独授权的 Memos capability issuer 提供，reader 不签发 token。下一闸门应先定义 process-local、
+有界、短时的 authority capability issuer/resolver，使 opaque authority reference 能安全恢复 Memos-owned
+caller binding；之后才能分别授权 HTTP handler/client、HMAC/replay runtime 接线与 AI runtime selection。

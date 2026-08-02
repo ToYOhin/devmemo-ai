@@ -153,14 +153,15 @@ Memo、prompt/context、embedding、身份、可见范围或 secret。
 transport 和一次性 integration proof 已存在，但都保持未接线。它们不会由当前 Memo CRUD、
 AI route、dispatcher、worker、定时器、Qdrant 或默认 Compose 自动调用。
 
-R5-I1 至 R5-I6 的持久化授权检索边界分布在 AI Service 的
+R5-I1 至 R5-I7 的持久化授权检索边界分布在 AI Service 的
 `durable_authorized_retrieval.py`、`evidence_rehydration.py`、对应未接线 service/临时 adapter，
 以及 Go `internal/aiagent/evidence_rehydration_transport.go` 与
-`evidence_rehydration_authority.go`。跨语言 fixture 位于
+`evidence_rehydration_authority.go`，以及 Memos API 内尚未接线的
+`evidence_rehydration_authority_sqlite.go`。跨语言 fixture 位于
 `contracts/memo-evidence-rehydration-v1.json` 和
 `contracts/memo-evidence-rehydration-transport-v1.json`。当前只有纯对象、内存 fake 和临时 SQLite
-证明；真实 Memos Store/visibility reader、HTTP、runtime secret/config、replay 接线和 Agent runtime
-selection 均未实现。
+证明；R5-I7 只增加真实 SQLite Store/visibility reader 的临时合成 parity，不增加 authority capability
+issuer/resolver、HTTP、runtime secret/config、replay 接线或 Agent runtime selection。
 
 ## 默认完整 Memo 索引
 
