@@ -230,6 +230,56 @@ func SignEvidenceRehydrationResponse(
 	}, nil
 }
 
+// VerifyEvidenceRehydrationResponse authenticates the exact status and body
+// before parsing the response payload. Replay remains owned by the AI-side
+// R5-I4 response replay store.
+func VerifyEvidenceRehydrationResponse(
+	body []byte,
+	statusCode int,
+	headers EvidenceRehydrationResponseHeaders,
+	now time.Time,
+	maxAge time.Duration,
+	expectedRequestNonce string,
+	request EvidenceRehydrationRequest,
+	secret string,
+) (EvidenceRehydrationResult, error) {
+	if strings.TrimSpace(secret) == "" || !validEvidenceRehydrationRequestValue(request) ||
+		headers.Version != evidenceRehydrationTransportVersion ||
+		headers.RequestNonce != expectedRequestNonce ||
+		!evidenceRehydrationNoncePattern.MatchString(expectedRequestNonce) ||
+		!evidenceRehydrationSignaturePattern.MatchString(headers.Signature) ||
+		!evidenceRehydrationTimestampPattern.MatchString(headers.Timestamp) ||
+		len(body) == 0 || len(body) > maxEvidenceRehydrationResponseBytes || !utf8.Valid(body) ||
+		maxAge <= 0 || maxAge > maxEvidenceRehydrationAge || maxAge%time.Second != 0 {
+		return EvidenceRehydrationResult{}, evidenceRehydrationUnavailable()
+	}
+	issuedAt, err := strconv.ParseInt(headers.Timestamp, 10, 64)
+	if err != nil || issuedAt < 0 || strconv.FormatInt(issuedAt, 10) != headers.Timestamp {
+		return EvidenceRehydrationResult{}, evidenceRehydrationUnavailable()
+	}
+	nowSeconds := now.UTC().Unix()
+	if issuedAt > nowSeconds || nowSeconds-issuedAt > int64(maxAge/time.Second) {
+		return EvidenceRehydrationResult{}, evidenceRehydrationUnavailable()
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(canonicalEvidenceRehydrationResponse(
+		headers.Timestamp,
+		headers.RequestNonce,
+		request.SnapshotToken,
+		statusCode,
+		body,
+	))
+	expectedSignature := evidenceRehydrationSignaturePrefix + fmt.Sprintf("%x", mac.Sum(nil))
+	if !hmac.Equal([]byte(expectedSignature), []byte(headers.Signature)) {
+		return EvidenceRehydrationResult{}, evidenceRehydrationUnavailable()
+	}
+	result, err := ParseEvidenceRehydrationResponse(body, statusCode, request)
+	if err != nil {
+		return EvidenceRehydrationResult{}, evidenceRehydrationUnavailable()
+	}
+	return result, nil
+}
+
 // ParseEvidenceRehydrationResponse accepts only exact success or fixed failure.
 func ParseEvidenceRehydrationResponse(
 	body []byte,

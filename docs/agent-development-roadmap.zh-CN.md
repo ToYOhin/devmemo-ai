@@ -1,6 +1,6 @@
 # DevMemo Agent 开发路线
 
-> 状态日期：2026-08-02
+> 状态日期：2026-08-03
 >
 > 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
 >
@@ -18,9 +18,10 @@
 > canonical 与 exact payload parity，R5-I6 已增加尚未接线的纯 Go current-authority reader 契约与内存
 > all-or-nothing parity proof，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库
 > parity proof，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver 与有界 registry
-> 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明。生产
-> HTTP rehydration adapter、lifecycle route、dispatcher、运行时接线和
-> 可用于正式产品的回答链路仍未实现。
+> 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明，
+> R5-I10 已增加尚未注册的单机 HTTP handler/client contract、严格投影、固定五秒 timeout 与
+> recorder/fake-transport 证明。route/listener、runtime secret 生命周期、lifecycle dispatcher、Agent runtime
+> 接线和可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -54,7 +55,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I9 已证明从 request verification 到 signed response 的尚未接线单机 composition，但仍无 HTTP route/client、runtime secret/configuration、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权 disabled 单机 HTTP adapter 与 secret/timeout lifecycle，再授权 AI runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I10 已证明包裹 R5-I9、尚未注册的单机 HTTP handler/client，但仍无 route/listener、runtime secret sourcing/rotation、shutdown ownership、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权 runtime secret/lifecycle ownership 与 dormant route/client registration，再授权 AI runtime selection |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -235,6 +236,14 @@ capability store 保持独立且 process-local，未来 client timeout 仍为五
 覆盖 exact signed success、verification 顺序、nonce/capability 单次性、UID scope、binding/token mismatch、
 reader one-call、固定 signed failure、并发 duplicate 与新 store 失效。没有增加 HTTP route/client、runtime
 secret source、timer、配置、持久化、数据库/网络访问或真实数据。
+R5-I10 在该 composition 外增加尚未注册的标准库 HTTP adapter。handler 只接受精确 internal POST path、
+四个 HMAC request header 各一个值、精确 JSON content type、最多 32 KiB 的已知非 chunked body、唯一 JSON
+value 与成功关闭的 body。verification 前拒绝是无正文、无签名且不可缓存的 404；验证结果只映射 exact signed
+200/503 status、body 与 response header。client 只使用 constructor 注入的 base URL、scoped secret、clock
+与 RoundTripper，固定五秒 timeout，禁止 redirect/retry，关闭有界 response，并在 exact parsing 前认证
+freshness、nonce、snapshot token、status 与 body。client replay 仍属于 AI R5-I4 边界。recorder、内存 handler
+与 fake-transport 测试没有增加 registration、listener、环境变量/配置字段、runtime secret lifecycle、真实
+socket、Store 访问或真实数据。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -304,10 +313,10 @@ secret source、timer、配置、持久化、数据库/网络访问或真实数�
 
 ## 下一授权闸门
 
-R5-I9 已在不注册 runtime 的前提下完成单独授权的 **单机 rehydration transport composition contract**。
-下一闸门是单独评审、disabled 的单机 HTTP adapter 与 runtime secret/timeout lifecycle：把一个严格 internal
-route/client 绑定到 R5-I9 composition，明确 secret sourcing/rotation 与 shutdown ownership，执行既有五秒
-client timeout 且不 retry，并保留 exact signed response parsing。它仍不得同时接 `EvidenceAnswerAgent`、
-当前 `RetrievalService`、VectorStore selection、lifecycle runtime、Compose 默认值、真实数据或多实例主张。
-任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability storage；AI runtime selection
-仍是后续独立授权闸门。
+R5-I10 已在不注册 route 或打开 listener 的前提下完成单独授权的 **disabled 单机 HTTP adapter contract**。
+下一闸门是单独评审 R5-I11 runtime secret sourcing、rotation/overlap、shutdown ownership 与 dormant 单机
+route/client registration。该闸门必须定义 rollback condition；未经另一项明确 opt-in，不得使用真实账号或
+Memo 数据。它仍不得同时接 `EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore selection、lifecycle
+runtime、Compose 默认值、真实数据或多实例主张。Docker/浏览器端到端证明仍被这些 runtime ownership 与
+registration 决策阻塞。任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability
+storage；AI runtime selection 仍是后续独立授权闸门。

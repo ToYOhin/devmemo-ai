@@ -1,6 +1,6 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-02
+> Status date: 2026-08-03
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
@@ -25,8 +25,11 @@
 > current-authority reader and temporary-database parity proof. R5-I8 adds the
 > unwired process-local authority capability issuer/resolver and bounded registry
 > proof. R5-I9 adds the unwired single-host transport composition and dedicated
-> process-local request-replay proof. No HTTP rehydration adapter, lifecycle route, dispatcher,
-> runtime wiring, or production-ready answer path is implemented.
+> process-local request-replay proof. R5-I10 adds an unregistered single-host
+> HTTP handler/client contract with strict projection, fixed five-second timeout,
+> and recorder/fake-transport proof. No route/listener, runtime secret lifecycle,
+> lifecycle dispatcher, Agent runtime wiring, or production-ready answer path is
+> implemented.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -74,7 +77,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I9 now proves an unwired single-host composition from request verification through signed response, but there is no HTTP route/client, runtime secret/configuration, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize a disabled single-host HTTP adapter and secret/timeout lifecycle, then AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I10 now proves an unregistered single-host HTTP handler/client around R5-I9, but there is no route/listener, runtime secret sourcing/rotation, shutdown ownership, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize runtime secret/lifecycle ownership and dormant route/client registration, then AI runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -329,6 +332,18 @@ order, nonce and capability single-use, UID scope, binding/token mismatch,
 reader one-call, fixed signed failure, concurrent duplicate handling, and
 new-store invalidation. No HTTP route/client, runtime secret source, timer,
 configuration, persistence, database/network access, or real data is added.
+R5-I10 adds an unregistered standard-library HTTP adapter around that
+composition. Its handler accepts only the exact internal POST path, one value
+for each HMAC request header, exact JSON content type, a known non-chunked body
+up to 32 KiB, one JSON value, and a successfully closed body. Pre-verification
+rejection is a bodyless unsigned non-cacheable 404; verified results map only
+exact signed 200/503 status, body, and response headers. The client uses only a
+constructor-injected base URL, scoped secret, clock, and RoundTripper, fixes a
+five-second timeout, disables redirects and retry, closes a bounded response,
+and authenticates freshness, nonce, snapshot token, status, and body before
+exact parsing. Client replay remains the AI R5-I4 boundary. Recorder, in-memory
+handler, and fake-transport tests add no registration, listener, environment or
+config field, runtime secret lifecycle, real socket, Store access, or real data.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -437,14 +452,15 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I9 has completed the separately authorized **single-host rehydration
-transport composition contract** without registering a runtime. The next gate
-is a separately reviewed, disabled single-host HTTP adapter and runtime
-secret/timeout lifecycle: bind one strict internal route/client to the R5-I9
-composition, decide secret sourcing/rotation and shutdown ownership, enforce the
-existing five-second client timeout without retry, and retain exact signed
-response parsing. It must remain separate from `EvidenceAnswerAgent`, current
-`RetrievalService`, VectorStore selection, lifecycle runtime, Compose defaults,
-real data, and multi-instance claims. Encrypted transport and shared atomic
-replay/capability storage remain mandatory before any multi-instance use; AI
-runtime selection remains a subsequent authorization gate.
+R5-I10 has completed the separately authorized **disabled single-host HTTP
+adapter contract** without registering a route or opening a listener. The next
+gate is a separate R5-I11 review of runtime secret sourcing, rotation/overlap,
+shutdown ownership, and dormant single-host route/client registration. That
+gate must define a rollback condition and may use no real account or Memo data
+without another explicit opt-in. It must remain separate from
+`EvidenceAnswerAgent`, current `RetrievalService`, VectorStore selection,
+lifecycle runtime, Compose defaults, real data, and multi-instance claims.
+Docker/browser end-to-end proof remains blocked until those runtime ownership
+and registration decisions are authorized. Encrypted transport and shared
+atomic replay/capability storage remain mandatory before multi-instance use;
+AI runtime selection remains a later authorization gate.
