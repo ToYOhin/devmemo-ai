@@ -83,6 +83,11 @@ dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
 [docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。
 
+R5-I1 至 R5-I7 的持久化检索工作同样只是未接线的安全证明：它定义授权 candidate 选择、
+当前权威正文 rehydration、认证 request/response 契约，以及只用临时合成数据验证的单机
+SQLite authority reader。它没有增加浏览器或 HTTP rehydration API，没有启用持久化 Agent
+回答，也没有授权真实数据索引；正文、身份与 visibility 的最终权威仍属于 Memos。
+
 ## 本地开发与验证
 
 安装 Go、Node.js、pnpm 和 Python，并创建 `ai-service/.venv` 后运行：

@@ -1,5 +1,20 @@
 # DevMemo AI 变更记录
 
+## 2026-08-02：R5 持久化授权检索与 SQLite 当前权威读取证明
+
+- R5-I1 至 R5-I3 固定了 Memos-authorized UID、A4 lifecycle eligibility、两阶段正文加载和
+  Memos current-authority rehydration；AI 侧不成为正文、身份或 visibility 的第二事实源。
+- R5-I4 至 R5-I6 分别证明 rehydration-only request/response HMAC、process-local replay、
+  Go/Python exact payload parity，以及一次调用的 Memos current-authority reader 契约。
+- R5-I7 新增未注册 route/runtime 的真实单机 SQLite reader：caller identity 只来自 Memos
+  内部认证 context，并在同一只读 snapshot 中确认 caller、visibility、comment、正文和最新
+  A4 source event；读取期间任意提交都会使整批 fail closed。
+- 临时 SQLite/合成 Go 回归、相关 Go vet 与 R5/A4/R4 Python 定向回归通过。该证明不覆盖
+  MySQL/PostgreSQL、HTTP、真实数据、多实例或生产持久化回答路径。
+- 功能默认值、Memo CRUD、Compose、Qdrant、Provider、dispatcher/worker 和现有
+  `EvidenceAnswerAgent` runtime selection 均未改变；下一闸门为单独授权的 process-local
+  authority capability issuer/resolver。
+
 ## 2026-08-01：Agent 契约链路与公开维护基线
 
 - Evidence Answer Agent 已完成 A4-I1 至 A4-I5 的 dormant lifecycle 契约/恢复证明，
