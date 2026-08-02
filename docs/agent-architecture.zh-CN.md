@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route。尚未交付新 listener、Python client lifecycle、Agent runtime 接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加由 AI Service lifespan 拥有且确定关闭的 opt-in Python client。尚未交付新 listener、Agent answer-path 接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -117,6 +117,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 23. **disabled 单机 HTTP adapter — 已完成、未接线。** R5-I10 在 R5-I9 外增加尚未注册的标准库 handler/client。handler 只接受精确 internal POST envelope，把未验证输入投影为无正文、不可缓存的 404，并只映射 exact signed 200/503；client 固定五秒 timeout，只调用一次注入的 `RoundTripper`，关闭有界 body，并在解析前认证 exact response。测试只使用 recorder、内存 handler 与 fake transport；没有增加 route、listener、环境变量/配置字段、runtime secret source、真实 socket 或 Agent runtime 接线。
 24. **独立 rehydration runtime 配置 — 已完成、未接线。** R5-I11A 增加对称的 Go/Python 环境契约，disabled 时不保留 secret，启用时必须先开启总 Agent flag。runtime 要求一个规范的无填充 base64url 32-byte current secret、可选且不同的 previous secret、与回答 delegation secret 严格隔离，以及 AI 侧单一无凭据 HTTP(S) Memos origin。纯 settings 测试没有生成 key、构造 route/client、启动 listener/timer、持久化或使用真实 secret。
 25. **Memos dormant rehydration registration — 已完成、opt-in。** R5-I11B 用一份共享的 process-local capability registry 与 request replay store 构造 current 及可选 previous composition。handler 固定按 current 后 previous 验证，并只用实际匹配 request 的 key 签回 verified response。只有显式启用才在既有 Echo server 上注册 exact internal POST；disabled 时 route 不存在。runtime 不拥有 listener、goroutine、timer、transport 或 closeable resource。
+26. **AI 侧 rehydration client lifespan — 已完成、未连接 answer path。** R5-I11C 只在启用的 AI Service lifespan 内构造 Python client，并在 shutdown 清空 state、确定关闭 transport。注入的 async transport 不重试；client 固定五秒 timeout、拒绝 redirect 与非精确 response envelope、有界流式读取、先验签再解析，并独占一份 process-local response replay store。对象只暴露在 `app.state`，没有 endpoint 或 `EvidenceAnswerAgent` 调用它。
 
 ## A1 验收结果
 
@@ -336,7 +337,13 @@ keyring 只在启动时固定，最多 current 加 previous，没有 timer 或�
 previous 验证，两份 composition 共享同一个 process-local capability registry 与 request replay store；verified
 success/failure 只由实际匹配 request 的 key 签名。显式 opt-in 只在现有 Memos Echo 实例注册 exact POST，
 disabled 时 route 不存在。Memos server 拥有 handler 生命周期，runtime 不增加 listener、port、goroutine、timer、
-transport 或 shutdown hook。AI client shutdown 仍属于 R5-I11C。
+transport 或 shutdown hook。AI client 由独立 lifespan 管理。
+
+R5-I11C 只在 rehydration flag 启用时于 FastAPI lifespan 构造 Python client；生产注入
+`AsyncHTTPTransport(retries=0)`，测试注入内存 transport。每次调用只准备一次 signed POST，固定五秒 timeout，
+不 redirect/retry，有界流式读取 response，要求 exact signed 200/503 headers，并在解析前验签及消费现有
+process-local response replay。shutdown 始终关闭 owned client/transport 并清空 `app.state`；disabled lifespan
+不创建 transport。该 client 仍未连接 answer Agent 或 durable retrieval selection。
 
 ## A4 本地 RAG 生命周期契约
 

@@ -30,9 +30,10 @@
 > and recorder/fake-transport proof. R5-I11A adds strict, disabled-by-default
 > Go/Python configuration for a dedicated current/previous rehydration keyring
 > and one AI-side Memos origin. R5-I11B adds fixed-order matching-key handling
-> and opt-in registration on the existing Memos listener. No new listener,
-> Python client lifecycle, Agent runtime wiring, or production-ready answer path
-> is implemented.
+> and opt-in registration on the existing Memos listener. R5-I11C adds the
+> AI-side Python HTTP client and deterministic lifespan shutdown. No new
+> listener, Agent answer-path wiring, or production-ready durable answer path is
+> implemented.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -80,7 +81,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I11B now provides matching-key verification and an opt-in Memos route, but there is no Python client lifecycle, shared replay/capability store, or runtime selection, so no durable path serves answers | Complete R5-I11C Python client lifecycle, then separately connect durable runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I11C now provides the opt-in Memos route and owned Python client lifespan, but no capability issuance or durable runtime selection connects them to the answer path; process-local replay/capability state also remains single-instance only | Connect the reviewed single-host durable runtime selection without changing defaults; require shared atomic state before multi-instance use |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -362,6 +363,13 @@ matching request key. Explicit opt-in registers the exact internal POST on the
 existing Memos Echo server; disabled startup adds no route. The runtime creates
 no listener, port, goroutine, timer, transport, closeable resource, or shutdown
 hook, and registration performs no Store read.
+R5-I11C adds an async Python client created only by the enabled FastAPI lifespan.
+It receives an injected zero-retry transport, fixes a five-second timeout,
+disables redirects, performs one exact signed POST, closes a bounded streamed
+response, verifies exact signed 200/503 before parsing, and owns one process-
+local response replay store. Shutdown closes the owned client/transport and
+clears `app.state`; disabled mode creates none. No endpoint or answer Agent uses
+the client yet.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -470,13 +478,13 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I11B has completed startup-fixed current/previous verification with matching-
-key response signing and default-disabled registration on the existing Memos
-listener, without adding a listener, port, timer, transport, or Store read at
-registration. R5-I11C is the next approved slice: implement the Python HTTP
-client/replay lifespan and deterministic transport shutdown while remaining
-disconnected from `EvidenceAnswerAgent`, current `RetrievalService`, VectorStore
-selection, lifecycle runtime, Compose defaults, real data, and multi-instance
-claims.
+R5-I11C has completed the Python HTTP client/replay lifespan and deterministic
+transport shutdown while remaining disconnected from `EvidenceAnswerAgent` and
+all endpoints. The next narrow R5 gate is single-host durable runtime selection:
+issue the Memos-owned capability from the authenticated answer path, call the
+owned Python client only for the reviewed durable adapter, and retain existing
+memory/default behavior. It must be separately verified without Compose defaults,
+real data, or multi-instance claims. Real browser/Docker acceptance remains a
+later explicit runtime authorization gate after this answer path is connected.
 Docker/browser proof remains later; encrypted transport and shared atomic
 replay/capability storage remain mandatory before multi-instance use.

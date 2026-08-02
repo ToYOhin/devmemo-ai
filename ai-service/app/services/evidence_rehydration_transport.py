@@ -1,4 +1,4 @@
-"""Unwired authenticated transport proof for Memos evidence rehydration."""
+"""Authenticated transport contract for Memos evidence rehydration."""
 
 from __future__ import annotations
 
