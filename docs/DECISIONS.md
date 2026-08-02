@@ -463,3 +463,31 @@ Memos-private resolution，用于未来恢复 server-owned auth context、精确
 secret/config、answer path、数据库、持久化、网络、Compose、Provider、Qdrant 或真实数据。下一闸门需单独
 评审单机 handler/client 与 replay composition；多实例前必须提供 shared atomic capability/replay storage、
 加密 transport、密钥轮换与独立威胁评审，AI runtime selection 仍需之后另行授权。
+
+## ADR-063：R5 单机 transport composition 先保持未注册、单次且进程内
+
+R5-I9 在任何 HTTP route/client 或 answer runtime 接线前，把既有边界组合为一个 Memos-private、未注册的
+纯 Go service。构造函数只接受显式注入的 scoped secret、最多 60 秒的 request age、clock、专用有界
+request replay store、R5-I8 capability registry 与 reader factory；没有环境变量、全局 singleton、timer、
+自动 retry 或隐式 Store lookup。未来 client timeout 仍固定为五秒且 `auto_retry=false`，本阶段没有 network
+timer 或 client。
+
+调用顺序固定为 R5-I5 HMAC/freshness/exact parsing、专用 nonce consume、R5-I8 capability consume、私有
+resolution 二次 scope/binding/token 校验、server-owned auth context 恢复、reader factory、R5-I6
+all-or-nothing projection、exact JSON serialization 与 R5-I5 response-only signing。replay store 与 capability
+registry 是两个不同类型、不同容量状态的 process-local 对象；同 nonce 的并发请求最多一个越过 replay，
+同 capability 即使换 nonce 也最多一个进入 reader。reader factory 和 reader 每个请求都最多调用一次，caller、
+完整 UID scope、authenticated-context token 与 authority token 均不能来自 request/header/browser/AI。
+
+未通过 request 认证的输入没有可信 snapshot token，必须在 replay/capability 前以固定本地
+`authorized retrieval unavailable` 和零 response projection 拒绝，不能伪造“已签名失败”。请求验证完成后，
+replay、capability、scope、binding、reader 或 schema failure 只生成 exact、response-HMAC 签名的
+`503 {"error_code":"authorized_retrieval_unavailable"}`；若 response signing 本身失败，则返回零 projection
+与同一固定本地错误，绝不降级成未签名响应。成功只允许 exact signed `200` R5-I6 response。
+
+该证明只覆盖单进程调用顺序、并发单次性与故障投影。新 replay store 清空 nonce history，新 capability
+registry 使旧 authority reference 失效；二者都不主张 restart persistence 或 multi-instance safety。R5-I9
+没有注册 `net/http`、实现 client、配置 runtime secret、接 `EvidenceAnswerAgent`/`RetrievalService`、访问真实
+Store/网络/数据或改变 Compose/defaults。下一闸门必须单独评审 disabled single-host HTTP adapter 与 runtime
+secret/timeout lifecycle；任何多实例使用前仍需加密 transport、shared atomic replay/capability storage、
+密钥轮换与独立威胁评审，AI runtime selection 继续后置。

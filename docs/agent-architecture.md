@@ -26,7 +26,9 @@
 > all-or-nothing projection with an in-memory fake. R5-I7 adds an unwired real
 > SQLite current-authority reader with temporary-database parity and race proofs.
 > R5-I8 adds an unwired process-local authority capability issuer/resolver with
-> a bounded in-memory registry and synthetic concurrency proof. The feature remains
+> a bounded in-memory registry and synthetic concurrency proof. R5-I9 adds an
+> unwired single-host transport composition with a dedicated process-local request
+> replay store and synthetic call-order/concurrency proof. The feature remains
 > disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
@@ -313,6 +315,15 @@ LLM provider.
    collision, mismatch, restart invalidation, and concurrent consume. It adds
    no route/client, replay wiring, runtime configuration, persistence, real
    data, or multi-instance claim.
+22. **Single-host rehydration composition — complete, unwired.** R5-I9 fixes
+   the pure Go order from R5-I5 verification through a dedicated bounded
+   request replay store, R5-I8 single consume, server-owned auth-context
+   restoration, one reader-factory/reader call, R5-I6 projection, exact JSON,
+   and R5-I5 response signing. Synthetic tests cover independent nonce and
+   capability single-use, scope/binding/token rejection, fixed signed failure,
+   concurrent duplicate handling, and new-store invalidation. It registers no
+   HTTP route/client and adds no runtime secret/configuration, timer, retry,
+   persistence, real data, or multi-instance claim.
 
 ## Acceptance criteria for the first Agent path
 
@@ -573,6 +584,42 @@ nonce stores and does not implement HTTP, HMAC/replay runtime composition,
 answer runtime selection, configuration, secrets, persistence, database access,
 networking, or real data. A shared atomic capability/replay store and encrypted
 transport remain mandatory before any multi-instance use.
+
+R5-I9 composes those boundaries without registering a runtime. Its constructor
+requires an explicitly supplied scoped secret, request age of at most 60
+seconds, clock, dedicated fixed-capacity request replay store, R5-I8 registry,
+and reader factory. Verification of the R5-I5 HMAC, freshness, and exact body
+precedes nonce consumption; nonce consumption precedes capability lookup;
+capability resolution is rechecked for exact private token binding and a
+bounded authorized UID subset before it reconstructs a fresh Memos auth
+context. Only that context, the two-field R5-I6 binding, and the authority token
+reach the reader factory. The factory and reader are each called at most once.
+
+The request replay store and capability registry are different process-local
+types with independent capacity and lifecycle. A concurrent duplicate nonce
+allows at most one call past replay; changing the nonce does not make a consumed
+capability reusable. A new replay store forgets old nonces while a new
+capability registry rejects old authority references, which is an explicit
+restart boundary rather than a durability claim. The future client policy
+remains a five-second timeout with automatic retry disabled; no client or timer
+exists in this slice.
+
+An unauthenticated or malformed request is rejected before replay with the
+fixed local error and no response projection, because it supplies no trusted
+snapshot token for the response HMAC. Once a request is verified, replay,
+capability, binding, reader, or schema failure produces only the exact signed
+`503 authorized_retrieval_unavailable` body. If response signing itself fails,
+the composition returns no projection rather than emitting an unsigned body.
+Success is only an exact signed R5-I6 `200` response. Caller identity, full UID
+scope, authenticated-context token, authority reference, and raw failures have
+no response or observability projection.
+
+R5-I9 contains no `net/http` registration or client, runtime secret source,
+environment variable, port, volume, migration, persistence, network access,
+answer-path import, real Store access, or real data. A disabled single-host HTTP
+adapter and its secret/timeout lifecycle require another review. Encrypted
+transport and shared atomic replay/capability storage remain mandatory before
+multi-instance use; AI runtime selection remains later.
 
 ## A4 local RAG lifecycle contract
 
