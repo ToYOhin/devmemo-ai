@@ -185,6 +185,48 @@ func TestEvidenceAuthorityCapabilityHasNoCallerControlledIssueFieldsOrProjection
 	require.Equal(t, "AuthenticatedContextToken", bindingType.Field(1).Name)
 }
 
+func TestEvidenceAuthorityCapabilityIssuesExactDelegationScopeOnce(t *testing.T) {
+	clock := &fakeEvidenceAuthorityCapabilityClock{now: r5I8Now}
+	scope := r5I8Scope(17, "memo-visible-one", "memo-visible-two")
+	registry := newR5I8Registry(
+		t,
+		4,
+		30*time.Second,
+		clock,
+		&fakeEvidenceAuthorityCapabilityTokenSource{},
+		scope,
+	)
+
+	grant, delegatedUIDs, err := registry.issueForDelegation(r5I8AuthenticatedContext(17))
+	require.NoError(t, err)
+	require.Equal(t, 1, scope.calls)
+	require.Equal(t, []string{"memo-visible-one", "memo-visible-two"}, delegatedUIDs)
+	delegatedUIDs[0] = "mutated-copy"
+
+	entry := registry.byRef[grant.memosAuthorityRef]
+	require.Equal(t, []string{"memo-visible-one", "memo-visible-two"}, entry.authorizedMemoUIDs)
+}
+
+func TestEvidenceAuthorityCapabilityDelegatesEmptyScopeWithoutIssuingToken(t *testing.T) {
+	clock := &fakeEvidenceAuthorityCapabilityClock{now: r5I8Now}
+	scope := r5I8Scope(17)
+	registry := newR5I8Registry(
+		t,
+		4,
+		30*time.Second,
+		clock,
+		&fakeEvidenceAuthorityCapabilityTokenSource{},
+		scope,
+	)
+
+	grant, delegatedUIDs, err := registry.issueForDelegation(r5I8AuthenticatedContext(17))
+	require.NoError(t, err)
+	require.Equal(t, evidenceAuthorityCapabilityGrant{}, grant)
+	require.Empty(t, delegatedUIDs)
+	require.Empty(t, registry.byRef)
+	require.Equal(t, 1, scope.calls)
+}
+
 func TestEvidenceAuthorityCapabilityRequiresCurrentMemosAuthenticatedCaller(t *testing.T) {
 	tests := []struct {
 		name    string

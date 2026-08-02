@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -14,6 +15,7 @@ SIGNATURE_HEADER = "X-DevMemo-Agent-Signature"
 TIMESTAMP_HEADER = "X-DevMemo-Agent-Timestamp"
 SIGNATURE_PREFIX = "sha256="
 SIGNATURE_VERSION = "devmemo-agent-v1"
+_MEMOS_AUTHORITY_REF_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{31,63}$")
 
 
 class AgentDelegationError(ValueError):
@@ -27,6 +29,7 @@ class DelegatedAnswerRequest:
     question: str
     limit: int
     visible_memo_uids: tuple[str, ...]
+    memos_authority_ref: str | None = None
 
     def __post_init__(self) -> None:
         normalized_question = self.question.strip()
@@ -40,6 +43,11 @@ class DelegatedAnswerRequest:
             raise AgentDelegationError("invalid Agent delegation")
         object.__setattr__(self, "question", normalized_question)
         object.__setattr__(self, "visible_memo_uids", normalized_uids)
+        if (
+            self.memos_authority_ref is not None
+            and not _MEMOS_AUTHORITY_REF_PATTERN.fullmatch(self.memos_authority_ref)
+        ):
+            raise AgentDelegationError("invalid Agent delegation")
 
 
 @dataclass(frozen=True)
@@ -117,15 +125,23 @@ def _parse_request(body: bytes) -> DelegatedAnswerRequest:
         payload = json.loads(body)
     except (TypeError, ValueError, UnicodeDecodeError) as error:
         raise AgentDelegationError("invalid Agent delegation") from error
-    if not isinstance(payload, dict) or set(payload) != {"question", "limit", "visible_memo_uids"}:
+    required_fields = {"question", "limit", "visible_memo_uids"}
+    if not isinstance(payload, dict) or frozenset(payload) not in {
+        frozenset(required_fields),
+        frozenset(required_fields | {"memos_authority_ref"}),
+    }:
         raise AgentDelegationError("invalid Agent delegation")
     visible_memo_uids = payload["visible_memo_uids"]
     if not isinstance(visible_memo_uids, list) or any(not isinstance(uid, str) for uid in visible_memo_uids):
         raise AgentDelegationError("invalid Agent delegation")
     if not isinstance(payload["question"], str):
         raise AgentDelegationError("invalid Agent delegation")
+    memos_authority_ref = payload.get("memos_authority_ref")
+    if memos_authority_ref is not None and not isinstance(memos_authority_ref, str):
+        raise AgentDelegationError("invalid Agent delegation")
     return DelegatedAnswerRequest(
         question=payload["question"],
         limit=payload["limit"],
         visible_memo_uids=tuple(visible_memo_uids),
+        memos_authority_ref=memos_authority_ref,
     )

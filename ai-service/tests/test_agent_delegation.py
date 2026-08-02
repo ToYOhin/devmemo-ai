@@ -91,3 +91,42 @@ def test_delegation_rejects_unexpected_or_invalid_scope_fields(body):
             fixture["secret"],
             datetime.fromtimestamp(timestamp, timezone.utc),
         )
+
+
+def test_delegation_accepts_only_an_opaque_memos_authority_reference():
+    fixture = _fixture()
+    timestamp = int(fixture["timestamp"])
+    body = (
+        b'{"question":"Docker","limit":3,"visible_memo_uids":["memo-a"],'
+        b'"memos_authority_ref":"authority-ref-synthetic-0000000001"}'
+    )
+    headers = sign_delegated_request(
+        "POST", INTERNAL_ANSWER_PATH, body, timestamp, fixture["secret"]
+    )
+
+    parsed = verify_delegated_request(
+        "POST",
+        INTERNAL_ANSWER_PATH,
+        body,
+        headers,
+        fixture["secret"],
+        datetime.fromtimestamp(timestamp, timezone.utc),
+    )
+
+    assert parsed.memos_authority_ref == "authority-ref-synthetic-0000000001"
+
+    invalid_body = body.replace(
+        b"authority-ref-synthetic-0000000001", b"caller-controlled"
+    )
+    invalid_headers = sign_delegated_request(
+        "POST", INTERNAL_ANSWER_PATH, invalid_body, timestamp, fixture["secret"]
+    )
+    with pytest.raises(AgentDelegationError, match="invalid Agent delegation"):
+        verify_delegated_request(
+            "POST",
+            INTERNAL_ANSWER_PATH,
+            invalid_body,
+            invalid_headers,
+            fixture["secret"],
+            datetime.fromtimestamp(timestamp, timezone.utc),
+        )

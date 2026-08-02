@@ -35,9 +35,10 @@
 > a dedicated current/previous rehydration keyring and one AI-side Memos origin.
 > R5-I11B adds fixed-order matching-key verification and opt-in registration on
 > the existing Memos listener. R5-I11C adds an opt-in Python HTTP client owned by
-> the AI Service lifespan, with deterministic transport close. No new listener,
-> Agent answer-path wiring, remote deployment, or general-public availability is
-> delivered.
+> the AI Service lifespan, with deterministic transport close. R5-I12 issues a
+> Memos-owned authority capability from the authenticated BFF path and carries
+> only its opaque ref inside the signed delegation. No rehydration client call,
+> remote deployment, or general-public availability is delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -362,6 +363,13 @@ LLM provider.
    response envelopes, bounds streamed bodies, verifies before parsing, and
    owns one process-local response replay store. The object is only exposed on
    `app.state` and is not called by `EvidenceAnswerAgent` or any endpoint.
+27. **Authenticated capability delegation bridge — complete, disconnected.**
+   R5-I12 makes the enabled Memos runtime derive the caller and exact visible
+   complete-Memo UID scope once, issue one opaque capability for a nonempty
+   scope, and add only its ref to the already signed internal answer request.
+   An empty current scope produces no capability and preserves normal no-context
+   behavior. The browser request and safe response contain no authority ref;
+   disabled mode retains the prior memory delegation body.
 
 ## Acceptance criteria for the first Agent path
 
@@ -708,6 +716,15 @@ existing process-local response replay entry before parsing. Shutdown always
 closes the owned client/transport and clears `app.state`. Disabled lifespan does
 not construct a transport. The client remains disconnected from the answer
 Agent and durable retrieval selection.
+
+R5-I12 extends the private Memos-to-AI delegation with one optional opaque
+`memos_authority_ref`. When rehydration is enabled, the BFF asks the same
+process-local registry for the Memos-authenticated current visible UID scope and
+its capability in one operation, then delegates that exact UID copy plus the
+ref under the existing answer HMAC. Empty scope delegates no ref; registry or
+scope failure maps to the existing safe BFF failure. The field is never accepted
+from or returned to the browser. Python verifies its 32-64-character opaque
+shape but does not yet call the lifespan client.
 
 ## A4 local RAG lifecycle contract
 

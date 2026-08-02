@@ -134,18 +134,57 @@ func newEvidenceAuthorityCapabilityRegistry(
 func (registry *evidenceAuthorityCapabilityRegistry) issue(
 	ctx context.Context,
 ) (evidenceAuthorityCapabilityGrant, error) {
-	if registry == nil || ctx == nil {
+	callerID, scope, err := registry.readCurrentScope(ctx)
+	if err != nil || !validEvidenceAuthorityCapabilityUIDs(
+		scope.authorizedMemoUIDs,
+		maxEvidenceAuthorityCapabilityUIDs,
+	) {
 		return evidenceAuthorityCapabilityGrant{}, errEvidenceAuthorityCapabilityUnavailable
+	}
+	return registry.issueScope(callerID, scope.authorizedMemoUIDs)
+}
+
+func (registry *evidenceAuthorityCapabilityRegistry) issueForDelegation(
+	ctx context.Context,
+) (evidenceAuthorityCapabilityGrant, []string, error) {
+	callerID, scope, err := registry.readCurrentScope(ctx)
+	if err != nil {
+		return evidenceAuthorityCapabilityGrant{}, nil, err
+	}
+	if len(scope.authorizedMemoUIDs) == 0 {
+		return evidenceAuthorityCapabilityGrant{}, []string{}, nil
+	}
+	if !validEvidenceAuthorityCapabilityUIDs(scope.authorizedMemoUIDs, maxEvidenceAuthorityCapabilityUIDs) {
+		return evidenceAuthorityCapabilityGrant{}, nil, errEvidenceAuthorityCapabilityUnavailable
+	}
+	grant, err := registry.issueScope(callerID, scope.authorizedMemoUIDs)
+	if err != nil {
+		return evidenceAuthorityCapabilityGrant{}, nil, err
+	}
+	return grant, append([]string(nil), scope.authorizedMemoUIDs...), nil
+}
+
+func (registry *evidenceAuthorityCapabilityRegistry) readCurrentScope(
+	ctx context.Context,
+) (int32, evidenceAuthorityCapabilityScope, error) {
+	if registry == nil || ctx == nil {
+		return 0, evidenceAuthorityCapabilityScope{}, errEvidenceAuthorityCapabilityUnavailable
 	}
 	callerID := auth.GetUserID(ctx)
 	if callerID <= 0 {
-		return evidenceAuthorityCapabilityGrant{}, errEvidenceAuthorityCapabilityUnavailable
+		return 0, evidenceAuthorityCapabilityScope{}, errEvidenceAuthorityCapabilityUnavailable
 	}
 	scope, err := registry.scopeSource.ReadCurrentAuthorizedCompleteMemoScope(ctx, callerID)
-	if err != nil || scope.callerID != callerID || !scope.callerIsCurrent ||
-		!validEvidenceAuthorityCapabilityUIDs(scope.authorizedMemoUIDs, maxEvidenceAuthorityCapabilityUIDs) {
-		return evidenceAuthorityCapabilityGrant{}, errEvidenceAuthorityCapabilityUnavailable
+	if err != nil || scope.callerID != callerID || !scope.callerIsCurrent {
+		return 0, evidenceAuthorityCapabilityScope{}, errEvidenceAuthorityCapabilityUnavailable
 	}
+	return callerID, scope, nil
+}
+
+func (registry *evidenceAuthorityCapabilityRegistry) issueScope(
+	callerID int32,
+	authorizedMemoUIDs []string,
+) (evidenceAuthorityCapabilityGrant, error) {
 
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
@@ -183,7 +222,7 @@ func (registry *evidenceAuthorityCapabilityRegistry) issue(
 
 	entry := evidenceAuthorityCapabilityEntry{
 		callerID:                  callerID,
-		authorizedMemoUIDs:        append([]string(nil), scope.authorizedMemoUIDs...),
+		authorizedMemoUIDs:        append([]string(nil), authorizedMemoUIDs...),
 		memosAuthorityRef:         ref,
 		authenticatedContextToken: contextToken,
 		authorityToken:            authorityToken,
