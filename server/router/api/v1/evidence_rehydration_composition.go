@@ -112,7 +112,7 @@ func newEvidenceRehydrationComposition(
 	}, nil
 }
 
-// handle proves the single-host call order without registering an HTTP route.
+// handle preserves the single-host call order independently of HTTP routing.
 // An unverified request receives no response projection because no trusted
 // snapshot token exists for the response HMAC domain.
 func (composition *evidenceRehydrationComposition) handle(

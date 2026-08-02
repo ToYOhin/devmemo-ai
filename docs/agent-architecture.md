@@ -33,9 +33,9 @@
 > projection, fixed five-second timeout, and in-memory/fake-transport proof.
 > R5-I11A adds strict, disabled-by-default Go/Python runtime configuration for
 > a dedicated current/previous rehydration keyring and one AI-side Memos origin.
-> The feature remains disabled by default. No route registration, listener,
-> client lifecycle, Agent runtime wiring, remote deployment, or general-public
-> availability is delivered.
+> R5-I11B adds fixed-order matching-key verification and opt-in registration on
+> the existing Memos listener. No new listener, Python client lifecycle, Agent
+> runtime wiring, remote deployment, or general-public availability is delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -346,6 +346,13 @@ LLM provider.
    delegation secret, and one credential-free HTTP(S) Memos origin on the AI
    side. Pure settings tests add no key generation, route/client construction,
    listener, timer, persistence, or real secret.
+25. **Dormant Memos rehydration registration — complete, opt-in.** R5-I11B
+   constructs current and optional previous compositions over one shared
+   process-local capability registry and request replay store. The handler tries
+   current then previous and signs every verified response with the request-
+   matching key. Only explicit opt-in registers the exact internal POST on the
+   existing Echo server; disabled startup registers nothing. The runtime owns
+   no listener, goroutine, timer, transport, or closeable resource.
 
 ## Acceptance criteria for the first Agent path
 
@@ -675,10 +682,13 @@ requires exactly one credential-free HTTP(S) origin in
 `AI_AGENT_REHYDRATION_MEMOS_URL`.
 
 The keyring is startup-fixed, capped at current plus previous, and has no timer
-or dynamic reload. Request verification against both keys, matching-key response
-signing, overlap retirement, Memos route ownership, and AI client shutdown are
-the separately testable R5-I11B/I11C slices. No route/client or real secret is
-created by R5-I11A.
+or dynamic reload. R5-I11B verifies requests in fixed current-then-previous
+order and keeps both compositions on the same process-local capability and
+request-replay stores. A verified success or failure is signed only by the key
+that authenticated its request. Explicit opt-in registers the exact POST on the
+existing Memos Echo instance; disabled mode has no route. The Memos server owns
+the handler lifetime, while the runtime adds no listener, port, goroutine,
+timer, transport, or shutdown hook. AI client shutdown remains R5-I11C.
 
 ## A4 local RAG lifecycle contract
 

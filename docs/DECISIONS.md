@@ -544,3 +544,21 @@ R5-I11B 的 handler 仍由现有 Memos HTTP server 和 shutdown 管理，不增�
 client 必须属于 Python AI Service lifespan，并在 shutdown 时关闭 transport。R5-I10 Go client 保持协议/测试
 证明，不接入 Memos runtime。任何 Docker、浏览器、真实 Provider/账号/Memo/secret/data 或多实例主张继续需要
 后续独立授权与证据。
+
+## ADR-066：R5 dormant Memos runtime 共享单次状态并由现有 Echo server 托管
+
+R5-I11B 不改变 R5-I9 单密钥 composition，而是在一个 HTTP handler 内固定按 current、previous 顺序尝试最多
+两份 composition。两份 composition 必须共享同一个 process-local capability registry 与 request replay store；
+因此 key rotation 不得制造第二个 capability 或 replay 域。第一个成功验签的 composition 继续完整处理请求，并用
+同一个实际匹配 key 签 exact 200/503 response。current 已验签但后续 authority/read 失败时直接返回 current-key
+signed 503，不允许再尝试 previous。两个 key 都无法认证时仍返回无正文、unsigned、`no-store` 404。
+
+`AI_AGENT_REHYDRATION_ENABLED=false` 时不构造 runtime 且不注册 route。显式启用后，只在现有 Memos Echo
+实例注册 exact internal POST；错误 method 由 Echo 返回 405。runtime 只持有 handler、共享 registry/replay 与
+reader factory，注册期间不读取 Store。它不创建 listener、port、goroutine、timer、HTTP transport、closeable
+resource 或 shutdown hook；生命周期自然属于现有 Memos HTTP server。配置还必须拒绝复用 `APIV1Service.Secret`。
+
+该 route 目前保持 dormant：capability issuer 尚未接入回答路径，Python runtime client 也尚未创建。测试只使用
+Echo/httptest、synthetic secret、fake authority/reader/clock 与进程内对象；没有启动 socket、访问真实 Store、
+Provider、Qdrant、账号、Memo、volume、真实 secret/data 或外部网络。R5-I11C 单独负责 Python client lifespan
+与 transport shutdown；`EvidenceAnswerAgent` 和 durable runtime selection 仍需后续窄切片。
