@@ -57,6 +57,9 @@ class InMemoryVectorStore:
         query: Sequence[float],
         visible_memo_ids: frozenset[str],
         limit: int = 5,
+        *,
+        rebuild_generation: str | None = None,
+        index_version: str | None = None,
     ) -> list[VectorSearchResult]:
         """Search only the Memos authorized by the Memos service boundary."""
 

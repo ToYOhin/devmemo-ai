@@ -35,6 +35,10 @@ class FakeModels:
         any: list[str]
 
     @dataclass
+    class MatchValue:
+        value: str
+
+    @dataclass
     class FieldCondition:
         key: str
         match: object
@@ -75,13 +79,22 @@ class FakeQdrantClient:
         assert with_payload is True
         self.last_query_filter = query_filter
         visible_ids = None
+        required_metadata: dict[str, str] = {}
         if query_filter is not None:
             visible_ids = set(query_filter.must[0].match.any)
+            for condition in query_filter.must[1:]:
+                required_metadata[condition.key.removeprefix("metadata.")] = (
+                    condition.match.value
+                )
         return SimpleNamespace(
             points=[
                 FakeScoredPoint(point.id, 0.91, point.payload)
                 for point in self.points.values()
                 if visible_ids is None or point.payload["memo_id"] in visible_ids
+                if all(
+                    point.payload.get("metadata", {}).get(key) == value
+                    for key, value in required_metadata.items()
+                )
             ]
             [:limit]
         )
@@ -124,6 +137,41 @@ def test_qdrant_adapter_pushes_authorized_memo_scope_into_query():
     assert [result.memo_id for result in results] == ["memo-b"]
     assert client.last_query_filter.must[0].key == "memo_id"
     assert client.last_query_filter.must[0].match.any == ["memo-b"]
+
+
+def test_qdrant_adapter_pushes_active_generation_into_query():
+    client = FakeQdrantClient()
+    store = QdrantVectorStore(client, FakeModels, 2, "devmemo-test")
+    store.upsert(
+        VectorRecord(
+            "embedding-old",
+            "memo-a",
+            (1.0, 0.0),
+            {"rebuild_generation": "old", "index_version": "memo-v1"},
+        )
+    )
+    store.upsert(
+        VectorRecord(
+            "embedding-active",
+            "memo-a",
+            (1.0, 0.0),
+            {"rebuild_generation": "active", "index_version": "memo-v1"},
+        )
+    )
+
+    results = store.search_visible_memos(
+        (1.0, 0.0),
+        frozenset({"memo-a"}),
+        rebuild_generation="active",
+        index_version="memo-v1",
+    )
+
+    assert [result.embedding_id for result in results] == ["embedding-active"]
+    assert [condition.key for condition in client.last_query_filter.must] == [
+        "memo_id",
+        "metadata.rebuild_generation",
+        "metadata.index_version",
+    ]
 
 
 def test_qdrant_adapter_creates_the_configured_collection_with_cosine_dimension():

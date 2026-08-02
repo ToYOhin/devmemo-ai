@@ -96,6 +96,9 @@ class QdrantVectorStore:
         query: Sequence[float],
         visible_memo_ids: frozenset[str],
         limit: int = 5,
+        *,
+        rebuild_generation: str | None = None,
+        index_version: str | None = None,
     ) -> list[VectorSearchResult]:
         """Push the Memos-owned UID scope into Qdrant before ranking."""
 
@@ -104,17 +107,30 @@ class QdrantVectorStore:
             raise ValueError("search limit must be positive")
         if not visible_memo_ids:
             return []
+        must = [
+            self.models.FieldCondition(
+                key="memo_id",
+                match=self.models.MatchAny(any=sorted(visible_memo_ids)),
+            )
+        ]
+        if rebuild_generation is not None:
+            must.append(
+                self.models.FieldCondition(
+                    key="metadata.rebuild_generation",
+                    match=self.models.MatchValue(value=rebuild_generation),
+                )
+            )
+        if index_version is not None:
+            must.append(
+                self.models.FieldCondition(
+                    key="metadata.index_version",
+                    match=self.models.MatchValue(value=index_version),
+                )
+            )
         response = self.client.query_points(
             collection_name=self.collection_name,
             query=list(query),
-            query_filter=self.models.Filter(
-                must=[
-                    self.models.FieldCondition(
-                        key="memo_id",
-                        match=self.models.MatchAny(any=sorted(visible_memo_ids)),
-                    )
-                ]
-            ),
+            query_filter=self.models.Filter(must=must),
             limit=limit,
             with_payload=True,
         )
