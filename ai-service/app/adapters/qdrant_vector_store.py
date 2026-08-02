@@ -147,6 +147,63 @@ class QdrantVectorStore:
         )
         return True
 
+    def delete_memo_versions(self, memo_id: str, index_version: str) -> None:
+        """Delete every generation for one Memo/version lifecycle tombstone."""
+
+        if not memo_id or not index_version:
+            raise ValueError("memo lifecycle selector must not be empty")
+        self.client.delete(
+            collection_name=self.collection_name,
+            points_selector=self.models.FilterSelector(
+                filter=self.models.Filter(
+                    must=[
+                        self.models.FieldCondition(
+                            key="memo_id",
+                            match=self.models.MatchValue(value=memo_id),
+                        ),
+                        self.models.FieldCondition(
+                            key="metadata.index_version",
+                            match=self.models.MatchValue(value=index_version),
+                        ),
+                    ]
+                )
+            ),
+            wait=True,
+        )
+
+    def list_lifecycle_records(
+        self, rebuild_generation: str, index_version: str
+    ) -> list[VectorSearchResult]:
+        """Read content-free records for one candidate rebuild generation."""
+
+        if not rebuild_generation or not index_version:
+            raise ValueError("memo lifecycle selector must not be empty")
+        records: list[VectorSearchResult] = []
+        offset: object | None = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=self.models.Filter(
+                    must=[
+                        self.models.FieldCondition(
+                            key="metadata.rebuild_generation",
+                            match=self.models.MatchValue(value=rebuild_generation),
+                        ),
+                        self.models.FieldCondition(
+                            key="metadata.index_version",
+                            match=self.models.MatchValue(value=index_version),
+                        ),
+                    ]
+                ),
+                limit=256,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            records.extend(_to_search_result(point) for point in points)
+            if offset is None:
+                return records
+
     def health(self) -> VectorStoreHealth:
         """Return a safe status snapshot without exposing Qdrant SDK types."""
 

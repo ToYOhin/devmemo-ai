@@ -47,6 +47,10 @@ class FakeModels:
     class Filter:
         must: list[object]
 
+    @dataclass
+    class FilterSelector:
+        filter: object
+
 
 @dataclass
 class FakeScoredPoint:
@@ -101,8 +105,46 @@ class FakeQdrantClient:
 
     def delete(self, collection_name, points_selector, wait):
         assert collection_name in self.collections
-        for point_id in points_selector.points:
-            self.points.pop(point_id, None)
+        if isinstance(points_selector, FakeModels.PointIdsList):
+            for point_id in points_selector.points:
+                self.points.pop(point_id, None)
+            return
+        conditions = points_selector.filter.must
+        for point_id, point in list(self.points.items()):
+            if all(self._matches(point, condition) for condition in conditions):
+                self.points.pop(point_id)
+
+    def scroll(
+        self,
+        collection_name,
+        scroll_filter,
+        limit,
+        offset,
+        with_payload,
+        with_vectors,
+    ):
+        assert collection_name in self.collections
+        assert offset is None
+        assert with_payload is True
+        assert with_vectors is False
+        points = [
+            FakeScoredPoint(point.id, 0.0, point.payload)
+            for point in self.points.values()
+            if all(self._matches(point, condition) for condition in scroll_filter.must)
+        ]
+        return points[:limit], None
+
+    @staticmethod
+    def _matches(point, condition):
+        key = condition.key
+        if key == "memo_id":
+            value = point.payload["memo_id"]
+        else:
+            value = point.payload.get("metadata", {}).get(
+                key.removeprefix("metadata.")
+            )
+        match = condition.match
+        return value in match.any if hasattr(match, "any") else value == match.value
 
     def get_collection(self, collection_name):
         assert collection_name in self.collections
@@ -171,6 +213,37 @@ def test_qdrant_adapter_pushes_active_generation_into_query():
         "memo_id",
         "metadata.rebuild_generation",
         "metadata.index_version",
+    ]
+
+
+def test_qdrant_adapter_lists_generation_and_deletes_all_memo_versions():
+    client = FakeQdrantClient()
+    store = QdrantVectorStore(client, FakeModels, 2, "devmemo-test")
+    for embedding_id, memo_id, generation in (
+        ("memo-a-old", "memo-a", "old"),
+        ("memo-a-next", "memo-a", "next"),
+        ("memo-b-next", "memo-b", "next"),
+    ):
+        store.upsert(
+            VectorRecord(
+                embedding_id,
+                memo_id,
+                (1.0, 0.0),
+                {
+                    "source_sequence": 1,
+                    "document_hash": "a" * 64,
+                    "rebuild_generation": generation,
+                    "index_version": "memo-v1",
+                },
+            )
+        )
+
+    records = store.list_lifecycle_records("next", "memo-v1")
+    store.delete_memo_versions("memo-a", "memo-v1")
+
+    assert sorted(record.memo_id for record in records) == ["memo-a", "memo-b"]
+    assert sorted(point.payload["memo_id"] for point in client.points.values()) == [
+        "memo-b"
     ]
 
 
