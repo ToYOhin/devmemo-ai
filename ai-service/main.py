@@ -497,8 +497,19 @@ async def answer_delegated_agent_request(
         raise HTTPException(status_code=404, detail="not found")
 
     try:
+        durable_retrieval = None
+        if settings.agent_rehydration_enabled:
+            durable_retrieval = getattr(
+                raw_request.app.state,
+                "durable_rehydration_orchestrator",
+                None,
+            )
+            if durable_retrieval is None:
+                raise RetrievalUnavailableError("Agent retrieval unavailable")
         result = await EvidenceAnswerAgent(
-            RetrievalService(embedding_service), provider
+            RetrievalService(embedding_service),
+            provider,
+            durable_retrieval,
         ).run_delegated(
             await raw_request.body(),
             AgentDelegationHeaders(signature or "", timestamp or ""),

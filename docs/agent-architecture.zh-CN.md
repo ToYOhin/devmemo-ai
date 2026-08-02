@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加 lifespan-owned Python client；R5-I12 已私有委托 Memos-owned capability；R5-I13 已增加带 snapshot recheck 与 request-memory materialization 的 injected durable orchestration；R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation/revision、授权 UID 查询下推和严格默认关闭的 lifespan ownership。durable runtime 仍未连接回答 Agent，也未公开可用。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加 lifespan-owned Python client；R5-I12 已私有委托 Memos-owned capability；R5-I13 已增加带 snapshot recheck 与 request-memory materialization 的 injected durable orchestration；R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation/revision、授权 UID 查询下推和严格默认关闭的 lifespan ownership；R5-I15 已让 verified answer Agent 在同一 opt-in 下选择 owned orchestrator、禁止 legacy fallback，并完成 disposable synthetic 单机产品路径证明。真实运行时与浏览器验收仍未验证。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -121,6 +121,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 27. **认证 capability delegation bridge — 已完成、未连接 client。** R5-I12 让 enabled Memos runtime 从认证 BFF path 一次读取 caller 与精确可见完整 Memo UID scope，对非空 scope 签发一个 opaque capability，并只把 ref 加入既有 signed internal answer request。空 current scope 不签发 capability，保留正常 no-context 行为。浏览器 request 与 safe response 均不包含 authority ref；disabled 模式保留原 memory delegation body。
 28. **durable rehydration orchestration — 已完成、未选择 runtime。** R5-I13 只接受 verified delegation、content-free candidate repository 与 I11C client protocol。它先过滤 candidate，再调用 client 一次，重新读取 current snapshot token，只在 request memory materialize 重新验证的 documents，并复用现有 authorized result。空 scope/candidate 不调用；所有 mismatch/failure 均为 content-free 且无 fallback。
 29. **无正文 durable runtime selection — 已完成、未连接回答路径。** R5-I14 让 A4 SQLite ledger 持有 active rebuild generation 与单调 snapshot revision，并在每次 lifecycle transition 的同一事务中改变 opaque token。vector adapter 把精确授权 Memo UID 集合下推到排序，只接受严格的 `memo-v1` sequence/hash/generation metadata，连接 applied ledger state，并拒绝重复、格式错误、含正文、stale、delete、quarantine 或并发变化结果。既有 rehydration opt-in 只在 memo-mode Qdrant selection 下于 lifespan state 构造 repository/orchestrator；disabled 启动不构造任何对象。`EvidenceAnswerAgent` 和 endpoint 仍未选择它。
+30. **durable 回答路径选择 — 已完成、opt-in。** R5-I15 为 `EvidenceAnswerAgent` 增加一个可选 async durable retrieval dependency。internal endpoint 只在既有 rehydration flag 下，从当前 app lifespan 注入已持有的 orchestrator；ownership 缺失或任何 durable failure 均映射既有安全 503，绝不 fallback memory。disabled 保持原 memory retrieval 行为。durable evidence 只用 server-owned Memo UID、source sequence 和 `memo-v1` 生成受控 Agent citation；vector/rehydration metadata 不能提供 title、tag、visibility 或 citation 字段。临时 SQLite、内存 vector 与 fake-client 证明已到达 answered trace，未使用网络。
 
 ## A1 验收结果
 
@@ -366,6 +367,14 @@ revision。repository 对问题生成 embedding，把精确授权 UID 集合下�
 缺失、重复、越权、stale、delete、quarantine、含正文或并发变化均 fail closed。既有
 `AI_AGENT_REHYDRATION_ENABLED` 只在 memo-mode Qdrant 被选择时于 FastAPI lifespan 持有 repository 和
 orchestrator。memory 默认值不变，回答 Agent 继续留待 R5-I15 接线。
+
+R5-I15 在不增加第二个 client、repository、ledger、transport、route 或配置开关的前提下连接已持有的
+orchestrator。Agent 在调用可选 async retrieval dependency 前先验证 delegation。durable result 只提供请求内
+context；其 server-owned citation 被映射到既有 Agent schema，title/tag 使用受控空值，identity 仅由
+`memo-v1`、Memo UID 与 source sequence 生成，不读取 rehydration/vector metadata。空 durable evidence 保留
+no-context 且不调用 Provider。runtime ownership 或 authority 缺失、rehydration failure、snapshot race、结果格式
+错误或 projection failure 均映射既有 retrieval-unavailable 503，绝不 fallback memory。disposable product-path
+proof 只使用临时 ledger、内存 vectors、合成 delegation 和 fake rehydration client，不主张真实运行时已验收。
 
 ## A4 本地 RAG 生命周期契约
 

@@ -36,7 +36,9 @@
 > R5-I13 adds injected durable candidate/rehydration orchestration with snapshot
 > recheck. R5-I14 adds a content-free vector/lifecycle adapter, ledger-owned
 > generation revision, authorized UID query pushdown, and default-disabled
-> lifespan ownership. The answer Agent still does not select that runtime.
+> lifespan ownership. R5-I15 selects that owned runtime in the verified answer
+> path without fallback and proves a disposable synthetic single-host flow.
+> Real Docker/authenticated-browser acceptance remains unverified.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -84,7 +86,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent answers still select only the in-memory complete-Memo runtime | R5-I14 now owns a reviewed content-free vector/lifecycle adapter and default-disabled durable orchestrator in lifespan state, but `EvidenceAnswerAgent` does not select it; process-local capability/replay state remains single-instance only | Connect the durable orchestrator to the answer Agent without fallback, prove the disposable single-host product path, and require shared atomic state before multi-instance use |
+| P0 | Durable Agent answer path lacks real runtime acceptance | R5-I15 now selects the lifespan-owned durable orchestrator under the existing opt-in and proves a disposable single-host flow without fallback; lifecycle dispatch/rebuild activation, live Qdrant/Memos, restart reconciliation, and authenticated browser evidence remain unverified | Complete the R5 acceptance audit, then obtain explicit authorization for disposable Docker/browser runtime proof; require shared atomic state before multi-instance use |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -394,6 +396,15 @@ Malformed, duplicate, unauthorized, stale, deleted, quarantined, content-bearing
 or racing results fail closed. The existing rehydration opt-in constructs the
 repository/orchestrator only for memo-mode Qdrant and clears lifespan state on
 shutdown. Memory defaults and the answer path remain unchanged.
+R5-I15 connects that owned orchestrator to `EvidenceAnswerAgent` only under the
+same rehydration opt-in. Delegation remains the first operation; the endpoint
+injects the object already held by its app lifespan and treats missing ownership
+as retrieval unavailable. Durable context and server-owned citations enter the
+existing Agent result without accepting vector/rehydration title, tags,
+visibility, or citation metadata. Every durable error maps to the existing safe
+503 with no memory fallback or Provider call. Disabled mode retains memory
+retrieval. A temporary SQLite/in-memory-vector/fake-client proof reaches the
+complete answer trace without network, Docker, Qdrant, or a real Provider.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -502,12 +513,12 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I14 has completed the content-free vector/lifecycle adapter and strict dormant
-runtime ownership without changing the memory answer path. The next narrow R5
-gate is R5-I15: make `EvidenceAnswerAgent` select the already-owned durable
-orchestrator only under the existing rehydration opt-in, prohibit fallback to
-legacy/raw-content retrieval, and prove the disposable synthetic single-host
-product path. Real browser/Docker acceptance remains a later explicit runtime
-authorization gate after that answer path is connected.
+R5-I15 has connected the lifespan-owned durable orchestrator to the verified
+answer path and completed the disposable synthetic product proof without legacy
+fallback. The next narrow gate is R5-I16: audit every R5 acceptance criterion,
+run the final local regressions and safety scans, document rollback and remaining
+runtime gaps, and prepare the explicit authorization checklist for disposable
+Docker/authenticated-browser verification. Do not claim real runtime acceptance
+until that separate authorization is granted and evidence is captured.
 Docker/browser proof remains later; encrypted transport and shared atomic
 replay/capability storage remain mandatory before multi-instance use.

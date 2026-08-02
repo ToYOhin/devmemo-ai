@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Protocol
 
 from app.domain.agent import (
     AgentAnswerResult,
@@ -14,6 +15,10 @@ from app.domain.agent import (
     SearchMemosToolCall,
     VisibleMemoEvidence,
 )
+from app.domain.durable_authorized_retrieval import (
+    AuthorizedRetrievalEvidence,
+    AuthorizedRetrievalResult,
+)
 from app.domain.grounded_answer import (
     GroundedAnswerContractError,
     GroundedAnswerFailureCode,
@@ -21,6 +26,7 @@ from app.domain.grounded_answer import (
     parse_provider_grounded_answer,
     validate_grounded_answer,
 )
+from app.domain.retrieval import RetrievalUnavailableError
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationHeaders,
@@ -38,12 +44,25 @@ class AgentProviderError(RuntimeError):
         super().__init__("Agent provider unavailable")
 
 
+class DurableAgentRetrieval(Protocol):
+    async def retrieve(
+        self, request: DelegatedAnswerRequest
+    ) -> AuthorizedRetrievalResult:
+        ...
+
+
 class EvidenceAnswerAgent:
     """Execute one authorized whole-Memo search without HTTP or persistence."""
 
-    def __init__(self, retrieval_service: RetrievalService, provider: object) -> None:
+    def __init__(
+        self,
+        retrieval_service: RetrievalService,
+        provider: object,
+        durable_retrieval: DurableAgentRetrieval | None = None,
+    ) -> None:
         self._retrieval_service = retrieval_service
         self._provider = provider
+        self._durable_retrieval = durable_retrieval
 
     async def run_delegated(
         self,
@@ -71,15 +90,31 @@ class EvidenceAnswerAgent:
             limit=request.limit,
             visibility=visibility,
         )
-        retrieved = self._retrieval_service.retrieve_authorized(
-            tool_call.question,
-            tool_call.limit,
-            tool_call.visibility.visible_memo_ids,
-        )
-        citations = tuple(
-            _safe_citation(citation, visibility)
-            for citation in retrieved.citations
-        )
+        if self._durable_retrieval is None:
+            retrieved = self._retrieval_service.retrieve_authorized(
+                tool_call.question,
+                tool_call.limit,
+                tool_call.visibility.visible_memo_ids,
+            )
+            citations = tuple(
+                _safe_citation(citation, visibility)
+                for citation in retrieved.citations
+            )
+            context = retrieved.context
+            protected_context_fragments = retrieved.protected_context_fragments
+        else:
+            try:
+                durable = await self._durable_retrieval.retrieve(request)
+                if not isinstance(durable, AuthorizedRetrievalResult):
+                    raise TypeError
+                citations = tuple(
+                    _safe_durable_citation(evidence, visibility)
+                    for evidence in durable.evidence
+                )
+                context = durable.context
+                protected_context_fragments = durable.protected_context_fragments
+            except Exception as error:
+                raise RetrievalUnavailableError("Agent retrieval unavailable") from error
         search_step = AgentStep(
             1,
             "tool",
@@ -99,9 +134,9 @@ class EvidenceAnswerAgent:
 
         answer, answer_citations = await self._answer(
             request.question,
-            retrieved.context,
+            context,
             citations,
-            retrieved.protected_context_fragments,
+            protected_context_fragments,
         )
         return AgentAnswerResult(
             answer=answer,
@@ -179,6 +214,25 @@ def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCi
         ),
     )
     return evidence.citation_for(visibility)
+
+
+def _safe_durable_citation(
+    evidence: AuthorizedRetrievalEvidence,
+    visibility: MemoVisibilityScope,
+) -> AgentCitation:
+    citation = evidence.citation
+    safe = VisibleMemoEvidence(
+        memo_id=citation.memo_uid,
+        embedding_id=(
+            f"{citation.index_version}-{citation.memo_uid}-{citation.source_sequence}"
+        ),
+        score=0.0,
+        title="",
+        summary="Authorized current Memo retrieved as durable evidence.",
+        source_refs=(f"memos/{citation.memo_uid}",),
+        metadata=EvidenceMetadata(index_version=citation.index_version),
+    )
+    return safe.citation_for(visibility)
 
 
 def _provider_name(provider: object) -> str:

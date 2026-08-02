@@ -6,12 +6,21 @@ import pytest
 
 from app.adapters.embedding import DeterministicEmbeddingProvider
 from app.adapters.vector_store import InMemoryVectorStore
+from app.domain.durable_authorized_retrieval import (
+    AuthorizedRetrievalEvidence,
+    AuthorizedRetrievalResult,
+    ServerOwnedCitation,
+)
+from app.domain.retrieval import RetrievalUnavailableError
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationError,
     sign_delegated_request,
 )
 from app.services.embedding_service import EmbeddingService
+from app.services.durable_authorized_retrieval import (
+    DurableAuthorizedRetrievalUnavailableError,
+)
 from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
 from app.services.memo_indexing import MemoIndexDocument, index_memo
 from app.services.retrieval_service import RetrievalService
@@ -77,16 +86,20 @@ def _agent_with_memos() -> tuple[EvidenceAnswerAgent, RecordingProvider]:
     return EvidenceAnswerAgent(RetrievalService(service), provider), provider
 
 
-def _delegated_call(visible_memo_uids: list[str], question: str = "Docker ports"):
+def _delegated_call(
+    visible_memo_uids: list[str],
+    question: str = "Docker ports",
+    memos_authority_ref: str | None = None,
+):
     timestamp = 1785499200
-    body = json.dumps(
-        {
-            "question": question,
-            "limit": 3,
-            "visible_memo_uids": visible_memo_uids,
-        },
-        separators=(",", ":"),
-    ).encode("utf-8")
+    payload: dict[str, object] = {
+        "question": question,
+        "limit": 3,
+        "visible_memo_uids": visible_memo_uids,
+    }
+    if memos_authority_ref is not None:
+        payload["memos_authority_ref"] = memos_authority_ref
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     headers = sign_delegated_request(
         "POST", INTERNAL_ANSWER_PATH, body, timestamp, "test-agent-secret"
     )
@@ -99,6 +112,89 @@ def _keys(value: object) -> set[str]:
     if isinstance(value, list):
         return set().union(*(_keys(item) for item in value))
     return set()
+
+
+class FailingLegacyRetrieval:
+    def retrieve_authorized(self, *args, **kwargs):
+        raise AssertionError("durable selection must not call legacy retrieval")
+
+
+class FakeDurableRetrieval:
+    def __init__(self, result: AuthorizedRetrievalResult) -> None:
+        self.result = result
+        self.calls = 0
+        self.error: Exception | None = None
+
+    async def retrieve(self, request):
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+def _durable_result() -> AuthorizedRetrievalResult:
+    return AuthorizedRetrievalResult(
+        (
+            AuthorizedRetrievalEvidence(
+                "evidence-1",
+                "Docker ports use the host mapping declared in Compose.",
+                ServerOwnedCitation("memo-visible", 7),
+            ),
+        )
+    )
+
+
+def test_agent_selects_durable_retrieval_after_delegation_verification():
+    durable = FakeDurableRetrieval(_durable_result())
+    provider = RecordingProvider()
+    agent = EvidenceAnswerAgent(FailingLegacyRetrieval(), provider, durable)
+    body, headers, now = _delegated_call(
+        ["memo-visible"], memos_authority_ref="rehydration-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+    payload = result.to_dict()
+
+    assert durable.calls == 1
+    assert len(provider.prompts) == 1
+    assert payload["citations"][0]["memo_id"] == "memo-visible"
+    assert payload["citations"][0]["source_refs"] == ["memos/memo-visible"]
+    assert payload["citations"][0]["metadata"] == {
+        "memo_type": "plain",
+        "tags": [],
+        "index_version": "memo-v1",
+    }
+    assert "content" not in _keys(payload)
+
+
+def test_agent_durable_empty_result_does_not_call_provider():
+    durable = FakeDurableRetrieval(AuthorizedRetrievalResult(()))
+    provider = RecordingProvider()
+    agent = EvidenceAnswerAgent(FailingLegacyRetrieval(), provider, durable)
+    body, headers, now = _delegated_call(
+        ["memo-visible"], memos_authority_ref="rehydration-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert result.trace.terminal_state == "no_context"
+    assert provider.prompts == []
+
+
+def test_agent_durable_failure_never_falls_back_or_calls_provider():
+    durable = FakeDurableRetrieval(_durable_result())
+    durable.error = DurableAuthorizedRetrievalUnavailableError()
+    provider = RecordingProvider()
+    agent = EvidenceAnswerAgent(FailingLegacyRetrieval(), provider, durable)
+    body, headers, now = _delegated_call(
+        ["memo-visible"], memos_authority_ref="rehydration-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
+
+    with pytest.raises(RetrievalUnavailableError):
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert durable.calls == 1
+    assert provider.prompts == []
 
 
 def test_agent_runs_exactly_one_authorized_search_and_returns_safe_evidence(monkeypatch):
