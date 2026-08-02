@@ -30,9 +30,11 @@
 > unwired single-host transport composition with a dedicated process-local request
 > replay store and synthetic call-order/concurrency proof. R5-I10 adds an
 > unregistered single-host `net/http` handler/client contract with strict HTTP
-> projection, fixed five-second timeout, and in-memory/fake-transport proof. The
-> feature remains disabled by default. No route registration, listener, runtime
-> secret lifecycle, Agent runtime wiring, remote deployment, or general-public
+> projection, fixed five-second timeout, and in-memory/fake-transport proof.
+> R5-I11A adds strict, disabled-by-default Go/Python runtime configuration for
+> a dedicated current/previous rehydration keyring and one AI-side Memos origin.
+> The feature remains disabled by default. No route registration, listener,
+> client lifecycle, Agent runtime wiring, remote deployment, or general-public
 > availability is delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
@@ -336,6 +338,14 @@ LLM provider.
    recorders, in-memory handler calls, and fake transports. No route, listener,
    environment/config field, runtime secret source, real socket, or Agent runtime
    integration is added.
+24. **Dedicated rehydration runtime configuration — complete, unwired.**
+   R5-I11A adds matching Go/Python environment contracts that remain secret-free
+   while disabled and require the primary Agent flag before opt-in. An enabled
+   runtime requires one canonical unpadded base64url 32-byte current secret, an
+   optional distinct previous secret, strict separation from the answer-
+   delegation secret, and one credential-free HTTP(S) Memos origin on the AI
+   side. Pure settings tests add no key generation, route/client construction,
+   listener, timer, persistence, or real secret.
 
 ## Acceptance criteria for the first Agent path
 
@@ -652,6 +662,23 @@ data. Runtime secret sourcing and rotation, shutdown ownership, Docker/browser
 end-to-end proof, and AI runtime selection require later explicit authorization.
 Encrypted transport and shared atomic replay/capability storage remain mandatory
 before multi-instance use.
+
+R5-I11A establishes a third, purpose-scoped secret domain instead of reusing
+the Memos session secret or `AI_AGENT_INTERNAL_SECRET`. The deployment boundary
+injects `AI_AGENT_REHYDRATION_SECRET_CURRENT` and an optional
+`AI_AGENT_REHYDRATION_SECRET_PREVIOUS` into both processes; neither service
+creates, distributes, stores, logs, or projects them. Both contracts discard
+the supplied values while `AI_AGENT_REHYDRATION_ENABLED=false`. Enabling
+rehydration also requires `AI_AGENT_ENABLED=true`; malformed, duplicate, or
+delegation-secret-equal values fail startup validation. The AI contract also
+requires exactly one credential-free HTTP(S) origin in
+`AI_AGENT_REHYDRATION_MEMOS_URL`.
+
+The keyring is startup-fixed, capped at current plus previous, and has no timer
+or dynamic reload. Request verification against both keys, matching-key response
+signing, overlap retirement, Memos route ownership, and AI client shutdown are
+the separately testable R5-I11B/I11C slices. No route/client or real secret is
+created by R5-I11A.
 
 ## A4 local RAG lifecycle contract
 

@@ -20,7 +20,8 @@
 > parity proof，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver 与有界 registry
 > 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明，
 > R5-I10 已增加尚未注册的单机 HTTP handler/client contract、严格投影、固定五秒 timeout 与
-> recorder/fake-transport 证明。route/listener、runtime secret 生命周期、lifecycle dispatcher、Agent runtime
+> recorder/fake-transport 证明，R5-I11A 已增加独立 current/previous rehydration keyring 与 AI 侧单一 Memos
+> origin 的 Go/Python 严格默认关闭配置。route/listener、client lifecycle、lifecycle dispatcher、Agent runtime
 > 接线和可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
@@ -55,7 +56,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I10 已证明包裹 R5-I9、尚未注册的单机 HTTP handler/client，但仍无 route/listener、runtime secret sourcing/rotation、shutdown ownership、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权 runtime secret/lifecycle ownership 与 dormant route/client registration，再授权 AI runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I11A 已固定独立、默认关闭的 current/previous keyring 与 AI 侧 Memos origin，但仍无 matching-key runtime verification、route registration、client lifecycle、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 完成 R5-I11B Memos registration 与 R5-I11C Python client lifecycle，再单独连接 durable runtime selection |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -244,6 +245,11 @@ value 与成功关闭的 body。verification 前拒绝是无正文、无签名�
 freshness、nonce、snapshot token、status 与 body。client replay 仍属于 AI R5-I4 边界。recorder、内存 handler
 与 fake-transport 测试没有增加 registration、listener、环境变量/配置字段、runtime secret lifecycle、真实
 socket、Store 访问或真实数据。
+R5-I11A 增加对称的 Go/Python 默认关闭配置 contract。opt-in 要求先开启总 Agent flag、一个规范的无填充
+base64url 32-byte current secret、可选且不同的 previous secret、与 answer-delegation secret 严格隔离，
+以及 AI 侧单一无凭据 HTTP(S) Memos origin。disabled settings 不保留已提供的 secret 或 URL。deployment
+boundary 分别向两个进程注入值；服务不创建、分发、持久化、记录或投影它们。该启动时固定的双 key contract
+没有增加 route/client、timer、动态 reload、真实 secret、网络或数据。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -313,10 +319,9 @@ socket、Store 访问或真实数据。
 
 ## 下一授权闸门
 
-R5-I10 已在不注册 route 或打开 listener 的前提下完成单独授权的 **disabled 单机 HTTP adapter contract**。
-下一闸门是单独评审 R5-I11 runtime secret sourcing、rotation/overlap、shutdown ownership 与 dormant 单机
-route/client registration。该闸门必须定义 rollback condition；未经另一项明确 opt-in，不得使用真实账号或
-Memo 数据。它仍不得同时接 `EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore selection、lifecycle
-runtime、Compose 默认值、真实数据或多实例主张。Docker/浏览器端到端证明仍被这些 runtime ownership 与
-registration 决策阻塞。任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability
-storage；AI runtime selection 仍是后续独立授权闸门。
+R5-I11A 已在不创建 route、client 或 secret 的前提下完成已批准的 **独立 rehydration 配置 contract**。
+下一项已批准切片是 R5-I11B：增加启动时固定的 current/previous verification、matching-key response signing，
+并在现有 Memos listener 上实现默认关闭的 registration。不得增加新 listener/port，也不得连接
+`EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore selection、lifecycle runtime、Compose 默认值、
+真实数据或多实例主张。R5-I11C 随后负责 Python client/replay lifecycle 与确定性 shutdown。Docker/浏览器
+证明继续后置；任何多实例使用前仍需加密 transport 与 shared atomic replay/capability storage。
