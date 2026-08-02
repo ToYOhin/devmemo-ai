@@ -294,6 +294,54 @@ func TestEvidenceRehydrationResponseMatchesCrossLanguageFixture(t *testing.T) {
 	require.Equal(t, "rehydration-1", result.Response.Documents[0].SelectionRef)
 }
 
+func TestEvidenceRehydrationResponseVerifierAuthenticatesBeforeExactParsing(t *testing.T) {
+	fixture := loadEvidenceRehydrationTransportFixture(t)
+	request := verifiedFixtureEvidenceRehydrationRequest(t, fixture)
+	seconds, err := strconv.ParseInt(fixture.Response.Timestamp, 10, 64)
+	require.NoError(t, err)
+	body := []byte(fixture.Response.RawBody)
+	headers := EvidenceRehydrationResponseHeaders{
+		Signature:    fixture.Response.Signature,
+		Timestamp:    fixture.Response.Timestamp,
+		RequestNonce: fixture.Response.RequestNonce,
+		Version:      fixture.Version,
+	}
+
+	result, err := VerifyEvidenceRehydrationResponse(
+		body,
+		fixture.Response.Status,
+		headers,
+		time.Unix(seconds+30, 0),
+		time.Minute,
+		fixture.Request.Nonce,
+		request,
+		fixture.Secret,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, result.Response)
+
+	for _, mutate := range []func(*EvidenceRehydrationResponseHeaders){
+		func(value *EvidenceRehydrationResponseHeaders) { value.Signature = "sha256=" + strings.Repeat("0", 64) },
+		func(value *EvidenceRehydrationResponseHeaders) { value.RequestNonce = "different-response-nonce-0001" },
+		func(value *EvidenceRehydrationResponseHeaders) { value.Timestamp = strconv.FormatInt(seconds-61, 10) },
+		func(value *EvidenceRehydrationResponseHeaders) { value.Version = "wrong-version" },
+	} {
+		tampered := headers
+		mutate(&tampered)
+		_, err := VerifyEvidenceRehydrationResponse(
+			append(body, []byte(` {"raw":"memo"}`)...),
+			fixture.Response.Status,
+			tampered,
+			time.Unix(seconds+30, 0),
+			time.Minute,
+			fixture.Request.Nonce,
+			request,
+			fixture.Secret,
+		)
+		require.EqualError(t, err, "authorized retrieval unavailable")
+	}
+}
+
 func TestEvidenceRehydrationTransportUsesIndependentSignatureDomains(t *testing.T) {
 	fixture := loadEvidenceRehydrationTransportFixture(t)
 	request := verifiedFixtureEvidenceRehydrationRequest(t, fixture)

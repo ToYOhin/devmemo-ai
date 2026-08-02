@@ -491,3 +491,32 @@ registry 使旧 authority reference 失效；二者都不主张 restart persiste
 Store/网络/数据或改变 Compose/defaults。下一闸门必须单独评审 disabled single-host HTTP adapter 与 runtime
 secret/timeout lifecycle；任何多实例使用前仍需加密 transport、shared atomic replay/capability storage、
 密钥轮换与独立威胁评审，AI runtime selection 继续后置。
+
+## ADR-064：R5 单机 HTTP adapter 保持未注册，并对未验证输入使用无正文 404
+
+R5-I10 只在 R5-I9 composition 外增加 dormant 标准库 `net/http` handler/client 对象，不注册 route、不启动
+listener、不绑定 port，也不读取环境变量或配置。handler 只接受精确
+`POST /internal/ai/agent/evidence/rehydrate`、无 query/encoded path、四个 R5-I5 request header 各一个值、精确
+`application/json`，以及 1 byte 至 32 KiB 的已知非 chunked body；有界读取、唯一 JSON value、body close 与
+request context 均必须在进入 R5-I9 前 fail closed。query、cookie 或浏览器 header 不能补充 caller、scope、
+UID、binding、authority token 或 secret。
+
+未通过该 HTTP envelope 或 R5-I9 verification 的输入没有可信 snapshot token，因此统一投影为无正文、无
+response HMAC 且 `Cache-Control: no-store` 的 404。不得伪造 signed failure，也不得回显 raw error、nonce、
+authority reference、snapshot token 或 secret。R5-I9 返回的 exact signed 200/503 只允许逐字节映射 status、
+body、四个 response HMAC header、`application/json` 与 `no-store`；不得增加 envelope、identity、visibility、
+Memo UID、authority reference、debug header 或 cacheable response。
+
+client constructor 只接受单一 base URL、scoped secret、clock 与 `RoundTripper`。其 `http.Client.Timeout` 固定为
+五秒，禁止 redirect follow，不实现 automatic retry；每次调用只发送一次 exact POST。response body 必须有界
+读取并成功关闭，response header 必须唯一且符合 allowlist，context cancellation 必须 fail closed。R5-I5 Go
+transport 新增 response verifier，在解析正文前绑定 response freshness、request nonce、derived snapshot token、
+status、exact body 与 response-only HMAC。client-side response replay 仍只属于 AI R5-I4 process-local store，
+Go handler 不建立第二份 client replay store。
+
+测试只使用 `httptest.ResponseRecorder`、内存 handler 调用、fake `RoundTripper`、合成 secret/capability/Memo UID
+与 fake clock；没有建立真实 socket、访问 Store/网络/Provider/Qdrant/账号/Memo/volume 或真实数据。本阶段不
+决定 runtime secret sourcing、rotation、双 secret overlap 或 shutdown ownership，也不证明 restart
+persistence、cross-host confidentiality 或 multi-instance safety。R5-I11 必须单独评审这些 runtime lifecycle
+与 dormant registration 决策；任何多实例使用前仍需加密 transport、shared atomic replay/capability storage、
+密钥轮换与独立威胁评审，AI runtime selection 继续后置。

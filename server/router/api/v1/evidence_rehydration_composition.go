@@ -121,7 +121,17 @@ func (composition *evidenceRehydrationComposition) handle(
 	body []byte,
 	headers aiagent.EvidenceRehydrationRequestHeaders,
 ) (evidenceRehydrationCompositionResult, error) {
-	if composition == nil {
+	return composition.handleContext(context.Background(), method, path, body, headers)
+}
+
+func (composition *evidenceRehydrationComposition) handleContext(
+	ctx context.Context,
+	method string,
+	path string,
+	body []byte,
+	headers aiagent.EvidenceRehydrationRequestHeaders,
+) (evidenceRehydrationCompositionResult, error) {
+	if composition == nil || ctx == nil || ctx.Err() != nil {
 		return evidenceRehydrationCompositionResult{}, errEvidenceRehydrationCompositionUnavailable
 	}
 	now, err := composition.clock.Now()
@@ -155,16 +165,16 @@ func (composition *evidenceRehydrationComposition) handle(
 	if err != nil || !validEvidenceRehydrationCompositionResolution(request, resolution) {
 		return composition.signedFailure(request, headers.Nonce, now)
 	}
-	authenticatedContext, err := resolution.authenticatedContext(context.Background())
+	authenticatedContext, err := resolution.authenticatedContext(ctx)
 	if err != nil {
 		return composition.signedFailure(request, headers.Nonce, now)
 	}
 	reader, err := composition.readerFactory(authenticatedContext, resolution.binding, resolution.authorityToken)
-	if err != nil || reader == nil {
+	if err != nil || reader == nil || ctx.Err() != nil {
 		return composition.signedFailure(request, headers.Nonce, now)
 	}
 	response, err := aiagent.BuildEvidenceRehydrationResponse(request, resolution.binding, reader)
-	if err != nil {
+	if err != nil || ctx.Err() != nil {
 		return composition.signedFailure(request, headers.Nonce, now)
 	}
 	responseBody, err := json.Marshal(response)

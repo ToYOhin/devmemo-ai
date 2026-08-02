@@ -28,10 +28,12 @@
 > R5-I8 adds an unwired process-local authority capability issuer/resolver with
 > a bounded in-memory registry and synthetic concurrency proof. R5-I9 adds an
 > unwired single-host transport composition with a dedicated process-local request
-> replay store and synthetic call-order/concurrency proof. The feature remains
-> disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
-> automatic indexing, remote deployment, or general-public availability is
-> delivered.
+> replay store and synthetic call-order/concurrency proof. R5-I10 adds an
+> unregistered single-host `net/http` handler/client contract with strict HTTP
+> projection, fixed five-second timeout, and in-memory/fake-transport proof. The
+> feature remains disabled by default. No route registration, listener, runtime
+> secret lifecycle, Agent runtime wiring, remote deployment, or general-public
+> availability is delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -324,6 +326,16 @@ LLM provider.
    concurrent duplicate handling, and new-store invalidation. It registers no
    HTTP route/client and adds no runtime secret/configuration, timer, retry,
    persistence, real data, or multi-instance claim.
+23. **Disabled single-host HTTP adapter — complete, unwired.** R5-I10 adds an
+   unregistered standard-library handler and client around R5-I9. The handler
+   accepts only the exact internal POST envelope, projects unverified input as
+   a content-free non-cacheable 404, and maps only exact signed 200/503 results.
+   The client fixes a five-second timeout, makes one injected RoundTripper call,
+   closes bounded bodies, authenticates the exact response before parsing, and
+   leaves response replay with the AI-side R5-I4 boundary. Tests use only
+   recorders, in-memory handler calls, and fake transports. No route, listener,
+   environment/config field, runtime secret source, real socket, or Agent runtime
+   integration is added.
 
 ## Acceptance criteria for the first Agent path
 
@@ -614,12 +626,32 @@ Success is only an exact signed R5-I6 `200` response. Caller identity, full UID
 scope, authenticated-context token, authority reference, and raw failures have
 no response or observability projection.
 
-R5-I9 contains no `net/http` registration or client, runtime secret source,
-environment variable, port, volume, migration, persistence, network access,
-answer-path import, real Store access, or real data. A disabled single-host HTTP
-adapter and its secret/timeout lifecycle require another review. Encrypted
-transport and shared atomic replay/capability storage remain mandatory before
-multi-instance use; AI runtime selection remains later.
+R5-I10 wraps that composition in dormant standard-library HTTP objects without
+registering a route or opening a listener. The handler requires exact
+`POST /internal/ai/agent/evidence/rehydrate`, one value for each request HMAC
+header, exact `application/json`, a known non-chunked body length from 1 byte to
+32 KiB, one JSON value, and a successfully closed request body before entering
+R5-I9. Any pre-verification rejection is a bodyless, unsigned, non-cacheable
+404. Verified success or downstream failure maps only the exact body, status,
+four response HMAC headers, JSON content type, and `Cache-Control: no-store`.
+
+The dormant client accepts only constructor-injected base URL, scoped secret,
+clock, and `RoundTripper`. It fixes `http.Client.Timeout` at five seconds,
+disables redirect following, performs one POST without retry, bounds and closes
+the response body, rejects duplicate, cacheable, identity, or debug response
+headers, and verifies freshness, request nonce, snapshot token, status, body,
+and response HMAC before exact parsing. Client response replay remains solely
+the AI-side R5-I4 store; the Go handler does not add a second client replay
+store. Request contexts reach the restored server auth context and cancellation
+fails closed.
+
+R5-I10 contains no route registration, listener, environment variable, config
+field, runtime secret source, rotation/overlap policy, port, volume, migration,
+persistence, real network access, answer-path import, real Store access, or real
+data. Runtime secret sourcing and rotation, shutdown ownership, Docker/browser
+end-to-end proof, and AI runtime selection require later explicit authorization.
+Encrypted transport and shared atomic replay/capability storage remain mandatory
+before multi-instance use.
 
 ## A4 local RAG lifecycle contract
 
