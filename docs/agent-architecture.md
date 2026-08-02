@@ -23,7 +23,8 @@
 > process-local replay contract entirely in process. R5-I5 proves Go/Python
 > canonical and exact-payload parity against the same synthetic fixture. R5-I6
 > defines the pure Go current-authority reader boundary and proves its
-> all-or-nothing projection with an in-memory fake. The feature remains
+> all-or-nothing projection with an in-memory fake. R5-I7 adds an unwired real
+> SQLite current-authority reader with temporary-database parity and race proofs. The feature remains
 > disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
@@ -292,6 +293,15 @@ LLM provider.
    rejection of update/delete, partial, duplicate, stale, mixed-snapshot, and
    adapter failures. No real Store, visibility resolver, route, replay, HMAC,
    runtime configuration, persistence, network, or data is connected.
+20. **Real single-host SQLite current-authority reader — complete, unwired.**
+   R5-I7 derives caller identity only from Memos' internal authentication
+   context, reuses the shared Memo visibility scope, and reads the current
+   normal caller, bounded requested UIDs, comment relation, complete content,
+   and latest A4 source event through one read-only SQLite snapshot. A latest
+   delete, unknown version, stale document, ineligible Memo, missing row, or
+   any concurrent database commit fails the entire response. The adapter is
+   not registered with HTTP or runtime and has no real-data or multi-instance
+   claim.
 
 ## Acceptance criteria for the first Agent path
 
@@ -500,6 +510,28 @@ tombstoned, changed, malformed, or mixed row returns only
 in-memory fake and does not prove real-store transaction atomicity. A real
 Memos Store reader, HTTP handler/client, replay wiring, runtime secret/config,
 and AI runtime selection all require separate authorization.
+
+R5-I7 supplies the first real reader implementation, scoped deliberately to
+SQLite and still unwired. Its constructor obtains caller ID only from the
+Memos authentication context; the R5 request and opaque binding cannot carry
+or override identity or visibility. It shares the exact authenticated
+visibility scope used by `ListMemos`, then opens one read-only transaction on a
+dedicated SQLite connection. The transaction verifies the caller is still a
+normal user and uses a bounded requested-UID CTE to select only normal,
+noncomment, nonblank, currently visible Memos. Each selected Memo must join its
+latest outbox event, which must remain a `memo-v1` upsert whose stored source
+document equals the current Memos body. Memos content is the returned body;
+outbox metadata cannot authorize visibility, identity, or citation.
+
+The reader checks SQLite `data_version` before and after the transaction. Any
+commit during the read—including content update, delete, or visibility change—
+invalidates the whole snapshot. R5-I6 still owns exact UID, sequence, hash,
+version, request-order, and response projection checks. Temporary SQLite tests
+cover visibility parity, comment/archive/blank/tombstone rejection, missing or
+inconsistent source state, concurrent changes, and fixed errors. This proves
+only the existing SQLite schema and single-host process. It does not prove
+MySQL/PostgreSQL parity and adds no capability issuer, route/client, HMAC/replay
+wiring, runtime configuration, real data, or multi-instance support.
 
 ## A4 local RAG lifecycle contract
 

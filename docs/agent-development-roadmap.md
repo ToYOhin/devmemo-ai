@@ -21,8 +21,9 @@
 > HMAC, freshness, exact parsing, and bounded process-local replay. R5-I5 adds
 > unwired Go/Python canonical and exact-payload parity against the shared fixture.
 > R5-I6 adds the unwired pure Go current-authority reader contract and in-memory
-> all-or-nothing parity proof. No real Memos Store reader, HTTP rehydration
-> adapter, lifecycle route, dispatcher,
+> all-or-nothing parity proof. R5-I7 adds the unwired real single-host SQLite
+> current-authority reader and temporary-database parity proof. No HTTP rehydration
+> adapter, authority-capability issuer/resolver, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -71,7 +72,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I6 defines and fake-proves the single-host Memos current-authority reader boundary, but there is no real Store reader, HTTP route/client, replay wiring, runtime secret/configuration, shared replay store, or runtime selection, so no durable path serves answers | Separately authorize and prove the real single-host Store reader, then the transport and AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I7 now proves an unwired SQLite current-authority reader against temporary synthetic Memos, but there is no authority-capability issuer/resolver, HTTP route/client, replay wiring, runtime secret/configuration, shared replay store, or runtime selection, so no durable path serves answers | Separately authorize the process-local authority capability, then the transport handler/client and AI runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -284,6 +285,18 @@ selection ordering, exact R5-I3 response projection, and all-or-nothing failure
 for update/delete, partial, duplicate, stale, mixed-snapshot, and adapter errors.
 No real Store, visibility resolver, HTTP, HMAC/replay wiring, runtime config,
 persistence, network, or real data is added.
+R5-I7 binds that protocol to the real single-host SQLite Store boundary without
+registering a route or runtime. Caller identity comes only from Memos' internal
+authentication context; the reader rechecks the normal caller row and uses the
+same visibility scope as `ListMemos`. A bounded UID CTE reads normal, noncomment,
+nonblank Memos and each Memo's latest A4 source event in one read-only snapshot.
+Only a current `memo-v1` upsert whose source document equals current Memos content
+is returned; R5-I6 then rechecks sequence, hash, version, UID correspondence, and
+response order. SQLite `data_version` brackets the transaction, so any concurrent
+commit during the read rejects the whole result. Temporary SQLite tests cover
+visibility parity, update/delete/visibility races, lifecycle/source mismatch,
+schema/transaction failure, and content-free errors. This is SQLite-only parity,
+not MySQL/PostgreSQL, HTTP, real-data, or multi-instance proof.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -392,13 +405,14 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5 is now ready for a separately authorized **real single-host Memos
-current-authority reader** slice. That stage would have to bind the R5-I6
-protocol to existing Memos authentication, visibility, comment relation, row
-state, content, and source-sequence data through one demonstrably atomic Store
-read, while retaining exact all-or-nothing failure. It must be reviewed before
-implementation because it crosses from pure fakes into real authority/store
-code. HTTP route/client, runtime secret/configuration, replay wiring, AI runtime
-selection, real-data opt-in, and lifecycle automation remain later independent
-gates. Encrypted transport and shared replay storage remain mandatory before
-any multi-instance use.
+R5 is now ready for a separately authorized **process-local Memos authority
+capability issuer/resolver** slice. R5-I7 can derive caller ID from an existing
+authenticated Memos context, but a later internal rehydration request still has
+no authorized way to recover that context from `memos_authority_ref`. The next
+slice may define and fake-prove a bounded, expiring, single-host registry that
+issues opaque references only from authenticated Memos context and resolves
+them to server-owned caller binding without exposing identity or visibility.
+It must remain unwired to HTTP, answer runtime, real data, secrets, Compose, and
+AI runtime selection. HTTP handler/client plus HMAC/replay wiring remains a
+later gate; encrypted transport and shared replay/capability storage remain
+mandatory before any multi-instance use.
