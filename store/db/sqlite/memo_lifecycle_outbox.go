@@ -97,7 +97,15 @@ func (d *DB) UpdateMemoWithLifecycleEvent(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read updated memo lifecycle snapshot")
 	}
-	eventType, err := classifyUpdatedMemoLifecycleEvent(snapshot, request)
+	var isComment bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM memo_relation WHERE memo_id = ? AND type = 'COMMENT'
+		)
+	`, update.ID).Scan(&isComment); err != nil {
+		return nil, errors.Wrap(err, "failed to read updated memo lifecycle relation")
+	}
+	eventType, err := classifyUpdatedMemoLifecycleEvent(snapshot, isComment, request)
 	if err != nil {
 		return nil, err
 	}
@@ -296,8 +304,18 @@ func nullableStringPointer(value sql.NullString) *string {
 
 func classifyUpdatedMemoLifecycleEvent(
 	snapshot memoLifecycleSnapshot,
+	isComment bool,
 	request *store.MemoLifecycleEventRequest,
 ) (store.MemoLifecycleEventType, error) {
+	if isComment {
+		if err := request.ValidateFor(store.MemoLifecycleEventDelete); err != nil {
+			return "", err
+		}
+		if request.Reason != "became_comment" {
+			return "", errors.New("comment memo requires became_comment lifecycle reason")
+		}
+		return store.MemoLifecycleEventDelete, nil
+	}
 	if snapshot.RowStatus != store.Normal {
 		if err := request.ValidateFor(store.MemoLifecycleEventDelete); err != nil {
 			return "", err
