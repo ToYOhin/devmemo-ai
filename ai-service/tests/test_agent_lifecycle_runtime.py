@@ -15,7 +15,10 @@ from app.services.agent_lifecycle_runtime import (
     MemoLifecycleRuntime,
     QdrantLifecycleVectorWriter,
     _manifest_digest,
+    build_memo_lifecycle_runtime,
 )
+from app.services.embedding_service import EmbeddingService
+from app.settings import AiSettings
 
 
 class FakeLifecycleStore(InMemoryVectorStore):
@@ -128,3 +131,42 @@ def test_lifecycle_tombstone_removes_every_generation(tmp_path: Path):
 
     assert runtime.process(delete).status == "applied"
     assert store.search((1.0,) * store.dimension) == []
+
+
+def test_runtime_builder_is_default_disabled_without_constructing_ledger(
+    tmp_path: Path,
+):
+    service = EmbeddingService()
+
+    assert (
+        build_memo_lifecycle_runtime(
+            AiSettings(),
+            service,
+            database=tmp_path / "unused.db",
+            ledger_factory=lambda _: (_ for _ in ()).throw(AssertionError()),
+        )
+        is None
+    )
+
+
+def test_runtime_builder_selects_only_generation_capable_qdrant_contract(
+    tmp_path: Path,
+):
+    provider = DeterministicEmbeddingProvider()
+    store = FakeLifecycleStore(provider.dimension)
+    service = EmbeddingService(provider, store)
+    settings = AiSettings(
+        agent_enabled=True,
+        agent_rehydration_enabled=True,
+        agent_lifecycle_enabled=True,
+        agent_lifecycle_generation="generation-next",
+        index_mode="memo",
+        vector_store="qdrant",
+    )
+
+    runtime = build_memo_lifecycle_runtime(
+        settings, service, database=tmp_path / "ledger.db"
+    )
+
+    assert runtime is not None
+    assert runtime.writer.generation == "generation-next"
