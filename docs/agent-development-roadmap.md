@@ -24,7 +24,8 @@
 > all-or-nothing parity proof. R5-I7 adds the unwired real single-host SQLite
 > current-authority reader and temporary-database parity proof. R5-I8 adds the
 > unwired process-local authority capability issuer/resolver and bounded registry
-> proof. No HTTP rehydration adapter, HMAC/replay runtime composition, lifecycle route, dispatcher,
+> proof. R5-I9 adds the unwired single-host transport composition and dedicated
+> process-local request-replay proof. No HTTP rehydration adapter, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -73,7 +74,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I8 now proves an unwired process-local authority capability over the R5-I7 SQLite reader boundary, but there is no HTTP route/client, HMAC/replay runtime composition, runtime secret/configuration, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize the single-host transport handler/client and replay composition, then AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I9 now proves an unwired single-host composition from request verification through signed response, but there is no HTTP route/client, runtime secret/configuration, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize a disabled single-host HTTP adapter and secret/timeout lifecycle, then AI runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -313,6 +314,21 @@ failure projection, and one-success concurrent consume. No HTTP, replay-store
 reuse, runtime configuration, persistence, database, network, or real data is
 added; multi-instance use still requires encrypted transport and shared atomic
 capability/replay storage.
+R5-I9 adds an unwired pure Go composition. It explicitly injects the scoped
+secret, bounded request age, clock, a dedicated fixed-capacity request replay
+store, the R5-I8 registry, and a reader factory. R5-I5 verification precedes
+nonce consumption; nonce consumption precedes capability resolution; the
+private caller/scope/binding/token resolution is revalidated before a fresh
+server auth context reaches the one-call reader factory and R5-I6 projection.
+Verified downstream failures become only an exact R5-I5-signed 503; unverified
+requests and signing failures return no response projection and the same fixed
+local error. The request replay and capability stores remain independent and
+process-local, the future client timeout remains five seconds, and automatic
+retry remains disabled. Synthetic tests cover exact signed success, verification
+order, nonce and capability single-use, UID scope, binding/token mismatch,
+reader one-call, fixed signed failure, concurrent duplicate handling, and
+new-store invalidation. No HTTP route/client, runtime secret source, timer,
+configuration, persistence, database/network access, or real data is added.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -421,14 +437,14 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I8 has completed the separately authorized **process-local Memos authority
-capability issuer/resolver** without runtime wiring. The next gate is a separately
-reviewed single-host rehydration transport composition: bind the already-proven
-R5-I5 request verification, a dedicated bounded request replay boundary, R5-I8
-consume, R5-I7 reader, R5-I6 projection, and R5-I5 response signing through a
-strict Memos-owned handler/client contract. That gate must decide runtime secret
-and timeout configuration explicitly and still remain disabled and separate from
-`EvidenceAnswerAgent`, `RetrievalService`, VectorStore selection, lifecycle
-runtime, Compose defaults, and real data. Encrypted transport and shared atomic
+R5-I9 has completed the separately authorized **single-host rehydration
+transport composition contract** without registering a runtime. The next gate
+is a separately reviewed, disabled single-host HTTP adapter and runtime
+secret/timeout lifecycle: bind one strict internal route/client to the R5-I9
+composition, decide secret sourcing/rotation and shutdown ownership, enforce the
+existing five-second client timeout without retry, and retain exact signed
+response parsing. It must remain separate from `EvidenceAnswerAgent`, current
+`RetrievalService`, VectorStore selection, lifecycle runtime, Compose defaults,
+real data, and multi-instance claims. Encrypted transport and shared atomic
 replay/capability storage remain mandatory before any multi-instance use; AI
 runtime selection remains a subsequent authorization gate.

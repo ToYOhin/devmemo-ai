@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约，R5-I5 已基于同一合成 fixture 完成 Go/Python canonical 与 exact payload parity，R5-I6 已定义纯 Go current-authority reader 边界并用内存 fake 证明 all-or-nothing 投影，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库 parity/race 证明，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver、有界内存 registry 与合成并发证明；功能仍默认关闭。尚未交付 HTTP rehydration adapter、HMAC/replay 运行时接线、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约，R5-I5 已基于同一合成 fixture 完成 Go/Python canonical 与 exact payload parity，R5-I6 已定义纯 Go current-authority reader 边界并用内存 fake 证明 all-or-nothing 投影，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库 parity/race 证明，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver、有界内存 registry 与合成并发证明，R5-I9 已增加尚未接线的单机 transport composition、专用 process-local request replay 与合成调用顺序/并发证明；功能仍默认关闭。尚未交付 HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -113,6 +113,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 19. **Memos current-authority adapter 契约 — 已完成、未接线。** R5-I6 只接受已经验证的 `EvidenceRehydrationRequest` 与 Memos 内部 opaque 认证上下文绑定。一次调用的 reader protocol 必须返回同一个原子 snapshot，其中 authority reference、context binding、revision、authority token、当前 visibility、完整 Memo 类型、normal 行状态、current lifecycle 状态、sequence、hash 与 `memo-v1` 全部一致。纯 fake 测试证明 UID 精确一一对应、由请求拥有 selection 顺序、响应不投影 identity/visibility，并对 update/delete、部分、重复、stale、混合 snapshot 与 adapter failure 整体拒绝。没有接入真实 Store、visibility resolver、route、replay、HMAC、runtime 配置、持久化、网络或数据。
 20. **真实单机 SQLite current-authority reader — 已完成、未接线。** R5-I7 只从 Memos 内部认证 context 取得 caller identity，复用共享 Memo visibility scope，并通过一个 SQLite 只读 snapshot 读取当前 normal caller、受限请求 UID、comment relation、完整正文与最新 A4 source event。最新 delete、未知 version、stale document、不合格 Memo、缺失行或读取期间任意并发提交都使整批失败。adapter 没有注册 HTTP/runtime，也不主张真实数据或多实例安全。
 21. **process-local Memos authority capability — 已完成、未接线。** R5-I8 只能从 Memos 认证 context 与 Memos-owned 有界完整 Memo UID scope 签发。固定容量、短时内存 registry 把三个独立 opaque token 绑定到同一私有 caller/scope 记录，并对精确有界的 rehydration 子集最多原子消费一次。fake clock/token/scope 测试覆盖认证来源、UID 上限、过期、容量、碰撞、错配、重启失效与并发 consume。没有增加 route/client、replay 接线、runtime 配置、持久化、真实数据或多实例主张。
+22. **单机 rehydration composition — 已完成、未接线。** R5-I9 用纯 Go 固定 R5-I5 验签、专用有界 request replay、R5-I8 单次 consume、server-owned auth context 恢复、一次 reader factory/reader、R5-I6 投影、exact JSON 与 R5-I5 response signing 的顺序。合成测试覆盖 nonce/capability 独立单次性、scope/binding/token 拒绝、固定签名 failure、并发 duplicate 与新 store 失效边界。没有注册 HTTP route/client，也没有增加 runtime secret/config、timer、retry、持久化、真实数据或多实例主张。
 
 ## A1 验收结果
 
@@ -284,6 +285,28 @@ scope-source 或 concurrency failure 均只返回 `authorized_retrieval_unavaila
 R5-I4 nonce store，也不实现 HTTP、HMAC/replay runtime composition、answer runtime selection、配置、secret、
 持久化、数据库、网络或真实数据。任何多实例使用前仍必须提供 shared atomic capability/replay store 与加密
 transport。
+
+R5-I9 在不注册 runtime 的前提下组合上述边界。constructor 只接受显式提供的 scoped secret、不超过 60 秒
+的 request age、clock、专用固定容量 request replay store、R5-I8 registry 与 reader factory。R5-I5
+HMAC/freshness/exact body verification 必须先于 nonce consume，nonce consume 先于 capability lookup；私有
+resolution 在恢复新的 Memos auth context 前再次检查 exact token binding 与有界授权 UID 子集。只有该 context、
+R5-I6 两字段 binding 与 authority token 能进入 reader factory；factory 和 reader 每个请求最多调用一次。
+
+request replay store 与 capability registry 是容量和生命周期相互独立的两个 process-local 类型。同 nonce
+并发请求最多一个越过 replay；更换 nonce 也不能重复使用已消费 capability。新 replay store 会遗忘旧 nonce，
+新 capability registry 会拒绝旧 authority reference，这只是显式 restart 边界，不是 durability 主张。未来
+client policy 仍是五秒 timeout、`auto_retry=false`，但本切片没有 client 或 timer。
+
+未认证或 malformed request 在 replay 前只返回固定本地错误和零 response projection，因为它没有可供 response
+HMAC 信任的 snapshot token。request 验证成功后，replay、capability、binding、reader 或 schema failure 只能
+产生 exact signed `503 authorized_retrieval_unavailable`；response signing 自身失败时返回零 projection，绝不
+发出 unsigned body。成功只允许 exact signed R5-I6 `200`。caller、完整 UID scope、authenticated-context token、
+authority reference 与原始异常均无 response 或 observability 投影。
+
+R5-I9 没有 `net/http` 注册/client、runtime secret source、环境变量、port、volume、migration、持久化、网络、
+answer-path import、真实 Store 访问或真实数据。disabled single-host HTTP adapter 及其 secret/timeout lifecycle
+仍需下一次评审。任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability storage；AI
+runtime selection 继续后置。
 
 ## A4 本地 RAG 生命周期契约
 

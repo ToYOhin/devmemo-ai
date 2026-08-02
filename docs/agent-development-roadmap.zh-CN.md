@@ -18,7 +18,8 @@
 > canonical 与 exact payload parity，R5-I6 已增加尚未接线的纯 Go current-authority reader 契约与内存
 > all-or-nothing parity proof，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库
 > parity proof，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver 与有界 registry
-> 证明。生产 HTTP rehydration adapter、HMAC/replay runtime composition、lifecycle route、dispatcher、运行时接线和
+> 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明。生产
+> HTTP rehydration adapter、lifecycle route、dispatcher、运行时接线和
 > 可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
@@ -53,7 +54,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I8 已在 R5-I7 SQLite reader 边界上证明尚未接线的 process-local authority capability，但仍无 HTTP route/client、HMAC/replay runtime composition、runtime secret/configuration、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权单机 transport handler/client 与 replay composition，再授权 AI runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I9 已证明从 request verification 到 signed response 的尚未接线单机 composition，但仍无 HTTP route/client、runtime secret/configuration、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权 disabled 单机 HTTP adapter 与 secret/timeout lifecycle，再授权 AI runtime selection |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -225,6 +226,15 @@ Memos-private auth context、精确原始 UID scope、未改变的 R5-I6 binding
 容量、碰撞、错配、重启失效、固定 failure 投影和并发 consume 只有一个成功。没有增加 HTTP、replay-store
 复用、runtime 配置、持久化、数据库、网络或真实数据；多实例仍需要加密 transport 与 shared atomic
 capability/replay storage。
+R5-I9 增加尚未接线的纯 Go composition。它显式注入 scoped secret、有界 request age、clock、专用固定容量
+request replay store、R5-I8 registry 与 reader factory。R5-I5 verification 先于 nonce consume，nonce
+consume 先于 capability resolution；私有 caller/scope/binding/token resolution 在新 server auth context 进入
+单次 reader factory 和 R5-I6 projection 前再次校验。已验证请求的后续 failure 只能成为 exact R5-I5-signed
+503；未验证请求与 signing failure 返回零 response projection 和同一固定本地错误。request replay 与
+capability store 保持独立且 process-local，未来 client timeout 仍为五秒，automatic retry 仍关闭。合成测试
+覆盖 exact signed success、verification 顺序、nonce/capability 单次性、UID scope、binding/token mismatch、
+reader one-call、固定 signed failure、并发 duplicate 与新 store 失效。没有增加 HTTP route/client、runtime
+secret source、timer、配置、持久化、数据库/网络访问或真实数据。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -294,10 +304,10 @@ capability/replay storage。
 
 ## 下一授权闸门
 
-R5-I8 已在不接 runtime 的前提下完成单独授权的 **process-local Memos authority capability
-issuer/resolver**。下一闸门是单独评审的单机 rehydration transport composition：通过严格的 Memos-owned
-handler/client contract 组合既有 R5-I5 request verification、专用有界 request replay 边界、R5-I8 consume、
-R5-I7 reader、R5-I6 projection 与 R5-I5 response signing。该闸门必须显式决定 runtime secret 与 timeout
-配置，并继续默认关闭，且不得同时接 `EvidenceAnswerAgent`、`RetrievalService`、VectorStore selection、
-lifecycle runtime、Compose 默认值或真实数据。任何多实例使用前仍必须提供加密 transport 与 shared atomic
-replay/capability storage；AI runtime selection 仍是后续独立授权闸门。
+R5-I9 已在不注册 runtime 的前提下完成单独授权的 **单机 rehydration transport composition contract**。
+下一闸门是单独评审、disabled 的单机 HTTP adapter 与 runtime secret/timeout lifecycle：把一个严格 internal
+route/client 绑定到 R5-I9 composition，明确 secret sourcing/rotation 与 shutdown ownership，执行既有五秒
+client timeout 且不 retry，并保留 exact signed response parsing。它仍不得同时接 `EvidenceAnswerAgent`、
+当前 `RetrievalService`、VectorStore selection、lifecycle runtime、Compose 默认值、真实数据或多实例主张。
+任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability storage；AI runtime selection
+仍是后续独立授权闸门。
