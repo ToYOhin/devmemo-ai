@@ -27,9 +27,10 @@
 > proof. R5-I9 adds the unwired single-host transport composition and dedicated
 > process-local request-replay proof. R5-I10 adds an unregistered single-host
 > HTTP handler/client contract with strict projection, fixed five-second timeout,
-> and recorder/fake-transport proof. No route/listener, runtime secret lifecycle,
-> lifecycle dispatcher, Agent runtime wiring, or production-ready answer path is
-> implemented.
+> and recorder/fake-transport proof. R5-I11A adds strict, disabled-by-default
+> Go/Python configuration for a dedicated current/previous rehydration keyring
+> and one AI-side Memos origin. No route/listener, client lifecycle, lifecycle
+> dispatcher, Agent runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -77,7 +78,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I10 now proves an unregistered single-host HTTP handler/client around R5-I9, but there is no route/listener, runtime secret sourcing/rotation, shutdown ownership, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize runtime secret/lifecycle ownership and dormant route/client registration, then AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I11A now fixes a separate disabled current/previous keyring and AI-side Memos origin, but there is no matching-key runtime verification, route registration, client lifecycle, shared replay/capability store, or runtime selection, so no durable path serves answers | Complete R5-I11B Memos registration and R5-I11C Python client lifecycle, then separately connect durable runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -344,6 +345,14 @@ and authenticates freshness, nonce, snapshot token, status, and body before
 exact parsing. Client replay remains the AI R5-I4 boundary. Recorder, in-memory
 handler, and fake-transport tests add no registration, listener, environment or
 config field, runtime secret lifecycle, real socket, Store access, or real data.
+R5-I11A adds matching disabled-by-default Go/Python configuration contracts.
+Opt-in requires the primary Agent flag, a canonical unpadded base64url 32-byte
+current secret, an optional distinct previous secret, strict separation from
+the answer-delegation secret, and one credential-free HTTP(S) Memos origin on
+the AI side. Disabled settings retain no supplied secret or URL. The deployment
+boundary injects values into each process; neither service creates, distributes,
+persists, logs, or projects them. The startup-fixed two-key contract adds no
+route/client, timer, dynamic reload, real secret, network, or data.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -452,15 +461,13 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I10 has completed the separately authorized **disabled single-host HTTP
-adapter contract** without registering a route or opening a listener. The next
-gate is a separate R5-I11 review of runtime secret sourcing, rotation/overlap,
-shutdown ownership, and dormant single-host route/client registration. That
-gate must define a rollback condition and may use no real account or Memo data
-without another explicit opt-in. It must remain separate from
+R5-I11A has completed the approved **dedicated rehydration configuration
+contract** without creating a route, client, or secret. R5-I11B is the next
+approved slice: add startup-fixed current/previous verification with matching-
+key response signing and default-disabled registration on the existing Memos
+listener. It must introduce no new listener/port and remain disconnected from
 `EvidenceAnswerAgent`, current `RetrievalService`, VectorStore selection,
 lifecycle runtime, Compose defaults, real data, and multi-instance claims.
-Docker/browser end-to-end proof remains blocked until those runtime ownership
-and registration decisions are authorized. Encrypted transport and shared
-atomic replay/capability storage remain mandatory before multi-instance use;
-AI runtime selection remains a later authorization gate.
+R5-I11C then owns the Python client/replay lifecycle and deterministic shutdown.
+Docker/browser proof remains later; encrypted transport and shared atomic
+replay/capability storage remain mandatory before multi-instance use.

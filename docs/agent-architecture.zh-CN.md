@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 现已增加尚未注册的单机 `net/http` handler/client contract、严格 HTTP 投影、固定五秒 timeout 与 recorder/fake-transport 测试；功能仍默认关闭。尚未交付 route/listener、runtime secret 生命周期、Agent runtime 接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加尚未注册的单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的 Go/Python 严格默认关闭配置。尚未交付 route/listener、client lifecycle、Agent runtime 接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -115,6 +115,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 21. **process-local Memos authority capability — 已完成、未接线。** R5-I8 只能从 Memos 认证 context 与 Memos-owned 有界完整 Memo UID scope 签发。固定容量、短时内存 registry 把三个独立 opaque token 绑定到同一私有 caller/scope 记录，并对精确有界的 rehydration 子集最多原子消费一次。fake clock/token/scope 测试覆盖认证来源、UID 上限、过期、容量、碰撞、错配、重启失效与并发 consume。没有增加 route/client、replay 接线、runtime 配置、持久化、真实数据或多实例主张。
 22. **单机 rehydration composition — 已完成、未接线。** R5-I9 用纯 Go 固定 R5-I5 验签、专用有界 request replay、R5-I8 单次 consume、server-owned auth context 恢复、一次 reader factory/reader、R5-I6 投影、exact JSON 与 R5-I5 response signing 的顺序。合成测试覆盖 nonce/capability 独立单次性、scope/binding/token 拒绝、固定签名 failure、并发 duplicate 与新 store 失效边界。没有注册 HTTP route/client，也没有增加 runtime secret/config、timer、retry、持久化、真实数据或多实例主张。
 23. **disabled 单机 HTTP adapter — 已完成、未接线。** R5-I10 在 R5-I9 外增加尚未注册的标准库 handler/client。handler 只接受精确 internal POST envelope，把未验证输入投影为无正文、不可缓存的 404，并只映射 exact signed 200/503；client 固定五秒 timeout，只调用一次注入的 `RoundTripper`，关闭有界 body，并在解析前认证 exact response。测试只使用 recorder、内存 handler 与 fake transport；没有增加 route、listener、环境变量/配置字段、runtime secret source、真实 socket 或 Agent runtime 接线。
+24. **独立 rehydration runtime 配置 — 已完成、未接线。** R5-I11A 增加对称的 Go/Python 环境契约，disabled 时不保留 secret，启用时必须先开启总 Agent flag。runtime 要求一个规范的无填充 base64url 32-byte current secret、可选且不同的 previous secret、与回答 delegation secret 严格隔离，以及 AI 侧单一无凭据 HTTP(S) Memos origin。纯 settings 测试没有生成 key、构造 route/client、启动 listener/timer、持久化或使用真实 secret。
 
 ## A1 验收结果
 
@@ -322,6 +323,17 @@ R5-I10 没有 route registration、listener、环境变量、配置字段、runt
 port、volume、migration、持久化、真实网络访问、answer-path import、真实 Store 或真实数据。runtime secret
 sourcing/rotation、shutdown ownership、Docker/浏览器端到端证明与 AI runtime selection 均需要后续明确授权。
 任何多实例使用前仍必须提供加密 transport 与 shared atomic replay/capability storage。
+
+R5-I11A 建立第三个 purpose-scoped secret domain，不复用 Memos session secret 或
+`AI_AGENT_INTERNAL_SECRET`。deployment boundary 把 `AI_AGENT_REHYDRATION_SECRET_CURRENT` 与可选的
+`AI_AGENT_REHYDRATION_SECRET_PREVIOUS` 分别注入两个进程；服务本身不创建、分发、保存、记录或投影这些
+值。`AI_AGENT_REHYDRATION_ENABLED=false` 时两侧 contract 都丢弃已提供值；启用时还必须满足
+`AI_AGENT_ENABLED=true`，malformed、duplicate 或与 delegation secret 相同的值全部在启动配置校验时失败。
+AI contract 还要求 `AI_AGENT_REHYDRATION_MEMOS_URL` 是单一无凭据 HTTP(S) origin。
+
+keyring 只在启动时固定，最多 current 加 previous，没有 timer 或动态 reload。双 key request verification、
+matching-key response signing、overlap 退出、Memos route ownership 与 AI client shutdown 分别留给可独立验证的
+R5-I11B/I11C；R5-I11A 不创建 route/client 或真实 secret。
 
 ## A4 本地 RAG 生命周期契约
 

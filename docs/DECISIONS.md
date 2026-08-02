@@ -520,3 +520,27 @@ Go handler 不建立第二份 client replay store。
 persistence、cross-host confidentiality 或 multi-instance safety。R5-I11 必须单独评审这些 runtime lifecycle
 与 dormant registration 决策；任何多实例使用前仍需加密 transport、shared atomic replay/capability storage、
 密钥轮换与独立威胁评审，AI runtime selection 继续后置。
+
+## ADR-065：R5 rehydration 使用独立、启动时固定且默认关闭的双 key 配置域
+
+R5-I11A 不复用 Memos `APIV1Service.Secret` 或回答委托使用的 `AI_AGENT_INTERNAL_SECRET`。deployment boundary
+负责生成并分别向 Memos 与 AI Service 进程注入一个 purpose-scoped
+`AI_AGENT_REHYDRATION_SECRET_CURRENT`，以及 rotation overlap 期间可选的
+`AI_AGENT_REHYDRATION_SECRET_PREVIOUS`；服务不得创建、通过 HTTP 分发、持久化、记录、trace 或投影这些值。
+两个 secret 都必须是规范的无填充 base64url 32-byte 值，必须互不相同，也不得等于 delegation secret。
+
+`AI_AGENT_REHYDRATION_ENABLED` 默认 false；关闭时 Go/Python settings 必须返回零值且不保留已经提供的 secret
+或 URL。启用还要求 `AI_AGENT_ENABLED=true`，否则配置失败。AI 侧同时要求
+`AI_AGENT_REHYDRATION_MEMOS_URL` 是不含 userinfo、query、fragment 或子路径的单一 HTTP(S) origin。配置非法
+时 fail startup，不允许静默回退到不安全的共享 secret、默认 URL 或 enabled-but-partial runtime。
+
+keyring 最多包含 current 与 previous，只在进程启动时构造；R5-I11A 不增加 timer、动态 reload、secret manager、
+route、client、listener、port 或真实 secret。R5-I11B 必须按固定顺序验证 current/previous，并使用实际匹配的
+request key 签 response，使 Memos 先接受新旧 key、AI 后切换 current 的轮换顺序可行。旧 key 只能在最后一个
+旧请求的 60 秒 freshness 与五秒 client timeout 窗口后移除，保守运维等待为至少 90 秒。rollback 是关闭
+rehydration flag 并重启；Memos 数据不变，process-local replay/capability 状态按既有边界失效。
+
+R5-I11B 的 handler 仍由现有 Memos HTTP server 和 shutdown 管理，不增加 listener；R5-I11C 的实际 runtime
+client 必须属于 Python AI Service lifespan，并在 shutdown 时关闭 transport。R5-I10 Go client 保持协议/测试
+证明，不接入 Memos runtime。任何 Docker、浏览器、真实 Provider/账号/Memo/secret/data 或多实例主张继续需要
+后续独立授权与证据。
