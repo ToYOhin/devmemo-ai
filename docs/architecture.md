@@ -1,6 +1,6 @@
 # DevMemo AI Architecture
 
-更新时间：2026-07-14
+更新时间：2026-08-02
 
 ## Boundary
 
@@ -43,3 +43,18 @@ The default indexing boundary is `MemoIndexDocument`: one complete Memo is passe
 The public `POST /api/ai/chat` contract remains complete-Memo oriented. A future Qdrant chunk collection and chunk-aware public retrieval contract require a separate phase.
 
 `GET /api/ai/index/chunk-health` is a read-only operational view for the explicit chunk path. It compares isolated VectorStore `point_count` with SQLite lifecycle `tracked_memos`/`tracked_chunks`; it does not mutate indexes or expose Markdown.
+
+## Evidence Answer and durable retrieval boundary
+
+The experimental Evidence Answer browser entry calls only the authenticated
+Memos BFF. Memos owns caller identity and visible complete-Memo scope; AI Service
+accepts only the signed, bounded `memo-v1` capability and returns server-owned
+citations plus a redacted trace. The feature remains disabled by default.
+
+A4-I1 through A4-I5 and R5-I1 through R5-I7 add dormant lifecycle, durable
+retrieval, rehydration, transport, and current-authority proofs. The first real
+authority reader is intentionally limited to a single-host SQLite snapshot and
+temporary synthetic tests. It is not registered with an HTTP route or runtime
+factory and does not change Memo CRUD, default indexing, Qdrant selection, or
+real-data persistence. The exact remaining gates are maintained in the
+[Agent development roadmap](agent-development-roadmap.md).

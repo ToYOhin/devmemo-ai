@@ -23,6 +23,14 @@ and Provider failures become fixed 503/502 errors without raw exception text.
 The A4 lifecycle outbox/ledger remains dormant and is not connected to Memo
 CRUD, this route, a dispatcher, a worker, or automatic indexing.
 
+R5-I1 through R5-I7 do not add a public or internal runtime endpoint. The fixed
+`/internal/ai/agent/evidence/rehydrate` path currently exists only as an
+authenticated contract fixture; no handler/client is registered. The SQLite
+current-authority reader is likewise unwired and tested only with temporary
+synthetic data. A capability issuer/resolver, HTTP wiring, runtime configuration,
+real-data opt-in, and multi-instance replay/capability storage remain separate
+authorization gates.
+
 ## Phase 12 strict TypeScript baseline（no API change）
 
 Phase 12 only repairs Web compile-time declaration resolution. It adds narrow local type bridges for the installed TanStack Query Devtools, goober, Mermaid/type-fest, React Leaflet, and Leaflet MarkerCluster declarations, plus an explicit project callback signature. No package, lockfile, runtime import, request, response, route, persistence, or authorization behavior changed.

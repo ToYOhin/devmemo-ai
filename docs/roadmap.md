@@ -10,11 +10,15 @@
 [Agent 开发路线](agent-development-roadmap.zh-CN.md) 和
 [架构契约](agent-architecture.zh-CN.md)：A4-I1 至 A4-I5 已证明 lifecycle event、
 Memos-owned outbox、AI ledger、认证 transport 与一次性故障恢复；R4-I1 至 R4-I3 已证明
-严格 grounded-answer 契约、安全运行时接入和一次性本地 Provider smoke。
+严格 grounded-answer 契约、安全运行时接入和一次性本地 Provider smoke；R5-I1 至
+R5-I7 已依次证明持久化授权检索、当前权威正文 rehydration、独立 HMAC transport、
+Go/Python parity、纯 reader 契约，以及未接线的真实单机 SQLite current-authority reader。
 
 这些证明不等于生命周期已上线。`AI_AGENT_ENABLED=false`、自动索引关闭和现有 Compose
 默认值均保持不变；A4 outbox/ledger 尚未接入 Memo CRUD、dispatcher、worker 或真实
-VectorStore。下一切片是 R5-I1 的纯持久化授权检索契约，不授权运行时接线。
+VectorStore，R5 也尚未接入 HTTP rehydration、answer runtime 或真实数据。下一授权闸门是
+R5-I8 process-local Memos authority capability issuer/resolver；它仍不得自动扩大到 HTTP、
+runtime secret/configuration、多实例或 AI runtime selection。
 
 ## Phase 0：开发基础
 

@@ -99,6 +99,13 @@ automatic indexing, Qdrant, or default Compose. Read
 [docs/agent-development-roadmap.md](docs/agent-development-roadmap.md) before
 attempting any runtime rollout.
 
+The durable retrieval work through R5-I7 is also an unwired safety proof. It
+defines authorized candidate selection, current-authority content rehydration,
+authenticated request/response contracts, and a single-host SQLite authority
+reader tested only with temporary synthetic data. It does not add a browser or
+HTTP rehydration API, enable persistent Agent answers, or authorize real-data
+indexing. Memos remains the final content, identity, and visibility authority.
+
 ## Local development and verification
 
 Install Go, Node.js, pnpm, and Python. Create `ai-service/.venv`, then run:

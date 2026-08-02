@@ -17,13 +17,16 @@ repository-root/
 ├── contracts/                   # 跨语言 provider-neutral fixtures（Context Pack、Agent、lifecycle、grounded answer）
 ├── integrations/                # 上游/部署集成脚本与配置
 ├── scripts/                     # Windows 验证、安装、Compose 辅助脚本
-├── docs/                        # 架构、API、路线、决策、交接和下一阶段 Prompt
+├── docs/                        # 可公开的架构、API、路线、决策与运维文档
 ├── docker-compose.yml           # Memos、AI Service、Qdrant、Ollama 编排
 ├── docker-compose.local-webhook.yml # 仅受控本地开发允许私网 Webhook 的显式 override
 ├── NOTICE                        # 上游 Memos 与 DevMemo AI 的许可/归属说明
 ├── UPSTREAM.md                   # 下游维护、同步与非官方关系说明
 └── graphify-out/                # 本地忽略的结构图产物，不属于运行时源码
 ```
+
+本地 Agent 状态、交接和下一阶段 Prompt 位于 Git 忽略的仓库本地目录或操作系统临时目录，
+不属于公开仓库结构，也不得随代码提交或推送。公开文档只记录可复现的产品、架构和验证事实。
 
 ## Memos 核心边界
 
