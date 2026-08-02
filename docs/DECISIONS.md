@@ -562,3 +562,20 @@ resource 或 shutdown hook；生命周期自然属于现有 Memos HTTP server。
 Echo/httptest、synthetic secret、fake authority/reader/clock 与进程内对象；没有启动 socket、访问真实 Store、
 Provider、Qdrant、账号、Memo、volume、真实 secret/data 或外部网络。R5-I11C 单独负责 Python client lifespan
 与 transport shutdown；`EvidenceAnswerAgent` 和 durable runtime selection 仍需后续窄切片。
+
+## ADR-067：R5 Python rehydration client 只由 AI Service lifespan 创建和关闭
+
+R5-I11C 使用独立 `EvidenceRehydrationHTTPClient`，不接入 R5-I10 的 Go client，也不创建第二个 service 或
+listener。启用时 FastAPI lifespan 以 I11A 的 exact Memos origin 与 current key 构造 client；生产显式注入
+`AsyncHTTPTransport(retries=0)`，测试只注入内存 transport。disabled lifespan 不构造 transport 或 client。
+client 仅保存在 `app.state`，shutdown 必须清空 state 并 `aclose` owned client/transport。
+
+每次调用只生成一个 request nonce、准备一次 exact signed POST，并使用固定五秒 timeout、`follow_redirects=false`
+和零 automatic retry。response 只接受 exact 200/503、单值 JSON/no-store/HMAC headers 与有界非空 streamed body；
+body 在任何 success/failure 路径关闭后才进入既有 response verifier/parser。client 生命周期内只拥有一份既有
+`RehydrationReplayStore`，重启即失效；不得把 response replay 复制到 Memos handler 或持久化。
+
+I11C 不把 client 注入 `EvidenceAnswerAgent`、endpoint、当前 `RetrievalService`、VectorStore factory、A4 lifecycle
+或 Compose 默认值，也不发起真实网络请求。下一窄切片必须单独决定并验证 authenticated answer path 的
+Memos-owned capability issuance 与 durable runtime selection；在此之前 route/client 均保持 opt-in dormant，
+真实 Docker/浏览器验收仍受独立 runtime 授权闸门约束。

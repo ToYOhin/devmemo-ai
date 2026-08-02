@@ -6,6 +6,8 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Literal
@@ -52,6 +54,9 @@ from app.services.agent_delegation import (
     AgentDelegationHeaders,
 )
 from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
+from app.services.evidence_rehydration_http_client import (
+    evidence_rehydration_client_lifespan,
+)
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
 from app.settings import AiSettings, parse_env_bool
@@ -168,9 +173,21 @@ class MemoWebhookRequest(BaseModel):
     memo: dict[str, object] = Field(default_factory=dict)
 
 
-app = FastAPI(title="DevMemo AI Service", version="0.1.0")
-provider = create_provider()
 settings = AiSettings.from_env()
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    async with evidence_rehydration_client_lifespan(settings) as client:
+        application.state.evidence_rehydration_client = client
+        try:
+            yield
+        finally:
+            application.state.evidence_rehydration_client = None
+
+
+app = FastAPI(title="DevMemo AI Service", version="0.1.0", lifespan=lifespan)
+provider = create_provider()
 embedding_service = build_embedding_service(settings)
 chunk_lifecycle_coordinator = build_chunk_lifecycle_coordinator(
     settings,

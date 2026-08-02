@@ -21,8 +21,9 @@
 > 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明，
 > R5-I10 已增加单机 HTTP handler/client contract、严格投影、固定五秒 timeout 与 recorder/fake-transport
 > 证明，R5-I11A 已增加独立 current/previous rehydration keyring 与 AI 侧单一 Memos origin 的严格默认关闭
-> 配置，R5-I11B 已增加 matching-key handling 与现有 Memos listener 上的 opt-in registration。尚未增加新
-> listener、Python client lifecycle、Agent runtime 接线和可用于正式产品的回答链路。
+> 配置，R5-I11B 已增加 matching-key handling 与现有 Memos listener 上的 opt-in registration，R5-I11C 已
+> 增加 AI 侧 Python HTTP client 与确定性 lifespan shutdown。尚未增加新 listener、Agent answer-path 接线或
+> 可用于正式产品的 durable 回答链路。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -56,7 +57,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I11B 已提供 matching-key verification 与 opt-in Memos route，但仍无 Python client lifecycle、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 完成 R5-I11C Python client lifecycle，再单独连接 durable runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I11C 已提供 opt-in Memos route 与受控 Python client lifespan，但尚无 capability issuance 或 durable runtime selection 把它们连接到 answer path；process-local replay/capability 也仍仅支持单实例 | 在不改变默认值的前提下连接经审查的单机 durable runtime selection；多实例前必须提供 shared atomic state |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -254,6 +255,10 @@ R5-I11B 在同一份 process-local capability registry 与 request replay store 
 composition。HTTP handler 固定先 current 后 previous，只用实际匹配 request 的 key 签 verified success/failure。
 显式 opt-in 仅在既有 Memos Echo server 注册 exact internal POST；disabled 启动不增加 route。runtime 不创建
 listener、port、goroutine、timer、transport、closeable resource 或 shutdown hook，registration 也不读取 Store。
+R5-I11C 增加仅由 enabled FastAPI lifespan 构造的 async Python client。它接收注入的 zero-retry transport，固定
+五秒 timeout、禁 redirect、只执行一次 exact signed POST、关闭有界流式 response，并在解析前验证 exact signed
+200/503；client 独占一份 process-local response replay store。shutdown 关闭 owned client/transport 并清空
+`app.state`，disabled 时完全不创建。当前没有 endpoint 或 answer Agent 使用该 client。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -323,9 +328,9 @@ listener、port、goroutine、timer、transport、closeable resource 或 shutdow
 
 ## 下一授权闸门
 
-R5-I11B 已完成启动时固定的 current/previous verification、matching-key response signing 与现有 Memos
-listener 上的默认关闭 registration，且没有增加 listener、port、timer、transport 或 registration-time Store read。
-下一项已批准切片是 R5-I11C：实现 Python HTTP client/replay lifespan 与确定性 transport shutdown，同时不得连接
-`EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore selection、lifecycle runtime、Compose 默认值、
-真实数据或多实例主张。Docker/浏览器
-证明继续后置；任何多实例使用前仍需加密 transport 与 shared atomic replay/capability storage。
+R5-I11C 已完成 Python HTTP client/replay lifespan 与确定性 transport shutdown，且仍未连接
+`EvidenceAnswerAgent` 或任何 endpoint。下一项窄范围 R5 闸门是单机 durable runtime selection：由已认证回答
+路径签发 Memos-owned capability，只对经审查的 durable adapter 调用 lifespan-owned Python client，并保留现有
+memory/default 行为。该切片必须在不改变 Compose 默认值、不使用真实数据、不主张多实例的前提下独立验证。
+真实 Docker/浏览器验收要等 answer path 接通后另行取得 runtime 授权；多实例前仍需加密 transport 与 shared
+atomic replay/capability storage。

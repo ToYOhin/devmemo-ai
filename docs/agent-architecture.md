@@ -34,8 +34,10 @@
 > R5-I11A adds strict, disabled-by-default Go/Python runtime configuration for
 > a dedicated current/previous rehydration keyring and one AI-side Memos origin.
 > R5-I11B adds fixed-order matching-key verification and opt-in registration on
-> the existing Memos listener. No new listener, Python client lifecycle, Agent
-> runtime wiring, remote deployment, or general-public availability is delivered.
+> the existing Memos listener. R5-I11C adds an opt-in Python HTTP client owned by
+> the AI Service lifespan, with deterministic transport close. No new listener,
+> Agent answer-path wiring, remote deployment, or general-public availability is
+> delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -353,6 +355,13 @@ LLM provider.
    matching key. Only explicit opt-in registers the exact internal POST on the
    existing Echo server; disabled startup registers nothing. The runtime owns
    no listener, goroutine, timer, transport, or closeable resource.
+26. **AI-side rehydration client lifespan — complete, disconnected.** R5-I11C
+   creates the Python client only during an enabled AI Service lifespan and
+   clears/closes it on shutdown. Its injected async transport has zero retries;
+   the client fixes a five-second timeout, rejects redirects and non-exact
+   response envelopes, bounds streamed bodies, verifies before parsing, and
+   owns one process-local response replay store. The object is only exposed on
+   `app.state` and is not called by `EvidenceAnswerAgent` or any endpoint.
 
 ## Acceptance criteria for the first Agent path
 
@@ -688,7 +697,17 @@ request-replay stores. A verified success or failure is signed only by the key
 that authenticated its request. Explicit opt-in registers the exact POST on the
 existing Memos Echo instance; disabled mode has no route. The Memos server owns
 the handler lifetime, while the runtime adds no listener, port, goroutine,
-timer, transport, or shutdown hook. AI client shutdown remains R5-I11C.
+timer, transport, or shutdown hook. The AI client has separate lifespan ownership.
+
+R5-I11C constructs the Python client only inside the FastAPI lifespan when the
+rehydration flag is enabled. Production injects `AsyncHTTPTransport(retries=0)`;
+tests inject an in-memory transport. Each call prepares one signed POST, uses a
+fixed five-second timeout without redirects or retry, streams and bounds the
+response, requires exact signed 200/503 headers, then verifies and consumes the
+existing process-local response replay entry before parsing. Shutdown always
+closes the owned client/transport and clears `app.state`. Disabled lifespan does
+not construct a transport. The client remains disconnected from the answer
+Agent and durable retrieval selection.
 
 ## A4 local RAG lifecycle contract
 
