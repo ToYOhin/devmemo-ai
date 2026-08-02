@@ -54,17 +54,21 @@ func (config LifecycleRuntimeConfig) Validate(
 	if !config.Enabled {
 		return nil
 	}
-	parsed, err := url.Parse(strings.TrimSpace(config.InternalURL))
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil ||
-		(parsed.Scheme != "http" && parsed.Scheme != "https") ||
-		(parsed.Path != "" && parsed.Path != "/") || parsed.RawQuery != "" || parsed.Fragment != "" ||
-		!validEvidenceRehydrationRuntimeSecret(config.Secret) ||
-		!lifecycleGenerationPattern.MatchString(config.Generation) ||
-		!rehydration.Enabled || config.Secret == strings.TrimSpace(delegationSecret) ||
+	if !validLifecycleRuntimeShape(config) || !rehydration.Enabled ||
+		config.Secret == strings.TrimSpace(delegationSecret) ||
 		config.Secret == rehydration.CurrentSecret || config.Secret == rehydration.PreviousSecret {
 		return ErrInvalidLifecycleRuntimeConfig
 	}
 	return nil
+}
+
+func validLifecycleRuntimeShape(config LifecycleRuntimeConfig) bool {
+	parsed, err := url.Parse(strings.TrimSpace(config.InternalURL))
+	return err == nil && parsed.Scheme != "" && parsed.Host != "" && parsed.User == nil &&
+		(parsed.Scheme == "http" || parsed.Scheme == "https") &&
+		(parsed.Path == "" || parsed.Path == "/") && parsed.RawQuery == "" && parsed.Fragment == "" &&
+		validEvidenceRehydrationRuntimeSecret(config.Secret) &&
+		lifecycleGenerationPattern.MatchString(config.Generation)
 }
 
 func parseStrictLifecycleBool(value string) (bool, error) {

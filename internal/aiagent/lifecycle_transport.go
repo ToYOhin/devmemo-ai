@@ -17,16 +17,26 @@ import (
 const (
 	// InternalLifecyclePath is reserved for Memos-owned memo-v1 lifecycle events.
 	InternalLifecyclePath = "/internal/ai/memo-lifecycle/events"
+	// InternalLifecycleActivationPath is reserved for reconciled generation activation.
+	InternalLifecycleActivationPath = "/internal/ai/memo-lifecycle/activate"
 
 	LifecycleSignatureHeader = "X-DevMemo-Lifecycle-Signature"
 	LifecycleTimestampHeader = "X-DevMemo-Lifecycle-Timestamp"
 	LifecycleNonceHeader     = "X-DevMemo-Lifecycle-Nonce"
 
-	lifecycleSignaturePrefix  = "sha256="
-	lifecycleSignaturePurpose = "devmemo-memo-lifecycle-transport-v1"
-	maxLifecycleRequestBytes  = 204096
-	maxLifecycleAckBytes      = 2048
+	lifecycleSignaturePrefix            = "sha256="
+	lifecycleSignaturePurpose           = "devmemo-memo-lifecycle-transport-v1"
+	lifecycleActivationSignaturePurpose = "devmemo-memo-lifecycle-activation-v1"
+	maxLifecycleRequestBytes            = 204096
+	maxLifecycleAckBytes                = 2048
 )
+
+// LifecycleActivationRequest is the content-free rebuild projection sent by Memos.
+type LifecycleActivationRequest struct {
+	Generation     string `json:"generation"`
+	EligibleCount  int    `json:"eligible_count"`
+	ManifestDigest string `json:"manifest_digest"`
+}
 
 var lifecycleNoncePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{16,128}$`)
 var lifecycleErrorCodePattern = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)
@@ -64,6 +74,31 @@ func SignLifecycleRequest(body []byte, at time.Time, nonce, secret string) (Life
 	timestamp := strconv.FormatInt(at.UTC().Unix(), 10)
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write(canonicalLifecycleRequest("POST", InternalLifecyclePath, timestamp, nonce, body))
+	return LifecycleSignedHeaders{
+		Signature: lifecycleSignaturePrefix + fmt.Sprintf("%x", mac.Sum(nil)),
+		Timestamp: timestamp,
+		Nonce:     nonce,
+	}, nil
+}
+
+// SignLifecycleActivationRequest uses an independent purpose and fixed path.
+func SignLifecycleActivationRequest(body []byte, at time.Time, nonce, secret string) (LifecycleSignedHeaders, error) {
+	if strings.TrimSpace(secret) == "" {
+		return LifecycleSignedHeaders{}, errors.New("lifecycle signing secret must not be empty")
+	}
+	if !lifecycleNoncePattern.MatchString(nonce) || len(body) == 0 || len(body) > 512 {
+		return LifecycleSignedHeaders{}, errors.New("lifecycle activation request is invalid")
+	}
+	timestamp := strconv.FormatInt(at.UTC().Unix(), 10)
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(canonicalLifecycleRequestForPurpose(
+		lifecycleActivationSignaturePurpose,
+		"POST",
+		InternalLifecycleActivationPath,
+		timestamp,
+		nonce,
+		body,
+	))
 	return LifecycleSignedHeaders{
 		Signature: lifecycleSignaturePrefix + fmt.Sprintf("%x", mac.Sum(nil)),
 		Timestamp: timestamp,
@@ -110,9 +145,15 @@ func ParseLifecycleAcknowledgement(body []byte) (LifecycleAcknowledgement, error
 }
 
 func canonicalLifecycleRequest(method, path, timestamp, nonce string, body []byte) []byte {
+	return canonicalLifecycleRequestForPurpose(
+		lifecycleSignaturePurpose, method, path, timestamp, nonce, body,
+	)
+}
+
+func canonicalLifecycleRequestForPurpose(purpose, method, path, timestamp, nonce string, body []byte) []byte {
 	bodyDigest := sha256.Sum256(body)
 	return []byte(strings.Join([]string{
-		lifecycleSignaturePurpose,
+		purpose,
 		strings.ToUpper(strings.TrimSpace(method)),
 		path,
 		timestamp,
