@@ -612,3 +612,21 @@ repository error 全部折叠为无正文 `authorized retrieval unavailable`。
 I13 不选择真实 adapter，不修改 settings、`main.py`、endpoint 或 `EvidenceAnswerAgent`，也不访问网络、Store、
 Qdrant、Provider、真实数据或持久化正文。下一阶段必须单独评审 content-free durable adapter 与默认关闭的 runtime
 selection；实际产品 path 与浏览器验收继续后置。
+
+## ADR-070：R5 durable candidate snapshot 由 lifecycle ledger 修订权威与授权向量排序共同组成
+
+R5-I14 不把 Qdrant health、point count、时间戳或 process-local counter 当作 derived snapshot。A4 SQLite lifecycle
+ledger 新增且只保存一个 active rebuild generation 与单调 snapshot revision；reserve、complete、fail 在各自状态
+事务中推进 revision，generation 切换仅在值实际变化时推进。opaque snapshot token 由固定 index version、revision
+和 generation 确定生成，不包含 Memo 正文、身份、visibility、secret 或 vector。
+
+`DurableVectorCandidateRepository` 先把 Memos 已授权 UID 精确集合下推到 vector ranking，再只读取 record key、
+Memo UID、score、source sequence、document hash、rebuild generation 与 index version。只有 current generation 的
+`memo-v1` metadata 与 applied upsert ledger state 的 sequence/hash 一致时才输出无正文 candidate。缺失、重复、
+越权、stale、delete、failed quarantine、metadata 中的 `content` 或读取期间 revision 变化全部 fail closed；不允许
+从 vector metadata 恢复正文，也不使用 R5-I2 disposable SQLite adapter 作为生产 runtime。
+
+runtime selection 复用既有 `AI_AGENT_REHYDRATION_ENABLED`，且要求 memo-mode Qdrant；disabled 或现有 memory
+默认路径不构造 ledger/repository/orchestrator。enabled lifespan 只把 client 与 orchestrator 放入 `app.state`，shutdown
+确定清空；I14 不修改 `EvidenceAnswerAgent` 或 endpoint。下一阶段 R5-I15 才允许在同一 opt-in 下连接回答路径，
+并必须证明 durable failure 不 fallback 到 legacy/raw-content retrieval。

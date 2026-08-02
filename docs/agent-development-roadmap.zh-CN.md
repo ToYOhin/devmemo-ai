@@ -24,7 +24,8 @@
 > 配置，R5-I11B 已增加 matching-key handling 与现有 Memos listener 上的 opt-in registration，R5-I11C 已
 > 增加 AI 侧 Python HTTP client 与确定性 lifespan shutdown，R5-I12 已增加 Memos-owned capability issuance
 > 与 signed delegation 内的 opaque ref，R5-I13 已增加带 snapshot recheck 的 injected durable candidate/
-> rehydration orchestration。尚未连接真实 adapter 或 runtime selection。
+> rehydration orchestration，R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation revision、
+> 授权 UID 查询下推与默认关闭的 lifespan ownership。回答 Agent 尚未选择该 runtime。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -58,7 +59,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I13 已证明 candidate filtering、一次 rehydration call、snapshot recheck 与 request-memory materialization，但尚无真实 adapter/runtime selection 接入 answer Agent；process-local state 仍仅支持单实例 | 在不改变默认值的前提下连接经审查的单机 durable adapter/runtime selection；多实例前必须提供 shared atomic state |
+| P0 | 授权后的 Agent 回答仍只选择内存中的完整 Memo runtime | R5-I14 已在 lifespan state 持有经审查的无正文 vector/lifecycle adapter 与默认关闭的 durable orchestrator，但 `EvidenceAnswerAgent` 尚未选择它；process-local capability/replay state 仍仅支持单实例 | 无 fallback 地接入 durable orchestrator，证明 disposable 单机产品路径；多实例前必须提供 shared atomic state |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -267,6 +268,12 @@ R5-I13 在 content-free candidates 与 I11C client protocol 上增加 injected a
 过滤，重新读取 current snapshot token，只在 request memory materialize exact reverified response documents，并
 复用现有 authorized result。空 scope/candidates 不调用；所有失败均 content-free，绝不 fallback 到 derived raw
 content。当前没有 endpoint 或 Agent runtime 选择它。
+R5-I14 增加真实无正文 adapter 与 dormant runtime selection。A4 SQLite ledger 持有一个 active rebuild generation
+与单调 snapshot revision；每次 reserve、complete 或 fail 均在同一事务中改变 token。授权 UID scope 先下推到
+内存/Qdrant 排序，再把严格的 `memo-v1` sequence/hash/generation metadata 与 applied ledger state 连接。
+格式错误、重复、越权、stale、delete、quarantine、含正文或并发变化结果均 fail closed。既有 rehydration opt-in
+只为 memo-mode Qdrant 构造 repository/orchestrator，并在 shutdown 清空 lifespan state。memory 默认值与回答路径
+保持不变。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -336,8 +343,9 @@ content。当前没有 endpoint 或 Agent runtime 选择它。
 
 ## 下一授权闸门
 
-R5-I13 已完成 injected durable candidate/rehydration orchestration，尚未选择真实 adapter 或改变 Agent runtime。
-下一项窄范围 R5 闸门是经审查的 content-free durable adapter 与默认关闭的 runtime selection。必须保留 memory
-默认值，并先用 disposable synthetic data 证明，再连接 `EvidenceAnswerAgent`。
+R5-I14 已完成无正文 vector/lifecycle adapter 与严格 dormant runtime ownership，未改变 memory 回答路径。下一项
+窄范围闸门是 R5-I15：只在既有 rehydration opt-in 下让 `EvidenceAnswerAgent` 选择已持有的 durable
+orchestrator，禁止 fallback 到 legacy/raw-content retrieval，并证明 disposable synthetic 单机产品路径。真实
+Docker/浏览器验收仍须在回答路径接通后单独授权。
 真实 Docker/浏览器验收要等 answer path 接通后另行取得 runtime 授权；多实例前仍需加密 transport 与 shared
 atomic replay/capability storage。

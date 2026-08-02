@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 import sqlite3
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,6 +20,16 @@ from app.domain.agent_lifecycle import (
     fail_lifecycle_event,
     is_retrieval_eligible,
 )
+
+
+_GENERATION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+@dataclass(frozen=True)
+class LifecycleSnapshotAuthority:
+    active_generation: str | None
+    revision: int
+    snapshot_token: str
 
 
 class SQLiteMemoLifecycleLedger:
@@ -34,6 +47,7 @@ class SQLiteMemoLifecycleLedger:
             transition = accept_lifecycle_event(current, event)
             if transition.decision in {"apply", "resume"}:
                 self._upsert_state(connection, transition.state, last_error_code=None)
+                self._advance_snapshot_revision(connection)
             connection.commit()
         return transition
 
@@ -47,6 +61,7 @@ class SQLiteMemoLifecycleLedger:
             current = self._require_state(connection, event)
             completed, acknowledgement = complete_lifecycle_event(current, event)
             self._upsert_state(connection, completed, last_error_code=None)
+            self._advance_snapshot_revision(connection)
             connection.commit()
         return completed, acknowledgement
 
@@ -64,6 +79,7 @@ class SQLiteMemoLifecycleLedger:
                 failed,
                 last_error_code=acknowledgement.error_code,
             )
+            self._advance_snapshot_revision(connection)
             connection.commit()
         return failed, acknowledgement
 
@@ -72,6 +88,41 @@ class SQLiteMemoLifecycleLedger:
     ) -> MemoLifecycleState | None:
         with self._connection() as connection:
             return self._select_state(connection, memo_uid, index_version)
+
+    def read_snapshot_authority(self) -> LifecycleSnapshotAuthority:
+        with self._connection() as connection:
+            row = connection.execute(
+                """
+                SELECT active_generation, snapshot_revision
+                FROM memo_lifecycle_snapshot
+                WHERE singleton = 1
+                """
+            ).fetchone()
+        if row is None:
+            raise RuntimeError("lifecycle snapshot authority is unavailable")
+        return _snapshot_authority(row["active_generation"], row["snapshot_revision"])
+
+    def select_active_generation(self, generation: str) -> LifecycleSnapshotAuthority:
+        if not isinstance(generation, str) or not _GENERATION_PATTERN.fullmatch(generation):
+            raise ValueError("active generation must be one bounded opaque identifier")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT active_generation FROM memo_lifecycle_snapshot WHERE singleton = 1"
+            ).fetchone()
+            if row is None:
+                raise RuntimeError("lifecycle snapshot authority is unavailable")
+            if row["active_generation"] != generation:
+                connection.execute(
+                    """
+                    UPDATE memo_lifecycle_snapshot
+                    SET active_generation = ?, snapshot_revision = snapshot_revision + 1
+                    WHERE singleton = 1
+                    """,
+                    (generation,),
+                )
+            connection.commit()
+        return self.read_snapshot_authority()
 
     def last_error_code(
         self, memo_uid: str, index_version: str = MEMO_INDEX_VERSION
@@ -107,6 +158,16 @@ class SQLiteMemoLifecycleLedger:
         _ensure_schema(connection)
         connection.commit()
         return connection
+
+    @staticmethod
+    def _advance_snapshot_revision(connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            UPDATE memo_lifecycle_snapshot
+            SET snapshot_revision = snapshot_revision + 1
+            WHERE singleton = 1
+            """
+        )
 
     @staticmethod
     def _select_state(
@@ -205,6 +266,23 @@ class SQLiteMemoLifecycleLedger:
 def _ensure_schema(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
+        CREATE TABLE IF NOT EXISTS memo_lifecycle_snapshot (
+            singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+            active_generation TEXT,
+            snapshot_revision INTEGER NOT NULL DEFAULT 0
+                CHECK (snapshot_revision >= 0)
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO memo_lifecycle_snapshot (
+            singleton, active_generation, snapshot_revision
+        ) VALUES (1, NULL, 0)
+        """
+    )
+    connection.execute(
+        """
         CREATE TABLE IF NOT EXISTS memo_lifecycle_ledger (
             memo_uid TEXT NOT NULL,
             index_version TEXT NOT NULL CHECK (index_version = 'memo-v1'),
@@ -236,3 +314,21 @@ def _ensure_schema(connection: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _snapshot_authority(
+    active_generation: object, snapshot_revision: object
+) -> LifecycleSnapshotAuthority:
+    if active_generation is not None and (
+        not isinstance(active_generation, str)
+        or not _GENERATION_PATTERN.fullmatch(active_generation)
+    ):
+        raise RuntimeError("lifecycle snapshot authority is invalid")
+    if type(snapshot_revision) is not int or snapshot_revision < 0:
+        raise RuntimeError("lifecycle snapshot authority is invalid")
+    digest = hashlib.sha256(
+        f"{MEMO_INDEX_VERSION}:{snapshot_revision}:{active_generation or '-'}".encode(
+            "ascii"
+        )
+    ).hexdigest()
+    return LifecycleSnapshotAuthority(active_generation, snapshot_revision, digest)

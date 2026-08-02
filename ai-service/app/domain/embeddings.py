@@ -79,5 +79,13 @@ class VectorStore(Protocol):
     def search(self, query: Sequence[float], limit: int = 5) -> list[VectorSearchResult]:
         ...
 
+    def search_visible_memos(
+        self,
+        query: Sequence[float],
+        visible_memo_ids: frozenset[str],
+        limit: int = 5,
+    ) -> list[VectorSearchResult]:
+        ...
+
     def delete(self, embedding_id: str) -> bool:
         ...
