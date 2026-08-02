@@ -36,6 +36,7 @@ type APIV1Service struct {
 	SSEHub                     *SSEHub
 	NotificationEmailSender    notification.EmailSender
 	evidenceRehydrationRuntime *evidenceRehydrationMemosRuntime
+	memoLifecycleRuntime       *memoLifecycleSourceRuntime
 
 	// thumbnailSemaphore limits concurrent thumbnail generation to prevent memory exhaustion
 	thumbnailSemaphore       *semaphore.Weighted
@@ -94,6 +95,9 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 
 			next(w, r, pathParams)
 		}
+	}
+	if err := s.configureMemoLifecycleRuntime(ctx); err != nil {
+		return err
 	}
 	if err := s.registerConfiguredAgentRoutes(echoServer); err != nil {
 		return err
