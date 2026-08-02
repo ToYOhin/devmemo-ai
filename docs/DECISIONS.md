@@ -630,3 +630,22 @@ runtime selection 复用既有 `AI_AGENT_REHYDRATION_ENABLED`，且要求 memo-m
 默认路径不构造 ledger/repository/orchestrator。enabled lifespan 只把 client 与 orchestrator 放入 `app.state`，shutdown
 确定清空；I14 不修改 `EvidenceAnswerAgent` 或 endpoint。下一阶段 R5-I15 才允许在同一 opt-in 下连接回答路径，
 并必须证明 durable failure 不 fallback 到 legacy/raw-content retrieval。
+
+## ADR-071：durable answer path 只注入 lifespan-owned orchestrator 且失败不回退
+
+R5-I15 为 `EvidenceAnswerAgent` 增加一个可选 async durable retrieval protocol，不在 Agent 内构造 client、repository、
+ledger 或 transport。internal answer endpoint 仍先验证既有 answer delegation；只有
+`AI_AGENT_REHYDRATION_ENABLED` 启用时，才把当前 request 所属 app lifespan 已持有的 orchestrator 注入 Agent。
+flag disabled 时忽略任何 state 对象并保持原 memory retrieval；flag enabled 但 ownership 缺失时直接映射既有安全
+503，不能以 memory 路径掩盖配置或一致性失败。
+
+durable retrieval 返回的 `AuthorizedRetrievalResult` 只提供 request-memory document 与 server-owned citation。
+Agent citation 的 Memo UID、source sequence identity 与 `memo-v1` 来自该受控 citation；title、tag、visibility、
+score 语义或 citation metadata 不从 vector result 或 rehydration response取得。空 evidence 保留 no-context 且不调用
+Provider。missing authority、client/503、partial/mismatch、snapshot race、结果类型或 projection failure 均折叠为
+既有 retrieval-unavailable 503；禁止 retry、第二次 client call、memory/raw-content fallback 或 Provider call。
+
+产品路径证明仅使用临时 SQLite lifecycle ledger、InMemoryVectorStore、合成 signed delegation、fake rehydration
+client 与 deterministic Provider，证明一次 candidate→rehydration→Agent answer、受控 citation/trace 和无公开正文。
+它不证明真实 Qdrant/Memos、lifecycle dispatcher、rebuild activation、重启对账、Docker 或认证浏览器运行时；这些
+属于 R5-I16 验收审计后的独立授权闸门。

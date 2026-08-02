@@ -41,8 +41,10 @@
 > candidate-to-rehydration orchestration with snapshot recheck and request-memory
 > materialization. R5-I14 adds a content-free vector/lifecycle adapter, a ledger-
 > owned active-generation revision, authorized UID query pushdown, and strict
-> default-disabled lifespan ownership. The durable runtime is still disconnected
-> from the answer Agent and has no public availability.
+> default-disabled lifespan ownership. R5-I15 makes the verified answer Agent
+> select that owned orchestrator under the same opt-in, with no legacy fallback,
+> and proves the disposable synthetic single-host product path. Real runtime and
+> browser acceptance remain unverified.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -390,6 +392,16 @@ LLM provider.
    rehydration opt-in constructs the repository/orchestrator in lifespan state
    only for memo-mode Qdrant selection; disabled startup constructs nothing.
    Neither `EvidenceAnswerAgent` nor an endpoint selects it yet.
+30. **Durable answer-path selection — complete, opt-in.** R5-I15 gives
+   `EvidenceAnswerAgent` one optional async durable retrieval dependency. The
+   internal endpoint injects only the orchestrator already owned by the current
+   app lifespan and only under the existing rehydration flag; missing ownership
+   or any durable failure maps to the existing safe 503 without memory fallback.
+   Disabled mode keeps the prior memory retrieval path byte-for-byte. Durable
+   evidence becomes controlled Agent citations using only the server-owned Memo
+   UID, source sequence, and `memo-v1`; vector or rehydration metadata cannot
+   supply title, tags, visibility, or citation fields. A temporary SQLite,
+   in-memory vector, fake-client proof reaches an answered trace with no network.
 
 ## Acceptance criteria for the first Agent path
 
@@ -768,6 +780,19 @@ closed. The existing `AI_AGENT_REHYDRATION_ENABLED` opt-in owns the repository
 and orchestrator in FastAPI lifespan state only when memo-mode Qdrant is
 selected. The memory default is unchanged, and the answer Agent remains
 disconnected until R5-I15.
+
+R5-I15 connects the already-owned orchestrator without adding another client,
+repository, ledger, transport, route, or configuration flag. Delegation is
+verified before the Agent calls the optional async retrieval dependency. The
+durable result supplies request-memory context, while its server-owned citation
+is projected into the existing Agent schema with controlled empty title/tags,
+an identity derived only from `memo-v1`, Memo UID, and source sequence, and no
+rehydration/vector metadata. Empty durable evidence preserves no-context and
+does not call the Provider. Missing runtime ownership, missing authority,
+rehydration failure, snapshot race, malformed result, or projection failure
+maps to the existing retrieval-unavailable 503 and never falls back to memory.
+The disposable product-path proof uses a temporary ledger, in-memory vectors,
+synthetic delegation, and a fake rehydration client; no real runtime is claimed.
 
 ## A4 local RAG lifecycle contract
 
