@@ -7,8 +7,9 @@ import hmac
 import json
 import re
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from app.adapters.agent_lifecycle_ledger import (
@@ -22,6 +23,8 @@ from app.domain.agent_lifecycle import (
 )
 from app.domain.embeddings import EmbeddingProvider, VectorRecord, VectorSearchResult
 from app.services.agent_lifecycle_processor import MemoLifecycleProcessor
+from app.services.embedding_service import EmbeddingService
+from app.settings import AiSettings
 
 
 _GENERATION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -180,6 +183,43 @@ class MemoLifecycleRuntime:
             seen.add(record.memo_id)
             entries.append((record.memo_id, document_hash))
         return entries
+
+
+def build_memo_lifecycle_runtime(
+    settings: AiSettings,
+    embedding_service: EmbeddingService,
+    *,
+    database: str | Path,
+    ledger_factory: Callable[[str | Path], SQLiteMemoLifecycleLedger] = (
+        SQLiteMemoLifecycleLedger
+    ),
+) -> MemoLifecycleRuntime | None:
+    """Own lifecycle mutation only under the strict existing opt-in."""
+
+    if not settings.agent_lifecycle_enabled:
+        return None
+    store = embedding_service.store
+    if (
+        not settings.agent_rehydration_enabled
+        or settings.vector_store != "qdrant"
+        or settings.index_mode != "memo"
+        or settings.agent_lifecycle_generation is None
+        or not hasattr(store, "delete_memo_versions")
+        or not hasattr(store, "list_lifecycle_records")
+    ):
+        raise LifecycleRuntimeError
+    try:
+        ledger = ledger_factory(database)
+        writer = QdrantLifecycleVectorWriter(
+            embedding_service.provider,
+            store,
+            settings.agent_lifecycle_generation,
+        )
+        return MemoLifecycleRuntime(ledger, writer)
+    except LifecycleRuntimeError:
+        raise
+    except Exception:
+        raise LifecycleRuntimeError from None
 
 
 def _manifest_digest(entries: Sequence[tuple[str, str]]) -> str:

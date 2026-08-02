@@ -12,7 +12,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -60,6 +60,19 @@ from app.services.durable_rehydration_runtime import (
 )
 from app.services.evidence_rehydration_http_client import (
     evidence_rehydration_client_lifespan,
+)
+from app.services.agent_lifecycle_http_adapter import (
+    INTERNAL_LIFECYCLE_ACTIVATION_PATH,
+    LifecycleHTTPResponse,
+    MemoLifecycleHTTPAdapter,
+)
+from app.services.agent_lifecycle_runtime import build_memo_lifecycle_runtime
+from app.services.agent_lifecycle_transport import (
+    INTERNAL_LIFECYCLE_PATH,
+    LIFECYCLE_NONCE_HEADER,
+    LIFECYCLE_SIGNATURE_HEADER,
+    LIFECYCLE_TIMESTAMP_HEADER,
+    LifecycleTransportHeaders,
 )
 from app.services.webhook_security import verify_signature
 from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
@@ -185,7 +198,22 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     async with evidence_rehydration_client_lifespan(settings) as client:
         application.state.evidence_rehydration_client = client
         application.state.durable_rehydration_orchestrator = None
+        application.state.memo_lifecycle_http_adapter = None
         try:
+            lifecycle_runtime = build_memo_lifecycle_runtime(
+                settings,
+                embedding_service,
+                database=database_path(),
+            )
+            if lifecycle_runtime is not None:
+                if settings.agent_lifecycle_secret is None:
+                    raise RuntimeError("memo lifecycle runtime is unavailable")
+                application.state.memo_lifecycle_http_adapter = (
+                    MemoLifecycleHTTPAdapter(
+                        lifecycle_runtime,
+                        settings.agent_lifecycle_secret,
+                    )
+                )
             application.state.durable_rehydration_orchestrator = (
                 build_durable_rehydration_orchestrator(
                     settings,
@@ -196,6 +224,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             )
             yield
         finally:
+            application.state.memo_lifecycle_http_adapter = None
             application.state.durable_rehydration_orchestrator = None
             application.state.evidence_rehydration_client = None
 
@@ -525,6 +554,76 @@ async def answer_delegated_agent_request(
     except AgentProviderError as error:
         raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
     return result.to_dict()
+
+
+@app.post(INTERNAL_LIFECYCLE_PATH)
+async def apply_memo_lifecycle_event(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias=LIFECYCLE_SIGNATURE_HEADER),
+    timestamp: str | None = Header(default=None, alias=LIFECYCLE_TIMESTAMP_HEADER),
+    nonce: str | None = Header(default=None, alias=LIFECYCLE_NONCE_HEADER),
+) -> Response:
+    """Apply one authenticated Memos-owned lifecycle event when opted in."""
+
+    adapter = getattr(raw_request.app.state, "memo_lifecycle_http_adapter", None)
+    if not isinstance(adapter, MemoLifecycleHTTPAdapter):
+        return _memo_lifecycle_response(LifecycleHTTPResponse(404))
+    if not _memo_lifecycle_envelope_is_exact(raw_request):
+        return _memo_lifecycle_response(LifecycleHTTPResponse(404))
+    result = adapter.handle_event(
+        method=raw_request.method,
+        path=raw_request.url.path,
+        body=await raw_request.body(),
+        headers=LifecycleTransportHeaders(
+            signature or "", timestamp or "", nonce or ""
+        ),
+        now=datetime.now(timezone.utc),
+    )
+    return _memo_lifecycle_response(result)
+
+
+@app.post(INTERNAL_LIFECYCLE_ACTIVATION_PATH)
+async def activate_memo_lifecycle_generation(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias=LIFECYCLE_SIGNATURE_HEADER),
+    timestamp: str | None = Header(default=None, alias=LIFECYCLE_TIMESTAMP_HEADER),
+    nonce: str | None = Header(default=None, alias=LIFECYCLE_NONCE_HEADER),
+) -> Response:
+    """Activate only an authenticated, reconciled rebuild generation."""
+
+    adapter = getattr(raw_request.app.state, "memo_lifecycle_http_adapter", None)
+    if not isinstance(adapter, MemoLifecycleHTTPAdapter):
+        return _memo_lifecycle_response(LifecycleHTTPResponse(404))
+    if not _memo_lifecycle_envelope_is_exact(raw_request):
+        return _memo_lifecycle_response(LifecycleHTTPResponse(404))
+    result = adapter.handle_activation(
+        method=raw_request.method,
+        path=raw_request.url.path,
+        body=await raw_request.body(),
+        headers=LifecycleTransportHeaders(
+            signature or "", timestamp or "", nonce or ""
+        ),
+        now=datetime.now(timezone.utc),
+    )
+    return _memo_lifecycle_response(result)
+
+
+def _memo_lifecycle_response(result: LifecycleHTTPResponse) -> Response:
+    return Response(
+        content=result.body,
+        status_code=result.status_code,
+        media_type=result.content_type,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def _memo_lifecycle_envelope_is_exact(request: Request) -> bool:
+    return (
+        not request.url.query
+        and request.headers.get("content-type", "").strip().lower()
+        == "application/json"
+        and not request.headers.get("content-encoding")
+    )
 
 
 @app.get("/api/ai/notes/{memo_id}", response_model=AiNoteResponse)
