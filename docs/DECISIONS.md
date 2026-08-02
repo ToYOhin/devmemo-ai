@@ -356,3 +356,23 @@ backup 或错误正文。Memos 继续拥有正文、身份、visibility、retent
 repository、runtime wiring、secret、Compose、database 或真实数据。下一授权最多证明单机认证 transport；
 真实数据接入前必须完成 backup、dry run、rollback 与 reconciliation，多实例前必须增加跨宿主加密和共享
 replay protection。
+
+## ADR-058：rehydration request 与 response 使用独立 HMAC 和双向单进程 replay
+
+R5-I4 将 `memo-evidence-rehydration-v1` 绑定到独立 transport version、固定 `POST` path 与
+rehydration-only request purpose。request canonical form 包含 purpose、version、method/path、十进制
+timestamp、nonce 和 exact body digest；验证在 exact JSON parsing 与 Memos authority callback 前完成，
+并消费有界 process-local request replay entry。callback 最多执行一次，timeout、authority 或 schema
+failure 只生成固定 `authorized_retrieval_unavailable`。
+
+正文 response 使用不同的 response-only purpose 与 header namespace，canonical form 绑定 response
+timestamp、原 request nonce、derived snapshot token、status 和 exact body digest。AI 侧必须先验签和检查
+时效，再 exact parse、核对全部 selection reference/sequence/hash/version，并消费独立 client-side replay
+entry。成功只允许 `200` exact R5-I3 response，失败只允许签名的 `503` 固定错误；response、错误和可观测
+输出均不得包含 `memos_authority_ref`。契约固定未来 client timeout 为五秒且不自动重试，本切片只映射
+合成 `TimeoutError`，不实现 HTTP timer。
+
+两个 replay store 都明确只证明单进程；HMAC 只证明完整性和 scoped secret possession，不提供正文
+保密性。本切片没有 route/client、runtime secret/config、database、repository、Compose、真实 Memo 或
+runtime selection。跨宿主或多实例前必须增加加密 transport、shared replay storage、密钥轮换和独立
+威胁评审；下一步仅允许证明 Memos Go 侧对共享 fixture 的跨语言 parity。
