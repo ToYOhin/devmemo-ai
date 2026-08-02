@@ -376,3 +376,20 @@ entry。成功只允许 `200` exact R5-I3 response，失败只允许签名的 `5
 保密性。本切片没有 route/client、runtime secret/config、database、repository、Compose、真实 Memo 或
 runtime selection。跨宿主或多实例前必须增加加密 transport、shared replay storage、密钥轮换和独立
 威胁评审；下一步仅允许证明 Memos Go 侧对共享 fixture 的跨语言 parity。
+
+## ADR-059：Memos Go 侧先证明 rehydration transport parity，不接 authority 或 runtime
+
+R5-I5 在 `internal/aiagent` 增加独立、未接线的 Go request verifier 与 response signer/parser。request
+验签严格复现 R5-I4 的 purpose、transport version、固定 method/path、十进制 timestamp、nonce 与 exact
+body digest；验签和 60 秒时效检查先于 exact nested JSON parsing。response 使用独立 purpose，签名前
+必须通过 exact success 或固定 `503` parsing，并重新核对 derived snapshot token 与全部 selection
+reference/sequence/hash/version。
+
+共享 `memo-evidence-rehydration-transport-v1.json` 同时锁定 Python 与 Go canonical bytes。Go 侧对未知、
+缺失、重复、部分、超限、非法 UTF-8、identity-bearing 或不一致 payload 只返回
+`authorized_retrieval_unavailable`，不暴露正文、authority reference、secret、signature、digest 或原始错误。
+
+本阶段不增加 Go replay store、Memos authority lookup、HTTP route/client、runtime secret/config、数据库、
+网络或真实数据。Python R5-I4 的 process-local replay 证明保持不变；任何多实例使用仍需要 shared replay
+storage 和加密 transport。下一步必须先用纯对象定义单机 Memos current-authority adapter 边界，再单独
+授权实际 transport 与 runtime selection。
