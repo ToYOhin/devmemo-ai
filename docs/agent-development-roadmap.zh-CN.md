@@ -23,7 +23,8 @@
 > 证明，R5-I11A 已增加独立 current/previous rehydration keyring 与 AI 侧单一 Memos origin 的严格默认关闭
 > 配置，R5-I11B 已增加 matching-key handling 与现有 Memos listener 上的 opt-in registration，R5-I11C 已
 > 增加 AI 侧 Python HTTP client 与确定性 lifespan shutdown，R5-I12 已增加 Memos-owned capability issuance
-> 与 signed delegation 内的 opaque ref。Python client 仍未调用，因此尚无可用于正式产品的 durable 回答链路。
+> 与 signed delegation 内的 opaque ref，R5-I13 已增加带 snapshot recheck 的 injected durable candidate/
+> rehydration orchestration。尚未连接真实 adapter 或 runtime selection。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -57,7 +58,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I12 已签发并私有委托 Memos-owned capability，但尚无 durable candidate orchestration 或 client call 把它连接到 answer Agent；process-local replay/capability 也仍仅支持单实例 | 在不改变默认值的前提下连接经审查的单机 durable runtime selection；多实例前必须提供 shared atomic state |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I13 已证明 candidate filtering、一次 rehydration call、snapshot recheck 与 request-memory materialization，但尚无真实 adapter/runtime selection 接入 answer Agent；process-local state 仍仅支持单实例 | 在不改变默认值的前提下连接经审查的单机 durable adapter/runtime selection；多实例前必须提供 shared atomic state |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -262,6 +263,10 @@ R5-I11C 增加仅由 enabled FastAPI lifespan 构造的 async Python client。�
 R5-I12 为既有 signed answer delegation 增加可选 opaque Memos authority ref。enabled BFF request 从
 process-local registry 一次获取当前 authenticated UID scope 与 capability，只委托该精确 scope，且不向浏览器
 投影 ref。空 scope 不创建 capability并保留 no-context 行为。Python 校验该私有字段，但尚未调用 client。
+R5-I13 在 content-free candidates 与 I11C client protocol 上增加 injected async orchestrator。它在一次调用前完成
+过滤，重新读取 current snapshot token，只在 request memory materialize exact reverified response documents，并
+复用现有 authorized result。空 scope/candidates 不调用；所有失败均 content-free，绝不 fallback 到 derived raw
+content。当前没有 endpoint 或 Agent runtime 选择它。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -331,9 +336,8 @@ process-local registry 一次获取当前 authenticated UID scope 与 capability
 
 ## 下一授权闸门
 
-R5-I12 已完成 Memos-owned capability issuance 与私有 signed delegation，未向浏览器投影也未调用 client。
-下一项窄范围 R5 闸门是单机 durable orchestration：从经审查 adapter 获取 content-free candidates，只调用一次
-lifespan-owned Python client，仅把重新验证的 request-memory documents materialize 到回答上下文，并保留现有
-memory/default 行为。该切片必须在不改变 Compose 默认值、不使用真实数据、不主张多实例的前提下独立验证。
+R5-I13 已完成 injected durable candidate/rehydration orchestration，尚未选择真实 adapter 或改变 Agent runtime。
+下一项窄范围 R5 闸门是经审查的 content-free durable adapter 与默认关闭的 runtime selection。必须保留 memory
+默认值，并先用 disposable synthetic data 证明，再连接 `EvidenceAnswerAgent`。
 真实 Docker/浏览器验收要等 answer path 接通后另行取得 runtime 授权；多实例前仍需加密 transport 与 shared
 atomic replay/capability storage。

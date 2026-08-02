@@ -595,3 +595,20 @@ client。空 current scope 不创建 capability、委托空 UID 且保留既有 
 该桥接仍为单进程、默认关闭，不增加 listener、port、secret、持久化、真实数据或多实例主张。下一窄切片才可
 把 content-free durable candidates、一次 Python rehydration call、snapshot recheck 与 request-memory materialization
 接入 Agent；在那之前 `EvidenceAnswerAgent` 仍使用原 memory retrieval。
+
+## ADR-069：R5 durable orchestration 必须在一次 rehydration 后重新确认 derived snapshot
+
+R5-I13 增加未被 runtime 选择的 Python `DurableRehydrationOrchestrator`。输入仅为已验签 delegation、只返回
+content-free `DerivedCandidateSnapshot` 的 repository，以及 I11C client protocol。orchestrator 先用既有
+`select_eligible_candidates` 做 authorization/lifecycle/generation 过滤，再以 delegation 中的 Memos authority ref
+构造一次 exact rehydration request；不允许 retry 或从 derived repository 加载正文作为 fallback。
+
+exact success response 返回后，repository 必须重新提供 current snapshot token；只有 token 未变化且既有
+`materialize_rehydrated_documents` 对 selection、sequence、hash、version、authority 与 response 完整性全部复核
+通过，正文才可在当前 request memory 中进入既有 `AuthorizedRetrievalResult`。空 authorized scope 或无 eligible
+candidate 直接返回空结果且不调用 client。missing ref、client failure/503、partial/mismatch、snapshot change 或
+repository error 全部折叠为无正文 `authorized retrieval unavailable`。
+
+I13 不选择真实 adapter，不修改 settings、`main.py`、endpoint 或 `EvidenceAnswerAgent`，也不访问网络、Store、
+Qdrant、Provider、真实数据或持久化正文。下一阶段必须单独评审 content-free durable adapter 与默认关闭的 runtime
+selection；实际产品 path 与浏览器验收继续后置。
