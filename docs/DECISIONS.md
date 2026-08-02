@@ -393,3 +393,22 @@ reference/sequence/hash/version。
 网络或真实数据。Python R5-I4 的 process-local replay 证明保持不变；任何多实例使用仍需要 shared replay
 storage 和加密 transport。下一步必须先用纯对象定义单机 Memos current-authority adapter 边界，再单独
 授权实际 transport 与 runtime selection。
+
+## ADR-060：Memos current-authority reader 先固定纯 Go 原子快照契约
+
+R5-I6 在真实 Store 或 HTTP 接线前，先用 provider-neutral Go 对象固定 Memos-owned current-authority
+reader 边界。输入只能是 R5-I5 已验签并 exact parse 的 `EvidenceRehydrationRequest` 与 Memos 内部 opaque
+认证上下文绑定；绑定类型不包含 caller ID、owner 或 visibility 字段。`memos_authority_ref` 只做请求内
+精确关联，不解码、不投影到响应，也不进入错误或可观测输出。
+
+reader 每次只允许返回一个原子 snapshot。snapshot 与每个文档必须在 authority reference、认证上下文、
+revision 和 authority token 上一致，并重新确认当前 visibility、complete Memo、normal row、current lifecycle、
+非空正文、UID、source sequence、document hash 与 `memo-v1`。请求 UID 与文档必须精确一一对应；缺失、
+多余、重复、unknown、archive/comment/blank/delete/tombstone、并发 update、stale 或混合 snapshot 全部
+整体失败。成功响应按请求拥有的 selection reference 顺序构造，只包含 R5-I3 exact 字段，不包含 Memo UID、
+identity、visibility、authority reference、citation 或 store metadata。所有失败固定为
+`authorized_retrieval_unavailable`，不返回部分正文或原始错误。
+
+本阶段的 reader 实现仅为测试内存 fake，因此只证明契约和 fail-closed projection，不证明真实 Store
+transaction 原子性。真实 Memos Store reader、visibility resolver 接线、HTTP handler/client、HMAC/replay
+运行时接线、secret/config、AI runtime selection、数据库、网络与真实数据均未加入，必须分别授权。

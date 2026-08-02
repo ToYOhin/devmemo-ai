@@ -21,8 +21,9 @@
 > side retains complete content only in request memory. R5-I4 proves the
 > domain-separated request/response HMAC, freshness, exact parsing, and bounded
 > process-local replay contract entirely in process. R5-I5 proves Go/Python
-> canonical and exact-payload parity against the same synthetic fixture. The
-> feature remains
+> canonical and exact-payload parity against the same synthetic fixture. R5-I6
+> defines the pure Go current-authority reader boundary and proves its
+> all-or-nothing projection with an in-memory fake. The feature remains
 > disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
@@ -280,6 +281,17 @@ LLM provider.
    inconsistent payloads with one content-free error. The Go proof adds no
    route/client, replay store, authority lookup, runtime secret/configuration,
    persistence, network, or real data.
+19. **Memos current-authority adapter contract — complete, unwired.** R5-I6
+   accepts only an already verified `EvidenceRehydrationRequest` and an opaque
+   Memos-internal authenticated-context binding. A one-call reader protocol must
+   return one atomic snapshot whose authority reference, context binding,
+   revision, authority token, current visibility, complete-Memo type, normal
+   row state, current lifecycle state, sequence, hash, and `memo-v1` version all
+   agree. Pure fake tests prove exact UID correspondence, request-owned
+   selection ordering, no identity or visibility projection, and all-or-nothing
+   rejection of update/delete, partial, duplicate, stale, mixed-snapshot, and
+   adapter failures. No real Store, visibility resolver, route, replay, HMAC,
+   runtime configuration, persistence, network, or data is connected.
 
 ## Acceptance criteria for the first Agent path
 
@@ -466,6 +478,28 @@ fields. This is cross-language contract parity, not a Go replay implementation
 or Memos authority adapter. The HTTP route/client, process-local replay wiring,
 current-visibility authority lookup, runtime secret/configuration, and AI
 runtime selection remain separate authorization gates.
+
+R5-I6 defines the next Memos-owned boundary without implementing that lookup.
+`EvidenceAuthorityContextBinding` contains only the opaque authority reference
+and an opaque authenticated-context token; it has no caller ID, owner, or
+visibility fields. `EvidenceCurrentAuthorityReader` is called once and must
+return all requested complete Memos from one atomic current-authority snapshot.
+Every document must be currently visible, complete, normal, non-tombstoned,
+nonblank, and must exactly match the requested UID, source sequence, document
+hash, and `memo-v1` version. Per-document revision and authority token seals
+must match the snapshot-level seals, preventing rows from different reads from
+being combined.
+
+The response is assembled in request selection order and contains only the R5-I3
+fields: selection reference, content, sequence, hash, version, derived snapshot
+token, and opaque authority token. Memo UID, caller identity, visibility,
+authority reference, citation metadata, and store metadata are not projected.
+Any missing, extra, duplicate, unknown, archived, comment, blank, deleted,
+tombstoned, changed, malformed, or mixed row returns only
+`authorized_retrieval_unavailable`, with no partial content. This proof uses an
+in-memory fake and does not prove real-store transaction atomicity. A real
+Memos Store reader, HTTP handler/client, replay wiring, runtime secret/config,
+and AI runtime selection all require separate authorization.
 
 ## A4 local RAG lifecycle contract
 
