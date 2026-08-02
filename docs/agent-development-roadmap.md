@@ -33,8 +33,8 @@
 > and opt-in registration on the existing Memos listener. R5-I11C adds the
 > AI-side Python HTTP client and deterministic lifespan shutdown. R5-I12 adds
 > Memos-owned capability issuance and an opaque ref inside signed delegation.
-> The Python client is still not called, so no production-ready durable answer
-> path is implemented.
+> R5-I13 adds injected durable candidate/rehydration orchestration with snapshot
+> recheck. No real adapter or runtime selection is connected yet.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -82,7 +82,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I12 now issues and privately delegates a Memos-owned capability, but no durable candidate orchestration or client call connects it to the answer Agent; process-local replay/capability state also remains single-instance only | Connect the reviewed single-host durable runtime selection without changing defaults; require shared atomic state before multi-instance use |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I13 now proves candidate filtering, one rehydration call, snapshot recheck, and request-memory materialization, but no real adapter/runtime selection connects it to the answer Agent; process-local state remains single-instance only | Connect the reviewed single-host durable adapter and runtime selection without changing defaults; require shared atomic state before multi-instance use |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -377,6 +377,12 @@ scope and capability together from the process-local registry, delegate that
 exact scope once, and never project the ref to the browser. Empty scope creates
 no capability and preserves no-context behavior. Python validates the private
 field but does not call the rehydration client yet.
+R5-I13 adds an injected async orchestrator over content-free candidates and the
+I11C client protocol. It filters before one call, rereads the current snapshot
+token, materializes only exact reverified response documents in request memory,
+and projects the existing authorized result. Empty scope/candidates do not call;
+all failures are content-free and never fall back to derived raw content. It is
+not selected by any endpoint or Agent runtime.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -485,13 +491,11 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5-I12 has completed Memos-owned capability issuance and private signed
-delegation without browser projection or a client call. The next narrow R5 gate
-is single-host durable orchestration: obtain content-free candidates from the
-reviewed adapter, call the lifespan-owned Python client once, materialize only
-the reverified request-memory documents, and retain existing memory/default
-behavior. It must be separately verified without Compose defaults, real data,
-or multi-instance claims. Real browser/Docker acceptance remains a later
-explicit runtime authorization gate after this answer path is connected.
+R5-I13 has completed injected durable candidate/rehydration orchestration without
+selecting a real adapter or changing the Agent runtime. The next narrow R5 gate
+is a reviewed content-free durable adapter and default-disabled runtime selection.
+It must preserve the memory default and be proven with disposable synthetic data
+before `EvidenceAnswerAgent` is connected. Real browser/Docker acceptance remains
+a later explicit runtime authorization gate after the answer path is connected.
 Docker/browser proof remains later; encrypted transport and shared atomic
 replay/capability storage remain mandatory before multi-instance use.

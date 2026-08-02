@@ -37,8 +37,10 @@
 > the existing Memos listener. R5-I11C adds an opt-in Python HTTP client owned by
 > the AI Service lifespan, with deterministic transport close. R5-I12 issues a
 > Memos-owned authority capability from the authenticated BFF path and carries
-> only its opaque ref inside the signed delegation. No rehydration client call,
-> remote deployment, or general-public availability is delivered.
+> only its opaque ref inside the signed delegation. R5-I13 adds injected durable
+> candidate-to-rehydration orchestration with snapshot recheck and request-memory
+> materialization. No real adapter/runtime selection or public availability is
+> delivered.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -370,6 +372,12 @@ LLM provider.
    An empty current scope produces no capability and preserves normal no-context
    behavior. The browser request and safe response contain no authority ref;
    disabled mode retains the prior memory delegation body.
+28. **Durable rehydration orchestration — complete, unselected.** R5-I13 accepts
+   only verified delegation, a content-free candidate repository, and the I11C
+   client protocol. It filters candidates before one client call, rereads the
+   current snapshot token, materializes reverified documents only in request
+   memory, and projects the existing authorized result. Empty scopes/candidates
+   make no call; every mismatch/failure is content-free and has no fallback.
 
 ## Acceptance criteria for the first Agent path
 
@@ -725,6 +733,15 @@ ref under the existing answer HMAC. Empty scope delegates no ref; registry or
 scope failure maps to the existing safe BFF failure. The field is never accepted
 from or returned to the browser. Python verifies its 32-64-character opaque
 shape but does not yet call the lifespan client.
+
+R5-I13 composes the existing R5 domain contracts without selecting a runtime
+adapter. A verified delegation becomes an authorized query; content-free
+candidates are filtered before one rehydration request. Only a successful exact
+response proceeds to a fresh repository snapshot-token read and the existing
+materialization cross-check. Any client failure, changed snapshot, partial or
+mismatched response fails as `authorized retrieval unavailable`, never loading
+derived raw content. Empty authorized/candidate scopes return empty without a
+client call. No endpoint or `EvidenceAnswerAgent` uses this orchestrator yet.
 
 ## A4 local RAG lifecycle contract
 
