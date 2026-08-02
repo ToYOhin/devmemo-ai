@@ -17,7 +17,8 @@
 > HMAC、时效、精确解析和有界 process-local replay，R5-I5 已基于共享 fixture 增加尚未接线的 Go/Python
 > canonical 与 exact payload parity，R5-I6 已增加尚未接线的纯 Go current-authority reader 契约与内存
 > all-or-nothing parity proof，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库
-> parity proof。authority capability issuer/resolver、生产 HTTP rehydration adapter、lifecycle route、dispatcher、运行时接线和
+> parity proof，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver 与有界 registry
+> 证明。生产 HTTP rehydration adapter、HMAC/replay runtime composition、lifecycle route、dispatcher、运行时接线和
 > 可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
@@ -52,7 +53,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I7 已用临时合成 Memo 证明尚未接线的 SQLite current-authority reader，但尚无 authority capability issuer/resolver、HTTP route/client、replay 接线、runtime secret/configuration、shared replay store 或 runtime selection，因此没有持久化回答路径 | 分别授权 process-local authority capability、transport handler/client 与 AI runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I8 已在 R5-I7 SQLite reader 边界上证明尚未接线的 process-local authority capability，但仍无 HTTP route/client、HMAC/replay runtime composition、runtime secret/configuration、shared replay/capability store 或 runtime selection，因此没有持久化回答路径 | 分别授权单机 transport handler/client 与 replay composition，再授权 AI runtime selection |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -215,6 +216,15 @@ A4 source event；只有 source document 等于当前 Memos 正文的 `memo-v1` 
 任何并发提交都使整批失败。临时 SQLite 测试覆盖 visibility parity、update/delete/visibility race、生命周期与
 source mismatch、schema/transaction failure 和无正文错误。本证明只覆盖 SQLite 单机，不覆盖 MySQL/PostgreSQL、
 HTTP、真实数据或多实例。
+R5-I8 增加尚未接线的 process-local issuer/resolver。签发只从 Memos authentication context 派生 caller
+identity，不接收 caller-controlled scope；注入的 Memos-owned source 必须返回同一个 current caller，以及采用
+R5-I1 matcher、非空、不重复且最多 1,000 个完整 Memo UID 的 scope。无 timer registry 的容量在构造时固定，
+TTL 最多 60 秒。三个独立来源的 opaque token 绑定同一个私有 entry，只有 authority reference 预期进入后续
+签名 request。consume 原子检查私有 token index 和唯一、1 至 10 项的 request 子集后删除 entry，只返回
+Memos-private auth context、精确原始 UID scope、未改变的 R5-I6 binding 与 authority token。合成测试覆盖过期、
+容量、碰撞、错配、重启失效、固定 failure 投影和并发 consume 只有一个成功。没有增加 HTTP、replay-store
+复用、runtime 配置、持久化、数据库、网络或真实数据；多实例仍需要加密 transport 与 shared atomic
+capability/replay storage。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -284,10 +294,10 @@ HTTP、真实数据或多实例。
 
 ## 下一授权闸门
 
-R5 现在已为后续单独授权的 **process-local Memos authority capability issuer/resolver** 切片做好准备。
-R5-I7 能从已有认证 Memos context 取得 caller ID，但未来 internal rehydration request 仍没有获准从
-`memos_authority_ref` 恢复该 context 的方式。下一切片最多定义并用 fake 证明一个有界、短时、单机 registry：
-只能从认证 Memos context 签发 opaque reference，并在服务端解析为 caller binding，不能投影 identity 或
-visibility。它仍不得接 HTTP、answer runtime、真实数据、secret、Compose 或 AI runtime selection。HTTP
-handler/client 与 HMAC/replay 接线仍是更后的独立闸门；任何多实例使用前仍必须提供加密 transport 与 shared
-replay/capability storage。
+R5-I8 已在不接 runtime 的前提下完成单独授权的 **process-local Memos authority capability
+issuer/resolver**。下一闸门是单独评审的单机 rehydration transport composition：通过严格的 Memos-owned
+handler/client contract 组合既有 R5-I5 request verification、专用有界 request replay 边界、R5-I8 consume、
+R5-I7 reader、R5-I6 projection 与 R5-I5 response signing。该闸门必须显式决定 runtime secret 与 timeout
+配置，并继续默认关闭，且不得同时接 `EvidenceAnswerAgent`、`RetrievalService`、VectorStore selection、
+lifecycle runtime、Compose 默认值或真实数据。任何多实例使用前仍必须提供加密 transport 与 shared atomic
+replay/capability storage；AI runtime selection 仍是后续独立授权闸门。

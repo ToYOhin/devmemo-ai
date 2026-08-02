@@ -22,8 +22,9 @@
 > unwired Go/Python canonical and exact-payload parity against the shared fixture.
 > R5-I6 adds the unwired pure Go current-authority reader contract and in-memory
 > all-or-nothing parity proof. R5-I7 adds the unwired real single-host SQLite
-> current-authority reader and temporary-database parity proof. No HTTP rehydration
-> adapter, authority-capability issuer/resolver, lifecycle route, dispatcher,
+> current-authority reader and temporary-database parity proof. R5-I8 adds the
+> unwired process-local authority capability issuer/resolver and bounded registry
+> proof. No HTTP rehydration adapter, HMAC/replay runtime composition, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -72,7 +73,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I7 now proves an unwired SQLite current-authority reader against temporary synthetic Memos, but there is no authority-capability issuer/resolver, HTTP route/client, replay wiring, runtime secret/configuration, shared replay store, or runtime selection, so no durable path serves answers | Separately authorize the process-local authority capability, then the transport handler/client and AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I8 now proves an unwired process-local authority capability over the R5-I7 SQLite reader boundary, but there is no HTTP route/client, HMAC/replay runtime composition, runtime secret/configuration, shared replay/capability store, or runtime selection, so no durable path serves answers | Separately authorize the single-host transport handler/client and replay composition, then AI runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -297,6 +298,21 @@ commit during the read rejects the whole result. Temporary SQLite tests cover
 visibility parity, update/delete/visibility races, lifecycle/source mismatch,
 schema/transaction failure, and content-free errors. This is SQLite-only parity,
 not MySQL/PostgreSQL, HTTP, real-data, or multi-instance proof.
+R5-I8 adds an unwired process-local issuer/resolver. Issuance derives caller
+identity only from Memos authentication context and accepts no caller-controlled
+scope; an injected Memos-owned source must return the same current caller and a
+unique, nonempty, R5-I1-matching scope of at most 1,000 complete-Memo UIDs. A
+constructor-fixed capacity and TTL of at most 60 seconds bound the no-timer
+registry. Three independently sourced opaque tokens bind one private entry;
+only the authority reference is intended for a later signed request. Consume
+atomically checks the private token indexes and a unique one-to-ten-item request
+subset, deletes the entry, and returns only a Memos-private auth context, exact
+original UID scope, unchanged R5-I6 binding, and authority token. Synthetic
+tests cover expiry, capacity, collision, mismatch, restart invalidation, fixed
+failure projection, and one-success concurrent consume. No HTTP, replay-store
+reuse, runtime configuration, persistence, database, network, or real data is
+added; multi-instance use still requires encrypted transport and shared atomic
+capability/replay storage.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -405,14 +421,14 @@ review, and explicit authorization.
 
 ## Next authorization gate
 
-R5 is now ready for a separately authorized **process-local Memos authority
-capability issuer/resolver** slice. R5-I7 can derive caller ID from an existing
-authenticated Memos context, but a later internal rehydration request still has
-no authorized way to recover that context from `memos_authority_ref`. The next
-slice may define and fake-prove a bounded, expiring, single-host registry that
-issues opaque references only from authenticated Memos context and resolves
-them to server-owned caller binding without exposing identity or visibility.
-It must remain unwired to HTTP, answer runtime, real data, secrets, Compose, and
-AI runtime selection. HTTP handler/client plus HMAC/replay wiring remains a
-later gate; encrypted transport and shared replay/capability storage remain
-mandatory before any multi-instance use.
+R5-I8 has completed the separately authorized **process-local Memos authority
+capability issuer/resolver** without runtime wiring. The next gate is a separately
+reviewed single-host rehydration transport composition: bind the already-proven
+R5-I5 request verification, a dedicated bounded request replay boundary, R5-I8
+consume, R5-I7 reader, R5-I6 projection, and R5-I5 response signing through a
+strict Memos-owned handler/client contract. That gate must decide runtime secret
+and timeout configuration explicitly and still remain disabled and separate from
+`EvidenceAnswerAgent`, `RetrievalService`, VectorStore selection, lifecycle
+runtime, Compose defaults, and real data. Encrypted transport and shared atomic
+replay/capability storage remain mandatory before any multi-instance use; AI
+runtime selection remains a subsequent authorization gate.

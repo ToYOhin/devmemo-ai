@@ -24,7 +24,9 @@
 > canonical and exact-payload parity against the same synthetic fixture. R5-I6
 > defines the pure Go current-authority reader boundary and proves its
 > all-or-nothing projection with an in-memory fake. R5-I7 adds an unwired real
-> SQLite current-authority reader with temporary-database parity and race proofs. The feature remains
+> SQLite current-authority reader with temporary-database parity and race proofs.
+> R5-I8 adds an unwired process-local authority capability issuer/resolver with
+> a bounded in-memory registry and synthetic concurrency proof. The feature remains
 > disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
@@ -302,6 +304,15 @@ LLM provider.
    any concurrent database commit fails the entire response. The adapter is
    not registered with HTTP or runtime and has no real-data or multi-instance
    claim.
+21. **Process-local Memos authority capability — complete, unwired.** R5-I8
+   issues only from Memos authentication context plus a Memos-owned bounded
+   complete-Memo UID scope. A fixed-capacity, expiring in-memory registry binds
+   three independent opaque tokens to one private caller/scope record and
+   atomically consumes an exact bounded rehydration subset at most once. Fake
+   clock/token/scope tests cover auth provenance, UID bounds, expiry, capacity,
+   collision, mismatch, restart invalidation, and concurrent consume. It adds
+   no route/client, replay wiring, runtime configuration, persistence, real
+   data, or multi-instance claim.
 
 ## Acceptance criteria for the first Agent path
 
@@ -529,9 +540,39 @@ invalidates the whole snapshot. R5-I6 still owns exact UID, sequence, hash,
 version, request-order, and response projection checks. Temporary SQLite tests
 cover visibility parity, comment/archive/blank/tombstone rejection, missing or
 inconsistent source state, concurrent changes, and fixed errors. This proves
-only the existing SQLite schema and single-host process. It does not prove
-MySQL/PostgreSQL parity and adds no capability issuer, route/client, HMAC/replay
-wiring, runtime configuration, real data, or multi-instance support.
+only the existing SQLite schema and single-host process. R5-I7 itself does not
+prove MySQL/PostgreSQL parity or add a capability issuer, route/client,
+HMAC/replay wiring, runtime configuration, real data, or multi-instance support.
+
+R5-I8 supplies the missing process-local capability boundary without wiring it
+to R5-I7 or transport. Issuance accepts only Memos authentication context; it
+has no caller, owner, visibility, query, request, or UID-scope parameter. A
+Memos-private scope source must return the same current caller plus a unique,
+nonempty set of at most 1,000 complete-Memo UIDs using the R5-I1 matcher. The
+registry derives an authority reference, authenticated-context token, and
+authority token from independent token-source values and binds them to one
+private entry. Only the authority reference is intended for a later signed
+rehydration request; caller identity, the full UID scope, and the other tokens
+have no JSON projection.
+
+The registry has a constructor-fixed capacity and TTL capped at 60 seconds. It
+uses an injected clock, lazy expiry, no timer, and a per-registry monotonic
+derivation sequence so recycled capacity cannot alias an older capability in
+the same process. Consume holds one lock across lookup, private token-index
+binding checks, and deletion. Exactly one concurrent caller can receive the
+Memos-private resolution containing a fresh server auth context, the original
+UID scope, the unchanged two-field R5-I6 binding, and its authority token.
+Selections must be a unique one-to-ten-item subset of that original scope before
+any future R5-I7 call. Unknown, expired, malformed, over-capacity, mismatched,
+duplicate, out-of-scope, clock, token, scope-source, or concurrency failure maps
+only to `authorized_retrieval_unavailable` and returns no partial binding.
+
+This is deliberately a single-process, request-local proof. Process restart or
+a new registry invalidates every prior entry. R5-I8 does not reuse the R5-I4
+nonce stores and does not implement HTTP, HMAC/replay runtime composition,
+answer runtime selection, configuration, secrets, persistence, database access,
+networking, or real data. A shared atomic capability/replay store and encrypted
+transport remain mandatory before any multi-instance use.
 
 ## A4 local RAG lifecycle contract
 

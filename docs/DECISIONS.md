@@ -435,3 +435,31 @@ archive、comment、blank 或 visibility 变化，都会使整批固定失败；
 仍由未来单独授权的 Memos capability issuer 提供，reader 不签发 token。下一闸门应先定义 process-local、
 有界、短时的 authority capability issuer/resolver，使 opaque authority reference 能安全恢复 Memos-owned
 caller binding；之后才能分别授权 HTTP handler/client、HMAC/replay runtime 接线与 AI runtime selection。
+
+## ADR-062：R5 authority capability 先限定为单进程、有界、短时且单次消费
+
+R5-I8 在任何 HTTP 或 answer runtime 接线前，先定义 Memos-private capability issuer/resolver。签发入口只
+接受 Memos 内部认证 context，并用 `auth.GetUserID` 派生 caller；接口不接收 caller ID、owner、visibility、
+query、rehydration request 或任意 UID scope。一个尚未接线的 Memos-owned scope source 必须返回同一个
+current caller，以及采用 R5-I1 UID matcher、非空、不重复且最多 1,000 个完整 Memo UID 的授权集合。unknown、
+archived、binding mismatch、scope failure 或非法集合全部固定失败。
+
+registry 的容量和 TTL 在构造时固定，TTL 上限为 60 秒；它只使用注入 clock 做惰性过期，不创建 timer。
+每次签发从独立 token-source 值派生 `memos_authority_ref`、authenticated-context token 与 authority token，
+并通过每个 registry 的独立 entropy 与单调序号避免同一进程回收容量后把旧 capability 解析为新 entry。
+三个 token 必须 opaque、互异且精确绑定同一私有记录；只有 authority reference 预期进入未来签名 request。
+caller、完整 UID scope、authenticated-context token 与 authority token 均不进入浏览器 schema、日志、错误或
+可观测输出。
+
+consume 在一把锁内完成过期清理、reference lookup、两个私有 token index 的一致性检查、selection 验证与
+entry 删除。selection 必须是原始授权集合中唯一、1 至 10 项的有界子集；missing、extra、duplicate、unknown、
+ref/token mismatch 或 malformed request 都在调用 R5-I7 前拒绝。并发 consume 最多一个成功；成功只返回
+Memos-private resolution，用于未来恢复 server-owned auth context、精确原始 UID scope、未改变的两字段
+`EvidenceAuthorityContextBinding` 与 authority token。失败不返回 caller、scope、token 或 partial binding，
+并统一映射为 `authorized_retrieval_unavailable`。
+
+本 registry 明确只证明 process-local request capability：进程重启或新 registry 会使旧 entry 失效，也不
+复用 R5-I4 transport nonce store。R5-I8 没有 HTTP route/client、HMAC/replay runtime composition、运行时
+secret/config、answer path、数据库、持久化、网络、Compose、Provider、Qdrant 或真实数据。下一闸门需单独
+评审单机 handler/client 与 replay composition；多实例前必须提供 shared atomic capability/replay storage、
+加密 transport、密钥轮换与独立威胁评审，AI runtime selection 仍需之后另行授权。
