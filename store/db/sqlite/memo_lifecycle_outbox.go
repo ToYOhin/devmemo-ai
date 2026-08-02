@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/usememos/memos/internal/base"
@@ -16,6 +18,7 @@ import (
 )
 
 var memoLifecycleErrorCodePattern = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)
+var memoLifecycleGenerationPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 
 type memoLifecycleSnapshot struct {
 	UID       string
@@ -365,6 +368,214 @@ func (d *DB) ListMemoLifecycleOutboxEvents(
 		return nil, err
 	}
 	return events, nil
+}
+
+func (d *DB) PrepareMemoLifecycleRebuild(
+	ctx context.Context,
+	generation string,
+	occurredAt time.Time,
+) (*store.MemoLifecycleRebuildManifest, error) {
+	if !memoLifecycleGenerationPattern.MatchString(generation) || occurredAt.IsZero() {
+		return nil, errors.New("memo lifecycle rebuild request is invalid")
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to begin memo lifecycle rebuild")
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	type rebuildEvent struct {
+		snapshot  memoLifecycleSnapshot
+		eventType store.MemoLifecycleEventType
+		reason    string
+	}
+	events := []rebuildEvent{}
+	manifestEntries := [][2]string{}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT memo.uid, memo.content, memo.row_status
+		FROM memo
+		WHERE memo.row_status = 'NORMAL'
+		  AND length(trim(memo.content)) > 0
+		  AND NOT EXISTS (
+			SELECT 1 FROM memo_relation
+			WHERE memo_relation.memo_id = memo.id
+			  AND memo_relation.type = 'COMMENT'
+		  )
+		ORDER BY memo.uid
+	`)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read memo lifecycle rebuild source")
+	}
+	for rows.Next() {
+		var snapshot memoLifecycleSnapshot
+		if err := rows.Scan(&snapshot.UID, &snapshot.Content, &snapshot.RowStatus); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		documentHash := fmt.Sprintf("%x", sha256.Sum256([]byte(snapshot.Content)))
+		manifestEntries = append(manifestEntries, [2]string{snapshot.UID, documentHash})
+		events = append(events, rebuildEvent{snapshot, store.MemoLifecycleEventReindex, "repair"})
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	deleteRows, err := tx.QueryContext(ctx, `
+		SELECT source.memo_uid, COALESCE(memo.content, ''), COALESCE(memo.row_status, 'ARCHIVED'),
+			CASE
+				WHEN memo.id IS NULL THEN 'deleted'
+				WHEN memo.row_status != 'NORMAL' THEN 'archived'
+				WHEN length(trim(memo.content)) = 0 THEN 'blank_content'
+				ELSE 'became_comment'
+			END
+		FROM (SELECT DISTINCT memo_uid FROM memo_index_outbox) AS source
+		LEFT JOIN memo ON memo.uid = source.memo_uid
+		WHERE memo.id IS NULL
+		   OR memo.row_status != 'NORMAL'
+		   OR length(trim(memo.content)) = 0
+		   OR EXISTS (
+			SELECT 1 FROM memo_relation
+			WHERE memo_relation.memo_id = memo.id
+			  AND memo_relation.type = 'COMMENT'
+		   )
+		ORDER BY source.memo_uid
+	`)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read memo lifecycle tombstones")
+	}
+	for deleteRows.Next() {
+		var event rebuildEvent
+		event.eventType = store.MemoLifecycleEventDelete
+		if err := deleteRows.Scan(
+			&event.snapshot.UID,
+			&event.snapshot.Content,
+			&event.snapshot.RowStatus,
+			&event.reason,
+		); err != nil {
+			_ = deleteRows.Close()
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	if err := deleteRows.Close(); err != nil {
+		return nil, err
+	}
+	if err := deleteRows.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, event := range events {
+		_, err := enqueueMemoLifecycleEvent(
+			ctx,
+			tx,
+			event.snapshot,
+			event.eventType,
+			&store.MemoLifecycleEventRequest{
+				EventID:    "rebuild-" + uuid.NewString(),
+				Reason:     event.reason,
+				OccurredAt: occurredAt,
+			},
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to enqueue memo lifecycle rebuild")
+		}
+	}
+	manifestBody, err := json.Marshal(manifestEntries)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode memo lifecycle manifest")
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, errors.Wrap(err, "failed to commit memo lifecycle rebuild")
+	}
+	return &store.MemoLifecycleRebuildManifest{
+		Generation:     generation,
+		EligibleCount:  len(manifestEntries),
+		ManifestDigest: fmt.Sprintf("%x", sha256.Sum256(manifestBody)),
+	}, nil
+}
+
+func (d *DB) ListPendingMemoLifecycleOutboxEvents(
+	ctx context.Context, limit int,
+) ([]*store.MemoLifecycleOutboxEvent, error) {
+	if limit < 1 || limit > 100 {
+		return nil, errors.New("memo lifecycle pending limit is invalid")
+	}
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT id, event_id, memo_uid, source_sequence, event_type,
+			index_version, operation, reason, occurred_at, document,
+			document_hash, status, attempts, last_error_code, created_ts, updated_ts
+		FROM memo_index_outbox
+		WHERE status = 'PENDING'
+		ORDER BY id
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	events := []*store.MemoLifecycleOutboxEvent{}
+	for rows.Next() {
+		event, err := scanMemoLifecycleOutboxEvent(rows)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, rows.Err()
+}
+
+func (d *DB) AcknowledgeMemoLifecycleOutboxEvent(
+	ctx context.Context, eventID string,
+) (*store.MemoLifecycleOutboxEvent, error) {
+	eventID = strings.TrimSpace(eventID)
+	if eventID == "" || len(eventID) > 128 {
+		return nil, errors.New("memo lifecycle event_id is invalid")
+	}
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var memoUID string
+	var sourceSequence int64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT memo_uid, source_sequence FROM memo_index_outbox WHERE event_id = ?
+	`, eventID).Scan(&memoUID, &sourceSequence); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE memo_index_outbox
+		SET status = 'ACKNOWLEDGED', last_error_code = NULL,
+			updated_ts = strftime('%s', 'now')
+		WHERE memo_uid = ? AND source_sequence <= ?
+		  AND status IN ('PENDING', 'EXHAUSTED')
+	`, memoUID, sourceSequence); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return d.getMemoLifecycleOutboxEvent(ctx, eventID)
+}
+
+func (d *DB) ReadMemoLifecycleBacklog(
+	ctx context.Context,
+) (*store.MemoLifecycleBacklog, error) {
+	var backlog store.MemoLifecycleBacklog
+	err := d.db.QueryRowContext(ctx, `
+		SELECT
+			COALESCE(SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'PENDING' AND attempts > 0 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'EXHAUSTED' THEN 1 ELSE 0 END), 0)
+		FROM memo_index_outbox
+	`).Scan(&backlog.Pending, &backlog.Failed, &backlog.Exhausted)
+	if err != nil {
+		return nil, err
+	}
+	return &backlog, nil
 }
 
 func (d *DB) RecordMemoLifecycleDeliveryFailure(
