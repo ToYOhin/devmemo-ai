@@ -20,7 +20,9 @@
 > Memos rehydration through a provider-neutral, unwired design contract; the AI
 > side retains complete content only in request memory. R5-I4 proves the
 > domain-separated request/response HMAC, freshness, exact parsing, and bounded
-> process-local replay contract entirely in process. The feature remains
+> process-local replay contract entirely in process. R5-I5 proves Go/Python
+> canonical and exact-payload parity against the same synthetic fixture. The
+> feature remains
 > disabled by default. No HTTP rehydration adapter, runtime lifecycle wiring,
 > automatic indexing, remote deployment, or general-public availability is
 > delivered.
@@ -270,6 +272,14 @@ LLM provider.
    tampering, expiry, replay, timeout, partial output, and authority mismatch.
    This is integrity/authentication proof only: it adds no HTTP adapter,
    runtime secret, persistence, remote confidentiality claim, or real data.
+18. **Cross-language Memos transport parity — complete, unwired.** R5-I5 adds
+   a provider-neutral Go verifier for the exact R5-I4 request plus a
+   response-only signer/parser. The shared synthetic fixture fixes both HMAC
+   canonical forms byte-for-byte; strict nested JSON parsing rejects duplicate,
+   unknown, partial, oversized, invalid-UTF-8, identity-bearing, stale, or
+   inconsistent payloads with one content-free error. The Go proof adds no
+   route/client, replay store, authority lookup, runtime secret/configuration,
+   persistence, network, or real data.
 
 ## Acceptance criteria for the first Agent path
 
@@ -446,7 +456,16 @@ threat review. A real-data opt-in additionally requires verified Memos backup,
 explicit dry run, rollback, and post-run lifecycle/retrieval reconciliation.
 `EvidenceAnswerAgent`, `RetrievalService`, VectorStore construction, A4 runtime
 routes, Memo CRUD, dispatcher/worker paths, Qdrant, Compose, and real data
-remain unchanged in R5-I4.
+remain unchanged in R5-I5.
+
+R5-I5 independently verifies the request signature in Go before exact parsing
+and signs only an exact success or fixed `503` response under the response-only
+purpose. The Go parser rechecks snapshot token and every selection reference,
+sequence, hash, and version; it rejects response identity or authority-reference
+fields. This is cross-language contract parity, not a Go replay implementation
+or Memos authority adapter. The HTTP route/client, process-local replay wiring,
+current-visibility authority lookup, runtime secret/configuration, and AI
+runtime selection remain separate authorization gates.
 
 ## A4 local RAG lifecycle contract
 

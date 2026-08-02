@@ -14,7 +14,8 @@
 > 尚未接线、经 fake 验证的持久化授权检索契约，R5-I2 已增加尚未接线的一次性 SQLite
 > repository-adapter parity proof，R5-I3 已通过纯设计契约与合成 fixture 选择认证的 Memos 当前权威
 > rehydration 和请求内存正文 retention，R5-I4 已增加尚未接线的进程内证明，覆盖独立 request/response
-> HMAC、时效、精确解析和有界 process-local replay。生产 HTTP rehydration adapter、lifecycle route、dispatcher、运行时接线和
+> HMAC、时效、精确解析和有界 process-local replay，R5-I5 已基于共享 fixture 增加尚未接线的 Go/Python
+> canonical 与 exact payload parity。生产 HTTP rehydration adapter、lifecycle route、dispatcher、运行时接线和
 > 可用于正式产品的回答链路仍未实现。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
@@ -49,7 +50,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I4 已证明认证 request/response 完整性与单进程 replay，但尚无跨语言 Memos adapter、HTTP route/client、shared replay store 或 runtime selection，因此没有持久化回答路径 | 先证明 Memos 侧跨语言 parity，再单独授权单机 adapter 与 runtime selection |
+| P0 | 授权后的 Agent 运行时检索仍仅支持内存中的完整 Memo store | R5-I5 已证明 Go/Python transport parity，但尚无 Memos 当前 authority lookup、HTTP route/client、replay 接线、runtime secret/configuration、shared replay store 或 runtime selection，因此没有持久化回答路径 | 先定义单机 Memos authority adapter 边界，再分别授权 transport 与 AI runtime selection |
 | P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
@@ -194,6 +195,10 @@ R5-I4 增加独立 request/response HMAC、严格 timestamp、body digest、exac
 authority handler、固定签名 failure 与有界 process-local request/client replay store。共享 fixture 与纯测试
 覆盖篡改、重放、timeout、部分输出和 selection mismatch。没有增加 HTTP adapter、route、repository、
 runtime secret 或真实数据，也不把 HMAC 描述为跨宿主正文保密。
+R5-I5 新增 Go request verifier 与 response signer/parser，逐字节对齐共享 Python fixture；它重新核对全部
+有界 request/response 字段、拒绝重复或非法嵌套 JSON，并把所有失败投影为
+`authorized_retrieval_unavailable`。本切片明确没有增加 Go replay store、authority lookup、route/client、
+runtime configuration、网络、持久化或真实数据。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -263,10 +268,9 @@ runtime secret 或真实数据，也不把 HMAC 描述为跨宿主正文保密�
 
 ## 下一推荐切片
 
-下一步实施 **R5-I5 跨语言 Memos transport parity proof**。只新增 provider-neutral Go canonical request
-verification 与 response signing/parsing，对齐 `memo-evidence-rehydration-transport-v1.json`，并保持 exact
-bounded payload validation 与固定无正文错误。不新增 HTTP route/client、runtime secret/configuration、
-authority lookup、自动重试、database、真实 Memo 或 runtime selection。继续保持 `EvidenceAnswerAgent`、
-当前 `RetrievalService`、VectorStore factory、Memo CRUD、dispatcher/worker、Qdrant、Compose 默认值、凭据和
-真实数据未接线。单机 HTTP adapter 仍需后续授权；任何多实例主张前仍必须提供加密 transport 与 shared
-replay storage。
+下一步实施 **R5-I6 单机 Memos authority-adapter 设计契约**。只用纯 Go 对象和合成测试定义：已经验签的
+rehydration request 如何在签名前绑定到认证调用者的当前 visibility 与一个原子 current-Memo snapshot。
+不新增 HTTP route/client、真实 store query、runtime secret/configuration、replay 实现、database、真实 Memo
+或 runtime selection。继续保持 `EvidenceAnswerAgent`、当前 `RetrievalService`、VectorStore factory、Memo
+CRUD、dispatcher/worker、Qdrant、Compose 默认值、凭据和真实数据未接线。单机 HTTP adapter 仍需后续授权；
+任何多实例使用前仍必须提供加密 transport 与 shared replay storage。

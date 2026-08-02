@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约；功能仍默认关闭。尚未交付 HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
+> 状态：A1 local-first 只读后端已实现并完成本地运行时验证。A2 新增了显式的实验性 Web 入口，A3 已完成受控本地 Provider smoke，A4 现已定义本地 RAG 生命周期契约，A4-I1 已实现纯事件、确认与状态机规则，A4-I2 已增加仅 SQLite 的 dormant 源端 outbox adapter 与临时数据库事务证明，A4-I3 已增加 dormant AI 派生 ledger adapter 与 fake vector 崩溃恢复证明，A4-I4 已增加不含 route/dispatcher 的认证 lifecycle transport 契约，A4-I5 已增加覆盖重启、重试、tombstone、对账和 rebuild generation 的合成一次性 outbox-to-ledger 集成证明，R4-I1 已增加严格 provider-neutral grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider 将其安全接入非 deterministic 回答路径，R4-I3 已完成一次性本地 Provider smoke，R5-I1 已增加采用两阶段无正文 candidate 边界与 fake repository 证明、尚未接线的持久化授权检索契约，R5-I2 已增加尚未接线、覆盖 reopen 与快照一致性的临时 SQLite repository-adapter parity proof，R5-I3 已通过尚未接线的 provider-neutral 设计契约选择 Memos 当前权威 rehydration，AI 侧完整正文只保留在请求内存，R5-I4 已完全在进程内证明独立 request/response HMAC、时效、精确解析和有界 process-local replay 契约，R5-I5 已基于同一合成 fixture 完成 Go/Python canonical 与 exact payload parity；功能仍默认关闭。尚未交付 HTTP rehydration adapter、运行时生命周期接线、自动索引、远程部署或通用公开可用性。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -109,6 +109,7 @@ trace 只包含序号、动作名称、状态和结果数。空索引检索后�
 15. **一次性 repository-adapter parity proof — 已完成、未接线。** R5-I2 把 R5-I1 边界绑定到显式创建的临时 SQLite store。candidate query 下推 Memos 授权 UID 集合与 limit，service 仍在正文加载前再次执行可见性求交。active generation、无正文 candidate 与 A4 ledger state 在同一个只读事务中读取；基于 revision 的 opaque snapshot token 防止后续正文加载混合不同 store generation。reopen parity、lifecycle 拒绝、重复/不一致行与固定 repository failure 映射只使用 `tmp_path` 和合成记录。该 adapter 仅用于测试，并非生产正文持久化或 rehydration 设计。
 16. **生产正文 rehydration 设计契约 — 已完成、未接线。** R5-I3 为 durable Agent 路径选择认证的 Memos 当前权威 rehydration，而不是 AI 侧持久化完整 Memo 正文或持久 hybrid cache。精确且有界的请求/响应投影绑定 eligible candidate 的 sequence、hash、version 与 R5 snapshot token；update、delete、visibility 丢失、generation/revision 切换、缺失项或响应不一致全部映射为同一个无正文错误。完整正文只存在于认证请求内存。共享 fixture 与纯测试未增加 transport、repository、route、runtime secret、database 或真实数据。
 17. **认证 content-rehydration transport 证明 — 已完成、未接线。** R5-I4 把 R5-I3 精确请求绑定到 rehydration-only method/path、transport version、timestamp、nonce 和 body digest；独立 response HMAC 在精确解析前绑定 status、响应 timestamp、原请求 nonce、derived snapshot token 与 body digest。有界 process-local request/response replay store、单次调用 fake authority handler、固定签名 failure 投影与共享合成 fixture 覆盖篡改、过期、重放、timeout、部分输出和 authority mismatch。本证明只覆盖认证与完整性，没有增加 HTTP adapter、runtime secret、持久化、远程保密性主张或真实数据。
+18. **跨语言 Memos transport parity — 已完成、未接线。** R5-I5 新增 provider-neutral Go request verifier 与 response-only signer/parser，共享合成 fixture 逐字节固定两套 HMAC canonical form。嵌套 exact JSON parsing 对重复、未知、部分、超限、非法 UTF-8、携带 identity、stale 或不一致 payload 统一返回无正文错误。Go 证明没有新增 route/client、replay store、authority lookup、runtime secret/configuration、持久化、网络或真实数据。
 
 ## A1 验收结果
 
@@ -227,6 +228,12 @@ sequence/hash/version，最后消费独立 client-side replay entry。契约固�
 威胁评审。真实数据 opt-in 还必须验证 Memos backup，提供显式 dry run、rollback 和运行后
 lifecycle/retrieval reconciliation。R5-I4 不改变 `EvidenceAnswerAgent`、`RetrievalService`、VectorStore
 构造、A4 runtime route、Memo CRUD、dispatcher/worker、Qdrant、Compose 或真实数据。
+
+R5-I5 在 Go 中独立完成 request 验签后 exact parsing，并且只允许在 response-only purpose 下签名 exact
+success 或固定 `503`。Go parser 重新核对 snapshot token 与每个 selection reference、sequence、hash、
+version，并拒绝 response identity 或 authority-reference 字段。这只是跨语言契约 parity，不是 Go replay
+实现或 Memos authority adapter。HTTP route/client、process-local replay 接线、当前 visibility authority
+lookup、runtime secret/configuration 和 AI runtime selection 仍是后续独立授权闸门。
 
 ## A4 本地 RAG 生命周期契约
 
