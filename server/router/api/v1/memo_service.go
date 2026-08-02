@@ -115,7 +115,7 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 		create.Payload.Location = convertLocationToStore(request.Memo.Location)
 	}
 
-	memo, err := s.Store.CreateMemo(ctx, create)
+	memo, err := s.createMemoWithLifecycle(ctx, create)
 	if err != nil {
 		// Check for unique constraint violation (AIP-133 compliance)
 		errMsg := err.Error()
@@ -535,7 +535,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 		}
 	}
 
-	if err = s.Store.UpdateMemo(ctx, update); err != nil {
+	if err = s.updateMemoWithLifecycle(ctx, memo, update); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update memo")
 	}
 
@@ -619,7 +619,7 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 	}
 
 	// Delete the memo (store.DeleteMemo handles relation and attachment cleanup)
-	if err = s.Store.DeleteMemo(ctx, &store.DeleteMemo{ID: memo.ID}); err != nil {
+	if err = s.deleteMemoWithLifecycle(ctx, memo); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete memo")
 	}
 
@@ -670,7 +670,7 @@ func (s *APIV1Service) CreateMemoComment(ctx context.Context, request *v1pb.Crea
 
 	// Create the memo comment first; suppress the generic memo.created SSE event
 	// since CreateMemoComment broadcasts memo.comment.created for the parent instead.
-	memoComment, err := s.CreateMemo(withSuppressMentionNotifications(withSuppressSSE(ctx)), &v1pb.CreateMemoRequest{
+	memoComment, err := s.CreateMemo(withSuppressMemoLifecycle(withSuppressMentionNotifications(withSuppressSSE(ctx))), &v1pb.CreateMemoRequest{
 		Memo:   comment,
 		MemoId: request.CommentId,
 	})
