@@ -1,6 +1,6 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-01
+> Status date: 2026-08-02
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
@@ -20,7 +20,9 @@
 > R5-I4 adds an unwired in-process proof for domain-separated request/response
 > HMAC, freshness, exact parsing, and bounded process-local replay. R5-I5 adds
 > unwired Go/Python canonical and exact-payload parity against the shared fixture.
-> No HTTP rehydration adapter, lifecycle route, dispatcher,
+> R5-I6 adds the unwired pure Go current-authority reader contract and in-memory
+> all-or-nothing parity proof. No real Memos Store reader, HTTP rehydration
+> adapter, lifecycle route, dispatcher,
 > runtime wiring, or production-ready answer path is implemented.
 
 This document is the delivery authority for the Agent product line. The
@@ -69,7 +71,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I5 proves Go/Python transport parity, but there is no Memos current-authority lookup, HTTP route/client, replay wiring, runtime secret/configuration, shared replay store, or runtime selection, so no durable path serves answers | Define the single-host Memos authority adapter boundary, then separately authorize transport and AI runtime selection |
+| P0 | Authorized Agent retrieval works only with the in-memory complete-Memo runtime | R5-I6 defines and fake-proves the single-host Memos current-authority reader boundary, but there is no real Store reader, HTTP route/client, replay wiring, runtime secret/configuration, shared replay store, or runtime selection, so no durable path serves answers | Separately authorize and prove the real single-host Store reader, then the transport and AI runtime selection |
 | P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
@@ -273,6 +275,15 @@ request and response fields, rejects duplicate or invalid nested JSON, and
 projects every failure as `authorized_retrieval_unavailable`. It deliberately
 adds no Go replay store, authority lookup, route/client, runtime configuration,
 network, persistence, or real data.
+R5-I6 adds a pure Go current-authority reader protocol. It accepts only the
+verified request and an opaque Memos-internal authenticated-context binding,
+then requires one atomic snapshot to re-confirm exact UID correspondence,
+current visibility, complete/normal/current state, sequence, hash, `memo-v1`,
+snapshot revision, and authority token. An in-memory fake proves request-owned
+selection ordering, exact R5-I3 response projection, and all-or-nothing failure
+for update/delete, partial, duplicate, stale, mixed-snapshot, and adapter errors.
+No real Store, visibility resolver, HTTP, HMAC/replay wiring, runtime config,
+persistence, network, or real data is added.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -379,15 +390,15 @@ single-Agent read path is reliable:
 They may be reconsidered only after R6 and with a new threat model, data-flow
 review, and explicit authorization.
 
-## Recommended next slice
+## Next authorization gate
 
-Implement **R5-I6 single-host Memos authority-adapter design contract** next.
-Define, with pure Go objects and synthetic tests only, how an already verified
-rehydration request is bound to the authenticated caller's current visibility
-and one atomic current-Memo snapshot before any response can be signed. Do not
-add an HTTP route/client, real store query, runtime secret/configuration, replay
-implementation, database, real Memo, or runtime selection. Keep
-`EvidenceAnswerAgent`, current `RetrievalService`, VectorStore factory, Memo
-CRUD, dispatcher/worker, Qdrant, Compose defaults, credentials, and real data
-unwired. The single-host HTTP adapter remains a later authorization; encrypted
-transport and shared replay storage remain mandatory before multi-instance use.
+R5 is now ready for a separately authorized **real single-host Memos
+current-authority reader** slice. That stage would have to bind the R5-I6
+protocol to existing Memos authentication, visibility, comment relation, row
+state, content, and source-sequence data through one demonstrably atomic Store
+read, while retaining exact all-or-nothing failure. It must be reviewed before
+implementation because it crosses from pure fakes into real authority/store
+code. HTTP route/client, runtime secret/configuration, replay wiring, AI runtime
+selection, real-data opt-in, and lifecycle automation remain later independent
+gates. Encrypted transport and shared replay storage remain mandatory before
+any multi-instance use.
