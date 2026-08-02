@@ -39,6 +39,9 @@ class AuthorizedVectorSearch(Protocol):
         query: Sequence[float],
         visible_memo_ids: frozenset[str],
         limit: int = 5,
+        *,
+        rebuild_generation: str | None = None,
+        index_version: str | None = None,
     ) -> list[VectorSearchResult]:
         ...
 
@@ -87,6 +90,8 @@ class DurableVectorCandidateRepository:
                 vector.values,
                 query.authorized_uid_set,
                 limit=len(query.authorized_memo_uids),
+                rebuild_generation=before.active_generation,
+                index_version=MEMO_INDEX_VERSION,
             )
             candidates = self._eligible_candidates(query, before, results)
             if self._read_snapshot() != before:

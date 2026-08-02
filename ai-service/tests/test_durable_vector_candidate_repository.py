@@ -252,7 +252,15 @@ def test_repository_rejects_duplicate_candidate_identity():
     class DuplicateStore:
         dimension = provider.dimension
 
-        def search_visible_memos(self, query, visible_memo_ids, limit=5):
+        def search_visible_memos(
+            self,
+            query,
+            visible_memo_ids,
+            limit=5,
+            *,
+            rebuild_generation=None,
+            index_version=None,
+        ):
             result = VectorSearchResult(
                 "record-a",
                 "memo-a",
