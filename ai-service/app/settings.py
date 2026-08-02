@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 
 _REHYDRATION_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
+_LIFECYCLE_GENERATION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,9 @@ class AiSettings:
     agent_rehydration_secret_current: str | None = None
     agent_rehydration_secret_previous: str | None = None
     agent_rehydration_memos_url: str | None = None
+    agent_lifecycle_enabled: bool = False
+    agent_lifecycle_secret: str | None = None
+    agent_lifecycle_generation: str | None = None
     index_mode: str = "memo"
     vector_store: str = "memory"
     qdrant_url: str = "http://localhost:6333"
@@ -101,6 +105,38 @@ class AiSettings:
         vector_store = os.getenv("AI_VECTOR_STORE", "memory").strip().lower()
         if vector_store not in {"memory", "qdrant"}:
             raise ValueError("AI_VECTOR_STORE must be memory or qdrant")
+        agent_lifecycle_enabled = parse_env_bool(
+            "AI_AGENT_LIFECYCLE_ENABLED", default=False
+        )
+        agent_lifecycle_secret: str | None = None
+        agent_lifecycle_generation: str | None = None
+        if agent_lifecycle_enabled:
+            if not agent_rehydration_enabled:
+                raise ValueError(
+                    "AI_AGENT_LIFECYCLE_ENABLED requires "
+                    "AI_AGENT_REHYDRATION_ENABLED=true"
+                )
+            if vector_store != "qdrant" or index_mode != "memo":
+                raise ValueError(
+                    "AI_AGENT_LIFECYCLE_ENABLED requires memo-mode Qdrant"
+                )
+            agent_lifecycle_secret = _parse_rehydration_secret(
+                "AI_AGENT_LIFECYCLE_SECRET"
+            )
+            if agent_lifecycle_secret in {
+                agent_internal_secret,
+                agent_rehydration_secret_current,
+                agent_rehydration_secret_previous,
+            }:
+                raise ValueError(
+                    "lifecycle secret must differ from Agent runtime secrets"
+                )
+            generation = os.getenv("AI_AGENT_LIFECYCLE_GENERATION", "").strip()
+            if not _LIFECYCLE_GENERATION_PATTERN.fullmatch(generation):
+                raise ValueError(
+                    "AI_AGENT_LIFECYCLE_GENERATION must be one bounded opaque identifier"
+                )
+            agent_lifecycle_generation = generation
         return cls(
             embedding_provider=embedding_provider,
             fastembed_model=fastembed_model,
@@ -113,6 +149,9 @@ class AiSettings:
             agent_rehydration_secret_current=agent_rehydration_secret_current,
             agent_rehydration_secret_previous=agent_rehydration_secret_previous,
             agent_rehydration_memos_url=agent_rehydration_memos_url,
+            agent_lifecycle_enabled=agent_lifecycle_enabled,
+            agent_lifecycle_secret=agent_lifecycle_secret,
+            agent_lifecycle_generation=agent_lifecycle_generation,
             index_mode=index_mode,
             vector_store=vector_store,
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333").strip(),
