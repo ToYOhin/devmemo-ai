@@ -812,3 +812,20 @@ fail-closed mapping、无 fallback 和旧 constructor 默认行为保持不变�
 clock。实现不新增 env/config/secret/port/dependency、reader/exporter/persistence、thread/timer/background task，也不触碰
 Go lifecycle/outbox/retry/quarantine、rebuild/reconciliation。rollback 删除 retrieval helper/wrapper/injection，保留 I4C
 answer sample，无持久数据清理。Provider timing 仍未接线，下一切片只能先独立评审 owner、边界、outcome、测试与授权条件。
+
+## ADR-081：Provider latency 只度量 configured generate 与 result envelope，不度量答案验证
+
+R6-I4F 只评审、不接线。Provider timing owner 固定为 `EvidenceAnswerAgent._answer` 的 configured-Provider branch；
+deterministic fallback 没有 Provider call，不产生 sample。候选在 `provider.generate` 前 start，在调用返回并完成 result
+envelope/string-text 检查后 stop：有效 text 映射 `success`，无效 envelope/text 映射 `invalid`，调用抛错、timeout 或
+cancellation 映射 `unavailable`。cancellation 必须继续传播。
+
+grounded-answer JSON parse、citation/echo validation、answer construction 与 handler projection 均在 interval 外。因此有效
+text 后 parse/validation 失败时，Provider outcome 仍为 `success`，现有 answer outcome 仍可为 `unavailable`；两者表达不同
+authority，不得互相回写。实现不得移动既有 `AgentProviderError` mapping、fallback 或 citation validation。
+
+候选复用 I4E optional recorder/monotonic clock 与 0 至 600,000 ms whole-pair discard。固定 sample 只能是
+`provider/provider_call/provider_latency_ms` metric 与 `provider_call` outcome event，不允许 Provider/model 名称、prompt、
+result text、exception、ID 或动态 label。最小首批是 pure helper 与 configured branch inner try/finally；post-Provider
+validation、token/cost、stream/retry、Go lifecycle/rebuild/reconciliation、reader/exporter/persistence、settings、network 与
+真实 Provider 均后置或拒绝。rollback 删除 helper 与 inner boundary，保留 I4C/I4E sample。R6-I4F 不自动授权接线。
