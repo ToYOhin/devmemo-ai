@@ -1053,10 +1053,22 @@ precision, groundedness, refusal accuracy, scope-leak count, and p95 latency.
 Each gate has an exact unit, direction, legal range, boundary, and applicable
 categories; no aggregate score field exists.
 
-These files still establish no observed quality, latency, or cost result. The
-thresholds are predeclared inputs for R6-I3, which must implement the
-deterministic runner and publish every failed case without changing thresholds
-in response to results.
+R6-I3 adds a pure runner over already parsed corpus, threshold, and result
+objects. It requires exactly one result per corpus case and rejects missing,
+duplicate, unknown, or wrong-type results. Recall@5 and reciprocal rank exclude
+cases with no expected evidence; citation precision and groundedness apply to
+answer cases; refusal accuracy applies to no-answer/refusal cases; scope leaks
+are counted from forbidden IDs or an explicit safe failure flag; p95 latency
+uses nearest-rank selection. The five ratio metrics are macro-averaged across
+their applicable cases, while scope leaks are summed. The runner never calls
+retrieval or a Provider.
+
+`agent-evaluation-report-v1` contains only bound contract versions, case count,
+aggregate metric values and gates, overall pass/fail, and every failed case ID
+with allowlisted categories. It contains no question, answer, evidence content,
+Memo, prompt, context, trace, identity mapping, Provider output, or secret. Test
+reports use supplied synthetic results only and are not product benchmark,
+Provider-quality, runtime-latency, or cost evidence.
 
 ## Future work excluded from this proposal
 

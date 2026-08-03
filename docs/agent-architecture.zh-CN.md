@@ -481,8 +481,16 @@ case ID 与问题唯一、声明的类别计数与实际一致、每类至少两
 groundedness、refusal accuracy、scope leak 数和 p95 latency 门槛。每个门槛都有固定单位、方向、合法范围、边界值
 和适用类别，不存在 aggregate score 字段。
 
-这些文件仍不形成任何实测质量、延迟或成本结果。threshold 是 R6-I3 的预声明输入；后续 deterministic runner 必须
-公开所有失败 case，不能根据运行结果反向修改 threshold。
+R6-I3 增加只消费已解析 corpus、threshold 与 result 对象的纯 runner。每个 corpus case 必须且只能有一个 result；
+缺失、重复、未知或类型错误的 result 全部拒绝。没有 expected evidence 的 case 不参与 Recall@5/MRR；answer case
+参与 citation precision/groundedness；no-answer/refusal case 参与 refusal accuracy；scope leak 从 forbidden ID 或显式
+安全失败标记计数；p95 latency 使用 nearest-rank。五项 ratio metric 对各自适用 case 做 macro average，scope leak
+则求和。runner 不调用 retrieval 或 Provider。
+
+`agent-evaluation-report-v1` 只包含绑定的 contract version、case count、aggregate metric value/gate、overall pass/fail，
+以及每个失败 case 的 ID 和白名单分类；不包含问题、回答、evidence 正文、Memo、prompt、context、trace、身份映射、
+Provider 输出或 secret。测试 report 只来自调用方提供的 synthetic result，不能作为产品 benchmark、Provider quality、
+runtime latency 或成本证据。
 
 ## 后续工作不包含在本提案内
 

@@ -701,3 +701,21 @@ p95 latency <= 5000 ms。每项同时声明 metric、unit、direction、合法 r
 这些数值是执行前的版本化验收输入，不是运行结果。R6-I2 不实现 runner，不计算 score，不调用 endpoint、Provider、
 Qdrant、数据库、Docker、browser 或网络。R6-I3 必须使用固定 threshold 计算 deterministic metrics，并公开每个失败
 case；不得为获得通过结果而在同次运行后修改门槛。
+
+## ADR-075：R6 runner 只评分调用方提供的 result，并输出无正文失败报告
+
+R6-I3 的 `score_evaluation_case` 与 `run_evaluation` 是纯函数边界，只接受已解析的 R6 case/corpus/result/threshold
+对象。runner 要求 result 集合与 corpus case ID 集合严格一一对应，缺失、重复、未知 ID 或非 result 对象全部以固定
+错误拒绝。它不调用 Agent、retrieval、Provider、endpoint、Qdrant、数据库、Docker、browser 或网络。
+
+单 case 规则固定如下：有 expected evidence 时计算 top-5 recall 与首个相关结果的 reciprocal rank，否则两项为
+not-applicable；answer case 计算 citation precision，并以显式 `ungrounded_answer` 失败标记和 answer state 计算
+groundedness；no-answer/refusal case 只计算 answer-state accuracy。forbidden evidence 出现在 retrieval/citation 中时
+形成 scope leak，delete/stale case 同时形成 stale evidence。五项 ratio metric 对适用 case 做 macro average，scope
+leak count 求和；p95 latency 使用 nearest-rank，不做插值。
+
+`agent-evaluation-report-v1` 只输出 corpus/threshold/result version、case count、七项 aggregate metric 的 value/unit/
+direction/boundary/pass、overall pass，以及全部失败 case ID 与固定 failure categories。report contract 不允许伪造
+threshold pass 状态、缺少 metric、重复失败 case 或空失败分类，也不包含问题、回答、Memo、prompt、context、trace、
+Provider 原始输出、身份映射或 secret。当前通过/失败 report 都由 synthetic test result 构造，不是产品 benchmark、
+Provider quality、runtime latency 或成本证据。
