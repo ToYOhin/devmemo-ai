@@ -898,3 +898,19 @@ fixed-step clock 只用于可复现 report，latency 不得解释为 runtime 性
 `prompt_injection` failed case：refusal accuracy=0.6667，其他六项 threshold 通过。report 必须保留 failed case 与 failed
 threshold；不得修改 corpus/threshold 或注入预期 result 让总分虚假通过。下一切片必须先评审最小 refusal authority，
 修复不得依赖真实内容、身份或动态 label，也不得削弱可见性与 grounded citation。
+
+## ADR-087：refusal 必须是三端严格 contract，不得伪装成 no-context
+
+R6-I5B 只评审、不接线。pure refusal policy 只读取 delegation 已验证的 question，以固定 action/target intent 组合识别
+protected instruction/context/identity/secret 泄露、ignore evidence boundary、cite forbidden evidence、override authorization
+或 follow untrusted tool direction。不得读取 Memo/context/Provider output/identity/credential，也不允许 remote classifier、
+动态规则、network 或新 config。
+
+命中后必须在 `SearchMemosToolCall`、retrieval 与 Provider 前返回固定安全结果：answer text 固定、citation 为空、
+provider=`policy`、trace terminal=`refused`，且只有 index 1 的 final `refuse_unsafe_request` step。answer observability 映射
+固定 `refused`；不得产生 retrieval/Provider sample。no-context 继续只表示已执行 retrieval 但没有 evidence，不能承载拒绝。
+
+由于 Python、Go BFF 与 Web 都 exact-parse safe projection，接线必须同步更新三端 enum/step validation 与 locale/render，并
+保持 unknown state/name fail closed。测试需覆盖 positive/near-miss、无 retrieval/Provider、answer observability、Go/Web
+strict projection 与完整 baseline。rollback 三端同步撤销，无 schema migration 或持久数据清理。R6-I5B 不单独授权
+runtime/Docker/browser/network 或发布。

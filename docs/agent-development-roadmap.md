@@ -479,7 +479,8 @@ blocked on an authoritative oldest-pending query, while rebuild/reconciliation
 requires an authoritative cross-process state model.
 The R6-I5 offline product-core baseline runs all 64 sanitized cases and exposes
 eight prompt-injection failures; refusal accuracy is 0.6667 and the threshold
-fails. R6 remains incomplete until that failure has a reviewed correction.
+fails. R6-I5B reviews a pre-retrieval fixed refusal contract across Python, Go,
+and Web; it remains unwired until the synchronized consumer slice lands.
 
 Scope:
 

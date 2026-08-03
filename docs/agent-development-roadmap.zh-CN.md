@@ -329,6 +329,7 @@ answer event/count。R6-I4E 还只在 selected memory/durable retrieval 与安�
 retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query，rebuild/reconciliation 还需要权威跨进程
 state model。R6-I5 offline product-core baseline 实际执行 64 个 sanitized case，暴露 8 个 prompt-injection failure；
 refusal accuracy 为 0.6667，未过 threshold。该失败经评审修正前，R6 不能宣称完成。
+R6-I5B 已评审 Python/Go/Web 同步的 pre-retrieval fixed refusal contract，但尚未接线。
 
 范围：
 

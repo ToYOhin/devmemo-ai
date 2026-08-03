@@ -1078,6 +1078,29 @@ fails the refusal threshold; no aggregate score hides them. Its injected clock
 and deterministic Provider make it reproducible but do not prove real runtime
 latency, model quality, durable storage, authentication, or lifecycle behavior.
 
+#### R6-I5B reviewed refusal boundary
+
+R6-I5B changes no source code. The reviewed policy is a pure, fixed intent
+classifier over the already verified question only. It may refuse explicit
+attempts to reveal protected instructions/context/identity or secrets, ignore
+evidence boundaries, cite forbidden evidence, override authorization, or follow
+untrusted tool directions. It must not inspect retrieved Memo content, Provider
+output, identity, credentials, or dynamic configuration.
+
+Refusal occurs after delegation verification but before `SearchMemosToolCall`,
+retrieval, or Provider execution. The safe result has fixed answer text, no
+citations, provider=`policy`, terminal state `refused`, and one final
+`refuse_unsafe_request` step. It produces only the existing answer count plus
+`answer/refused` event; retrieval and Provider clocks/recorders remain untouched.
+
+Because every consumer parses exact safe output, implementation must update the
+Python domain, Go BFF validator, and Web parser/locale together. Positive and
+near-miss policy tests, endpoint projection tests, Go strict-decoder tests, Web
+parser/render tests, and the 64-case baseline are required. Unknown trace states
+or step names still fail closed. Rollback removes the policy and new enum/step
+from all three consumers together; no data migration or persistent cleanup is
+needed.
+
 ### R6 content-free observability contract
 
 R6-I4A defines the provider-neutral `agent-observability-v1` contract without
