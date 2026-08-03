@@ -49,7 +49,12 @@
 > internal AI listener, generation activation, and Qdrant-derived state. Two
 > disposable authenticated-browser runs completed the private/public visibility,
 > update/delete, restart, rollback, and exact-cleanup matrix. R5 is complete only
-> for this default-disabled single-host scope.
+> for this default-disabled single-host scope. R6 locally adds the strict
+> 64-case evaluation/threshold/runner stack, a fixed pre-retrieval refusal
+> synchronized across Python, Go, and Web, and bounded content-free answer,
+> retrieval, Provider, and authoritative lifecycle observations. These local
+> results do not close the Python engineering-tool, disposable R6 browser,
+> clean-checkout CI, or reviewed merge/tag/release gates.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).

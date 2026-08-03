@@ -556,10 +556,16 @@ review, and explicit authorization.
 
 ## Next stage
 
-R5 is complete for the documented default-disabled single-host boundary; see
-the [R5 Acceptance Record](r5-acceptance.md). Proceed to R6 with a sanitized
-evaluation corpus and versioned thresholds first, followed by content-free
-observability and reproducible CI/release evidence. R6 does not authorize real
-user data, an external Provider, public AI ports, a push/tag/release, or
+The local R6 implementation is now assembled, but R6 is not release-complete.
+Proceed only through the remaining external gates in this order: establish and
+pin locally verified Python lint/type/coverage commands; run a disposable
+authenticated-browser proof for refusal, a cited answer, disablement, and exact
+cleanup; publish the feature branch and verify clean-checkout CI; then review
+default-branch merge, tag, and release as a separate authorization.
+
+Do not define or implement R7 while those R6 gates remain open. After R6 is
+closed, the bilingual roadmap must first review R7 outcome, scope, acceptance,
+rollback, privacy/data-flow impact, and authorization gates. R6 still does not
+authorize real user data, an external Provider, public AI ports, or
 multi-instance deployment. Encrypted transport and shared atomic
 replay/capability storage remain mandatory before any multi-instance claim.
