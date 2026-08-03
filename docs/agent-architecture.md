@@ -1090,6 +1090,30 @@ contract evidence rather than operational observability evidence. R6-I4B must
 review and explicitly authorize any minimal runtime instrumentation and its
 default, ownership, cardinality, and rollback boundaries.
 
+#### R6-I4B reviewed runtime matrix
+
+R6-I4B changes no runtime code. It fixes the following ownership and sequencing
+before any caller is authorized:
+
+| Disposition | Owner and exact point | Allowlisted emission and frequency | Timing boundary | Missing/failure behavior | Test and rollback |
+| --- | --- | --- | --- | --- | --- |
+| Minimal first batch, pending explicit R6-I4C authorization | AI Service `answer_delegated_agent_request`, after the existing Agent-enabled gate | One `request_count=1` metric and one `answer` event per handler invocation; only `success`, `no_context`, `invalid`, or `unavailable` | None; this slice adds no latency claim | Missing recorder is a no-op; eviction or record failure cannot alter the existing response/status | Fake and raising recorders must preserve success/no-context/400/401/500/502/503 projections; rollback removes lifespan ownership and endpoint injection, with no data cleanup |
+| Deferred | `EvidenceAnswerAgent._run`, around the selected memory or durable retrieval branch | One `search_memos` event and one `tool_latency_ms` metric per valid search | Injected monotonic clock immediately before retrieval through safe citation/context assembly | No recorder is a no-op; observer failure cannot change retrieval | Fake clock/recorder must cover both retrieval modes, no-context, invalid input, and unavailable mapping |
+| Deferred | `EvidenceAnswerAgent._answer`, only around an actual non-deterministic Provider call | One `provider_call` event and one `provider_latency_ms` metric per actual call; deterministic/no-context paths emit neither | Injected monotonic clock immediately before `generate` through parse/validation | Observer failure cannot change Provider failure mapping | Fake clock/provider must prove success, invalid result, timeout, and unavailable mapping |
+| Deferred to a Go-owned design | Memos `memoLifecycleSourceRuntime` and `MemoLifecycleOutboxStore` | Outbox outcome, lag, retry, and quarantine/exhaustion projections only from authoritative Go state | Source-owned UTC timestamps and store transaction boundaries; never Python wall time | No Python adapter, new transport, or per-event label | A separate Go contract/adapter must define whether exhausted means quarantined and add an authoritative oldest-pending-lag read |
+| Deferred | Memos rebuild preparation plus AI `MemoLifecycleRuntime.activate` | Fixed rebuild state only after one reviewed cross-process state machine exists | State transitions, not inferred elapsed time | Partial activation cannot be projected as complete | Fake Memos client/store and AI ledger tests must prove pending/active/complete/failed transitions and rollback |
+| Rejected until an authority exists | Reconciliation | No emission: there is no dedicated reconciliation owner or persisted status today | Not applicable | Never infer `synced`/`degraded` from raw errors or arbitrary mismatches | Define and review an authoritative state machine before instrumentation |
+
+The proposed first batch would let the existing AI lifespan own exactly one
+`BoundedInMemoryObservabilityAdapter(256)` only while the existing Agent opt-in
+is enabled, expose it through `app.state`, inject it into the internal answer
+handler, and clear the reference during shutdown. It adds no flag, environment
+variable, endpoint, exporter, persistence, thread, timer, or background task.
+The recorder sees only fixed contract objects and must never receive request
+bodies, result content, exceptions, IDs, or dynamic labels. This proposal is
+reviewed but not authorized by I4B; implementation requires explicit R6-I4C
+approval.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,
