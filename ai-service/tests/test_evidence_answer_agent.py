@@ -227,8 +227,8 @@ def test_agent_durable_failure_never_falls_back_or_calls_provider():
 
 
 def test_agent_records_memory_retrieval_before_provider_answering():
-    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
-    clock = SequenceClock(10.0, 10.025)
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.025, 20.0, 20.04)
     agent, provider = _agent_with_memos(
         observability_recorder=recorder,
         monotonic_clock=clock,
@@ -236,7 +236,7 @@ def test_agent_records_memory_retrieval_before_provider_answering():
     original_generate = provider.generate
 
     async def generate_after_retrieval(prompt):
-        assert clock.calls == 2
+        assert clock.calls == 3
         return await original_generate(prompt)
 
     provider.generate = generate_after_retrieval
@@ -244,12 +244,14 @@ def test_agent_records_memory_retrieval_before_provider_answering():
 
     result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
 
-    metric, event = recorder.snapshot()
+    metric, event, provider_metric, provider_event = recorder.snapshot()
     assert result.trace.terminal_state == "answered"
     assert len(provider.prompts) == 1
-    assert clock.calls == 2
+    assert clock.calls == 4
     assert metric.to_dict()["value"] == pytest.approx(25.0)
     assert event.to_dict()["outcome"] == "success"
+    assert provider_metric.to_dict()["value"] == pytest.approx(40.0)
+    assert provider_event.to_dict()["outcome"] == "success"
 
 
 def test_agent_records_memory_no_context_retrieval():
@@ -346,7 +348,7 @@ def test_agent_ignores_retrieval_recorder_failure():
         def record(self, _sample):
             raise RuntimeError("raw synthetic recorder failure")
 
-    clock = SequenceClock(10.0, 10.004)
+    clock = SequenceClock(10.0, 10.004, 20.0, 20.005)
     agent, provider = _agent_with_memos(
         observability_recorder=RaisingRecorder(),
         monotonic_clock=clock,
@@ -440,6 +442,124 @@ def test_agent_deterministic_answer_behavior_is_unchanged():
 
     assert result.answer == "Found 1 authorized Memo source(s) relevant to the question [1]."
     assert [citation.memo_id for citation in result.citations] == ["memo-visible"]
+
+
+def test_agent_records_configured_provider_after_retrieval_timing():
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.01, 20.0, 20.02)
+    agent, provider = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    payloads = [sample.to_dict() for sample in recorder.snapshot()]
+    assert result.trace.terminal_state == "answered"
+    assert len(provider.prompts) == 1
+    assert clock.calls == 4
+    assert [payload["component"] for payload in payloads] == [
+        "retrieval",
+        "retrieval",
+        "provider",
+        "provider",
+    ]
+    assert payloads[2]["metric"] == "provider_latency_ms"
+    assert payloads[3]["outcome"] == "success"
+
+
+def test_agent_keeps_provider_success_when_grounded_answer_is_invalid():
+    class MalformedProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            return LLMResult(text="not-json", provider=self.name)
+
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.01, 20.0, 20.02)
+    agent, _ = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    agent._provider = MalformedProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert error.value.error_code == "invalid_grounded_answer"
+    assert recorder.snapshot()[3].to_dict()["outcome"] == "success"
+
+
+def test_agent_records_invalid_provider_result_envelope():
+    class InvalidProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            return LLMResult(text=None, provider=self.name)
+
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.01, 20.0, 20.02)
+    agent, _ = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    agent._provider = InvalidProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert error.value.error_code == "invalid_grounded_answer"
+    assert recorder.snapshot()[3].to_dict()["outcome"] == "invalid"
+
+
+def test_agent_records_unavailable_provider_without_changing_failure():
+    provider_error = OSError("raw synthetic Provider failure")
+
+    class BrokenProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            raise provider_error
+
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.01, 20.0, 20.02)
+    agent, _ = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    agent._provider = BrokenProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(AgentProviderError) as error:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert error.value.error_code == "provider_unavailable"
+    assert recorder.snapshot()[3].to_dict()["outcome"] == "unavailable"
+
+
+def test_agent_records_provider_cancellation_without_swallowing_it():
+    class CancelledProvider:
+        name = "ollama"
+
+        async def generate(self, _prompt):
+            raise asyncio.CancelledError
+
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = SequenceClock(10.0, 10.01, 20.0, 20.02)
+    agent, _ = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    agent._provider = CancelledProvider()
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert recorder.snapshot()[3].to_dict()["outcome"] == "unavailable"
 
 
 @pytest.mark.parametrize(

@@ -22,11 +22,14 @@ RetrievalObservabilityOutcome = Literal[
     "invalid",
     "unavailable",
 ]
+ProviderObservabilityOutcome = Literal["success", "invalid", "unavailable"]
 MonotonicClock = Callable[[], float]
 _RETRIEVAL_OUTCOMES = frozenset(
     {"success", "no_context", "invalid", "unavailable"}
 )
 _MAX_RETRIEVAL_LATENCY_MS = 600_000.0
+_PROVIDER_OUTCOMES = frozenset({"success", "invalid", "unavailable"})
+_MAX_PROVIDER_LATENCY_MS = 600_000.0
 
 
 class AgentObservabilityRecorder(Protocol):
@@ -111,6 +114,62 @@ def record_retrieval_observation(
             AgentObservabilityEvent(
                 component="retrieval",
                 operation="search_memos",
+                outcome=outcome,
+            ),
+        )
+    except Exception:
+        return
+    for sample in samples:
+        try:
+            recorder.record(sample)
+        except Exception:
+            continue
+
+
+def start_provider_observation(clock: MonotonicClock | None) -> float | None:
+    """Read a valid monotonic start without affecting the Provider call."""
+
+    return _read_monotonic(clock)
+
+
+def record_provider_observation(
+    recorder: AgentObservabilityRecorder | None,
+    clock: MonotonicClock | None,
+    started_at: float | None,
+    outcome: ProviderObservabilityOutcome,
+) -> None:
+    """Attempt a fixed Provider latency/outcome pair without affecting answer."""
+
+    if (
+        recorder is None
+        or not isinstance(outcome, str)
+        or outcome not in _PROVIDER_OUTCOMES
+        or started_at is None
+        or not _is_valid_clock_value(started_at)
+    ):
+        return
+    stopped_at = _read_monotonic(clock)
+    if stopped_at is None:
+        return
+    elapsed_ms = (stopped_at - float(started_at)) * 1000
+    if (
+        not math.isfinite(elapsed_ms)
+        or elapsed_ms < 0
+        or elapsed_ms > _MAX_PROVIDER_LATENCY_MS
+    ):
+        return
+    try:
+        samples: tuple[AgentObservabilitySample, ...] = (
+            AgentObservabilityMetric(
+                component="provider",
+                operation="provider_call",
+                metric="provider_latency_ms",
+                unit="milliseconds",
+                value=elapsed_ms,
+            ),
+            AgentObservabilityEvent(
+                component="provider",
+                operation="provider_call",
                 outcome=outcome,
             ),
         )

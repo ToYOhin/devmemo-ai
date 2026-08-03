@@ -829,3 +829,19 @@ authority，不得互相回写。实现不得移动既有 `AgentProviderError` m
 result text、exception、ID 或动态 label。最小首批是 pure helper 与 configured branch inner try/finally；post-Provider
 validation、token/cost、stream/retry、Go lifecycle/rebuild/reconciliation、reader/exporter/persistence、settings、network 与
 真实 Provider 均后置或拒绝。rollback 删除 helper 与 inner boundary，保留 I4C/I4E sample。R6-I4F 不自动授权接线。
+
+## ADR-082：R6-I4G 复用 Agent clock 接线 configured Provider 固定样本
+
+R6-I4G 按 ADR-081 接线。`agent_observability_runtime.py` 增加 pure Provider timing helper，沿用 I4E 的 optional monotonic
+clock validation 与 0 至 600,000 ms whole-pair discard。有效 interval 只产生固定
+`provider/provider_call/provider_latency_ms` metric 与 `success`/`invalid`/`unavailable` event；两条 sample 独立
+best-effort，任何 clock/contract/recorder failure 均不改变 answer。
+
+`EvidenceAnswerAgent._answer` 只在 configured branch 的 `generate` 与 string-text envelope check 外增加 inner try/finally。
+deterministic fallback 不读取 Provider clock；有效 text 后的 JSON parse、citation/echo validation 与 handler projection 均
+在 interval 外。Provider exception 仍按既有固定 code 映射，cancellation 仍原样传播，旧 constructor 默认兼容。
+
+fake clock/provider/recorder 与 TestClient 已覆盖 nested retrieval/Provider 顺序、三种 Provider outcome、malformed grounded
+answer 保持 Provider `success`、invalid text、timeout/unavailable、cancellation、recorder failure 与 handler 注入。实现未
+增加 env/config/secret/port/dependency、reader/exporter/persistence、network/真实 Provider、Go lifecycle、rebuild 或
+reconciliation。rollback 只删除 Provider helper 与 inner boundary，保留 I4C answer 和 I4E retrieval sample。
