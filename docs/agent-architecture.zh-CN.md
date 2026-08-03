@@ -498,6 +498,21 @@ prompt-injection refusal failure，因此 refusal threshold 失败；不得用 a
 deterministic Provider 保证可复现，但不证明真实 runtime latency、model quality、durable storage、authentication 或
 lifecycle behavior。
 
+#### R6-I5B 已评审 refusal 边界
+
+R6-I5B 不修改 source code。已评审 policy 是只处理已验证 question 的 pure fixed intent classifier，只允许拒绝明确的
+protected instruction/context/identity/secret 泄露、忽略 evidence boundary、引用 forbidden evidence、override
+authorization 或跟随 untrusted tool direction 等意图。不得检查 retrieved Memo content、Provider output、identity、
+credential 或动态 config。
+
+refusal 位于 delegation verification 之后、`SearchMemosToolCall`/retrieval/Provider 之前。safe result 使用固定 answer、
+零 citation、provider=`policy`、terminal state=`refused`，并只有一个 `refuse_unsafe_request` final step。只产生既有 answer
+count 与 `answer/refused` event；retrieval/Provider clock 与 recorder 均不调用。
+
+所有 consumer 都严格解析 safe output，因此实现必须同步更新 Python domain、Go BFF validator 与 Web parser/locale，并覆盖
+positive/near-miss policy、endpoint projection、Go strict decoder、Web parser/render 和 64-case baseline。未知 trace state/
+step name 继续 fail closed。rollback 必须同步删除三端 policy/enum/step，无 data migration 或持久清理。
+
 ### R6 无正文可观测性契约
 
 R6-I4A 定义 provider-neutral 的 `agent-observability-v1`，但不在任何 runtime path 选择它。event 只允许固定的
