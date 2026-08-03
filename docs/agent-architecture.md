@@ -1034,6 +1034,22 @@ delete/tombstone rules, offline evaluation, reviewed migration gates, and the
 same Memos authority check before context assembly. `search_memos` continues to
 accept only complete `memo-v1` evidence.
 
+### R6 evaluation contract
+
+R6-I1 defines separate, provider-neutral `agent-evaluation-case-v1` and
+`agent-evaluation-result-v1` contracts. Cases are explicitly classified as
+synthetic and carry only a bounded question plus opaque visible, expected, and
+forbidden evidence IDs. Results are content-free: they carry the observed
+answer state, retrieved and cited evidence IDs, an allowlisted failure category,
+and bounded latency, but no answer text, prompt, context, trace payload, Memo
+content, identity mapping, Provider output, or secret.
+
+The eight seed cases prove only that the schema can express lookup, synthesis,
+no-answer, conflicting evidence, visibility boundaries, deletion, stale state,
+and prompt injection. They are not a benchmark and establish no quality score
+or threshold. R6-I2 must separately expand the sanitized corpus and version its
+thresholds before any evaluation run.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,

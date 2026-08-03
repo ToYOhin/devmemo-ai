@@ -316,6 +316,9 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
+**状态：** R6-I1 已实现并通过测试。版本化严格 case/result 契约与八个 synthetic seed case 已覆盖要求的评估类别，
+但没有 runtime 接线或 benchmark 主张。下一步是 R6-I2：扩展脱敏 corpus，并在执行前版本化 threshold。
+
 范围：
 
 - 50-100 个脱敏问题，覆盖查找、综合、无答案、冲突证据、可见性边界、删除、过期状态和 prompt injection。
