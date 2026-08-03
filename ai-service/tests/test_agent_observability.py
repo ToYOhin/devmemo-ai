@@ -15,6 +15,7 @@ from app.domain.agent_observability import (
     AgentObservabilityMetric,
     parse_observability_sample,
 )
+from app.services.agent_observability_runtime import record_answer_observation
 
 
 def _event_payload(**overrides):
@@ -284,3 +285,55 @@ def test_bounded_adapter_rejects_unvalidated_samples(sample):
         adapter.record(sample)
 
     assert adapter.snapshot() == ()
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    ["success", "no_context", "invalid", "unavailable"],
+)
+def test_answer_observation_records_only_fixed_count_and_outcome(outcome):
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+
+    record_answer_observation(adapter, outcome)
+
+    metric, event = adapter.snapshot()
+    assert metric.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "metric",
+        "component": "agent",
+        "operation": "answer",
+        "metric": "request_count",
+        "unit": "count",
+        "value": 1,
+    }
+    assert event.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "event",
+        "component": "agent",
+        "operation": "answer",
+        "outcome": outcome,
+    }
+
+
+def test_answer_observation_is_noop_without_recorder_or_allowed_outcome():
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+
+    record_answer_observation(None, "success")
+    record_answer_observation(adapter, "refused")
+
+    assert adapter.snapshot() == ()
+
+
+def test_answer_observation_attempts_both_samples_when_recorder_raises():
+    class RaisingRecorder:
+        calls = 0
+
+        def record(self, _sample):
+            self.calls += 1
+            raise RuntimeError("raw synthetic recorder failure")
+
+    recorder = RaisingRecorder()
+
+    record_answer_observation(recorder, "unavailable")
+
+    assert recorder.calls == 2

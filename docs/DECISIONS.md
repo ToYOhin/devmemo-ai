@@ -753,3 +753,21 @@ monotonic clock 验证。outbox、retry 与 exhausted backlog 的权威在 Memos
 新增 transport 跨进程复用，且当前 store 没有 oldest-pending-lag projection，也未评审 exhausted 到 quarantine 的
 语义映射。rebuild 状态横跨 Memos prepare 与 AI activate，reconciliation 当前没有专属 authority；二者在正式 state
 machine 前不得从 raw error、generation ID 或任意 mismatch 推断。以上后置项均不包含在首批授权候选中。
+
+## ADR-078：R6-I4C answer observability 由既有 Agent lifespan 持有并保持 failure-isolated
+
+用户明确授权后，R6-I4C 在既有 `agent_enabled` opt-in 内构造容量固定为 256 的
+`BoundedInMemoryObservabilityAdapter`，通过 `app.state` 只注入 internal answer handler，并在 lifespan shutdown
+清空引用。disabled route 在 ownership 与 handler gate 两处均保持 no-op。没有新增 env/config/secret/port/dependency、
+endpoint、snapshot reader、exporter、persistence、global singleton、thread、timer 或 background task。
+
+每个 enabled handler invocation 恰好尝试记录 `request_count=1` 与一个 fixed answer event。answered/no-context 分别
+映射 `success`/`no_context`，400/401 映射 `invalid`，500/502/503 映射 `unavailable`；当前不产生 `refused`。未知异常
+使用预设 `unavailable` 的 `finally` 路径，但异常本身继续原样传播。helper 独立 best-effort 调用两次 `record`，不读取
+或保留 exception、request/result/body、ID 或动态 label；recorder 缺失或抛错不得改变既有 response。
+
+TestClient 与 fake/raising recorder 已验证两条固定 sample、四种 outcome、disabled ownership、shutdown、正常回答、
+no-context、400、401、500、502、503 和 recorder failure isolation。当前 snapshot 只能由进程内对象读取，且没有运维
+消费面，因此 I4C 只证明真实 handler 会产生无正文 sample，不证明 operator-facing observability、latency、Provider、
+Go lifecycle、rebuild 或 reconciliation 指标。rollback 只删除 helper、lifespan ownership 与 handler injection，无持久
+数据清理。

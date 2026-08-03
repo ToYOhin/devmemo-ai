@@ -38,6 +38,7 @@ from database import (
     webhook_retention_cutoff,
 )
 from llm import create_provider
+from app.adapters.agent_observability import BoundedInMemoryObservabilityAdapter
 from app.adapters.chunk_state import SqliteChunkIndexStateStore
 from app.services.content_parser import parse_memo_content
 from app.services.embedding_factory import (
@@ -67,6 +68,10 @@ from app.services.agent_lifecycle_http_adapter import (
     MemoLifecycleHTTPAdapter,
 )
 from app.services.agent_lifecycle_runtime import build_memo_lifecycle_runtime
+from app.services.agent_observability_runtime import (
+    AnswerObservabilityOutcome,
+    record_answer_observation,
+)
 from app.services.agent_lifecycle_transport import (
     INTERNAL_LIFECYCLE_PATH,
     LIFECYCLE_NONCE_HEADER,
@@ -199,7 +204,12 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         application.state.evidence_rehydration_client = client
         application.state.durable_rehydration_orchestrator = None
         application.state.memo_lifecycle_http_adapter = None
+        application.state.agent_observability = None
         try:
+            if settings.agent_enabled:
+                application.state.agent_observability = (
+                    BoundedInMemoryObservabilityAdapter(256)
+                )
             lifecycle_runtime = build_memo_lifecycle_runtime(
                 settings,
                 embedding_service,
@@ -224,6 +234,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             )
             yield
         finally:
+            application.state.agent_observability = None
             application.state.memo_lifecycle_http_adapter = None
             application.state.durable_rehydration_orchestrator = None
             application.state.evidence_rehydration_client = None
@@ -525,6 +536,8 @@ async def answer_delegated_agent_request(
     if not settings.agent_enabled or settings.agent_internal_secret is None:
         raise HTTPException(status_code=404, detail="not found")
 
+    recorder = getattr(raw_request.app.state, "agent_observability", None)
+    outcome: AnswerObservabilityOutcome = "unavailable"
     try:
         durable_retrieval = None
         if settings.agent_rehydration_enabled:
@@ -545,15 +558,25 @@ async def answer_delegated_agent_request(
             settings.agent_internal_secret,
             datetime.now(timezone.utc),
         )
+        response = result.to_dict()
+        outcome = (
+            "no_context"
+            if result.trace.terminal_state == "no_context"
+            else "success"
+        )
+        return response
     except AgentDelegationError as error:
+        outcome = "invalid"
         raise HTTPException(status_code=401, detail="invalid Agent delegation") from error
     except RetrievalInputError as error:
+        outcome = "invalid"
         raise HTTPException(status_code=400, detail="invalid Agent request") from error
     except RetrievalUnavailableError as error:
         raise HTTPException(status_code=503, detail="Agent retrieval unavailable") from error
     except AgentProviderError as error:
         raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
-    return result.to_dict()
+    finally:
+        record_answer_observation(recorder, outcome)
 
 
 @app.post(INTERNAL_LIFECYCLE_PATH)
