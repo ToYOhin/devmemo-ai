@@ -1156,6 +1156,38 @@ Rollback removes those optional dependencies and the retrieval wrapper; R6-I4C
 answer samples remain and no persistent cleanup is required. Provider timing
 and all Go-owned lifecycle metrics remain separate and unwired.
 
+#### R6-I4F reviewed Provider timing boundary
+
+R6-I4F changes no runtime code. The reviewed owner is the configured-Provider
+branch of `EvidenceAnswerAgent._answer`; the deterministic fallback performs no
+Provider call and must emit no Provider sample. A later minimal implementation
+may reuse the Agent's optional recorder and monotonic clock without adding a
+second clock owner or changing existing constructors.
+
+| Path | Fixed Provider outcome | Exact timing boundary | Answer behavior that must remain | Required fake proof |
+| --- | --- | --- | --- | --- |
+| Deterministic fallback | No Provider sample | No interval | Existing fallback and citations | Clock and recorder are untouched |
+| `generate` returns a result with string text | `success` | Immediately before `generate`; stop after the result envelope/text check | Parsing, grounding validation, and response construction remain after the stop | Nested clock order is retrieval start/stop, then Provider start/stop |
+| `generate` returns an invalid result envelope/text | `invalid` | Same start; stop before the existing contract failure is mapped | Existing `invalid_grounded_answer` mapping | No prompt/result content or raw error is recorded |
+| `generate` raises, including timeout or cancellation | `unavailable` | Same start; stop before the original failure mapping or cancellation escapes | Existing fixed error mapping; cancellation is re-raised | Clock/recorder failure cannot replace the Provider failure |
+| Grounded-answer parse or validation fails after valid text | Completed Provider outcome remains `success` | Outside the Provider interval | Existing Agent Provider error and answer outcome remain unchanged | Provider success and answer unavailable can coexist |
+
+The candidate uses the same whole-pair discard rules as retrieval timing:
+missing dependencies, raising/boolean/non-numeric/non-finite clock values,
+negative elapsed time, or elapsed time above 600,000 ms emit neither sample.
+Recording happens after the stop read and independently attempts the fixed
+`provider_latency_ms` metric and `provider_call` event. No Provider/model name,
+prompt, result text, exception, request/Memo/user/generation ID, or dynamic label
+is retained.
+
+The minimal first batch is one helper plus one inner try/finally around the
+configured `generate` call and result-envelope check. Post-Provider parsing,
+grounding validation, token/cost metrics, Provider-specific labels, streaming,
+retries, and all Go-owned observability are deferred. Reader/exporter,
+persistence, settings, network calls, and real Provider execution are rejected
+from this slice. Rollback removes only the helper and inner boundary; answer and
+retrieval samples remain unchanged. Wiring requires explicit authorization.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,

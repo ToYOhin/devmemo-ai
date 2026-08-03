@@ -554,6 +554,30 @@ R6-I4E 实现仅扩展 `agent_observability_runtime.py`，为 `EvidenceAnswerAge
 缺失/抛错与旧 constructor 兼容性。rollback 删除 optional dependency 与 retrieval wrapper；保留 R6-I4C answer sample，
 无持久数据清理。Provider timing 与全部 Go-owned lifecycle metric 继续独立后置且未接线。
 
+#### R6-I4F 已评审 Provider timing 边界
+
+R6-I4F 不修改 runtime code。已评审 owner 是 `EvidenceAnswerAgent._answer` 的 configured-Provider branch；deterministic
+fallback 没有 Provider call，因此不得产生 Provider sample。后续最小实现可复用 Agent 的 optional recorder 与 monotonic
+clock，不增加第二个 clock owner，也不改变旧 constructor。
+
+| 路径 | 固定 Provider outcome | 精确计时边界 | 必须保持的 answer 行为 | 必需 fake 证明 |
+| --- | --- | --- | --- | --- |
+| deterministic fallback | 不产生 Provider sample | 无 interval | 既有 fallback 与 citation | clock、recorder 均不调用 |
+| `generate` 返回 string text result | `success` | `generate` 前立即 start；result envelope/text 检查后 stop | parse、grounding validation 与 response construction 均在 stop 后 | nested clock 顺序为 retrieval start/stop，再 Provider start/stop |
+| `generate` 返回无效 result envelope/text | `invalid` | 同一起点；既有 contract failure mapping 前 stop | 既有 `invalid_grounded_answer` mapping | 不记录 prompt/result content/raw error |
+| `generate` 抛错，含 timeout 或 cancellation | `unavailable` | 同一起点；既有 failure mapping 或 cancellation 逸出前 stop | 固定 error mapping 不变，cancellation 重新抛出 | clock/recorder failure 不替换 Provider failure |
+| 有效 text 后 grounded-answer parse/validation 失败 | 已完成 Provider outcome 保持 `success` | Provider interval 之外 | 既有 Agent Provider error 与 answer outcome 不变 | Provider success 可与 answer unavailable 并存 |
+
+候选复用 retrieval timing 的整组丢弃规则：dependency 缺失、clock 抛错、bool/非数字/非有限 clock value、负 elapsed 或
+超过 600,000 ms 时，两条 sample 均不产生。先读 stop 再记录，并独立尝试固定 `provider_latency_ms` metric 与
+`provider_call` event。不得保留 Provider/model name、prompt、result text、exception、request/Memo/user/generation ID 或
+动态 label。
+
+最小首批只有一个 helper，以及 configured `generate` call/result-envelope check 外的一层 inner try/finally。post-Provider
+parse、grounding validation、token/cost metric、Provider-specific label、streaming、retry 与全部 Go-owned observability
+均后置；本切片拒绝 reader/exporter、persistence、settings、network call 与真实 Provider execution。rollback 只删除
+helper 与 inner boundary，保留 answer/retrieval sample。接线仍需明确授权。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。
