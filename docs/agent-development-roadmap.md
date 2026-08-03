@@ -456,6 +456,11 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
+**Status:** R6-I1 is implemented and test-verified. The versioned strict
+case/result contract and eight synthetic seed cases cover the required
+evaluation categories without runtime wiring or benchmark claims. R6-I2 is
+next: expand the sanitized corpus and version thresholds before execution.
+
 Scope:
 
 - A sanitized 50-100 question corpus covering lookup, synthesis, no-answer,

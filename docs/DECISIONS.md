@@ -672,3 +672,16 @@ Qdrant point 会安全返回 503，但不能描述为 memory parity。rollback �
 此完成结论不覆盖真实用户数据、MySQL/PostgreSQL、backup/restore 执行、外部 Provider、跨主机 transport、
 shared atomic replay/capability state 或多实例。R6 可继续 evaluation、content-free observability 与 release
 工程门禁；上述扩大范围仍需独立设计、威胁建模与授权。
+
+## ADR-073：R6 先固定脱敏、无正文的评估契约，再扩展 corpus
+
+R6-I1 新增独立的 `agent-evaluation-case-v1` 与 `agent-evaluation-result-v1`，不修改早期只测 Recall@K 的
+`RetrievalEvaluationCase`。case 只接受 `synthetic` 数据分类、有界问题、固定类别和 opaque evidence ID 集合；
+expected evidence 必须属于 visible 集合，forbidden evidence 不能属于 visible 集合。result 不保存回答正文，
+只允许回答状态、检索/引用 evidence ID、固定失败类别和有界延迟；未知字段、重复 JSON 字段、非法版本、越权引用、
+正文类扩展字段和不一致状态全部 fail closed。
+
+八个 seed case 分别覆盖 lookup、synthesis、no-answer、conflicting evidence、visibility boundary、deletion、
+stale state 与 prompt injection，只证明 schema 表达能力，不构成 50-100 题 benchmark，不产生 threshold、质量分数、
+Provider 成本或产品主张。R6-I2 才能扩展脱敏 corpus 并在执行前版本化 threshold；R6-I1 不连接 endpoint、Provider、
+Qdrant、数据库、Docker、browser 或网络，也不授权真实数据、外部 Provider、push/tag/release 或多实例。

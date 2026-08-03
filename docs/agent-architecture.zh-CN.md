@@ -468,6 +468,17 @@ Memos-owned ops 状态公开 event ID、类型、序号、状态、attempts、�
 
 A4 仍不启用 chunk retrieval。R5 只在显式、默认关闭的单机 lifecycle 与 rehydration flag 下允许完整 Memo Qdrant Agent retrieval；Memos 继续持有当前 visibility 与 content authority。chunk 仍需独立 version/collection、稳定 delete/tombstone 规则、离线评估、已评审迁移闸门，以及组装 context 前相同的 Memos authority check。`search_memos` 继续只接受完整 `memo-v1` 证据。
 
+### R6 评估契约
+
+R6-I1 独立定义 provider-neutral 的 `agent-evaluation-case-v1` 与
+`agent-evaluation-result-v1` 契约。case 必须明确标记为 synthetic，只携带有界问题和 opaque 的 visible、expected、
+forbidden evidence ID。result 保持 content-free：只携带观测到的回答状态、检索与引用 evidence ID、白名单失败类别
+和有界延迟，不包含回答正文、prompt、context、完整 trace payload、Memo 正文、身份映射、Provider 输出或 secret。
+
+八个 seed case 只证明 schema 能表达 lookup、synthesis、no-answer、conflicting evidence、visibility boundary、
+deletion、stale state 与 prompt injection；它们不是 benchmark，也不形成质量分数或 threshold。R6-I2 必须单独扩展
+脱敏 corpus，并在任何评估运行前对 threshold 做版本化。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。
