@@ -492,6 +492,19 @@ R6-I3 增加只消费已解析 corpus、threshold 与 result 对象的纯 runner
 Provider 输出或 secret。测试 report 只来自调用方提供的 synthetic result，不能作为产品 benchmark、Provider quality、
 runtime latency 或成本证据。
 
+### R6 无正文可观测性契约
+
+R6-I4A 定义 provider-neutral 的 `agent-observability-v1`，但不在任何 runtime path 选择它。event 只允许固定的
+component、operation 与 outcome 组合；metric 分别允许 request count、工具/Provider latency、outbox lag、retry/
+quarantine count、rebuild state 与 reconciliation state，并固定单位、范围和状态值。未知字段、任意 label、身份或
+request ID、原始错误、正文与 generation ID 全部 fail closed。
+
+dormant in-memory adapter 只接受已校验的 contract 对象。容量在构造时固定为 1-4096，溢出时淘汰最旧项，snapshot
+是不可变副本。adapter 不包含持久化、timer、thread、后台任务、exporter、网络 transport 或 runtime config。当前
+endpoint、Agent、retrieval、Provider、lifecycle、rebuild 与 reconciliation 均未记录 sample，因此测试只证明契约，
+不构成运行时可观测性证据。R6-I4B 必须先评审并明确授权最小 runtime instrumentation 及其 default、ownership、
+cardinality 与 rollback 边界。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。
