@@ -456,11 +456,12 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
-**Status:** R6-I1 through R6-I4G are implemented and test-verified. R6-I4B's
+**Status:** R6-I1 through R6-I4J are implemented and test-verified. R6-I4B's
 runtime ownership review, R6-I4D's retrieval-timing review, and R6-I4F's
 Provider-timing review are documented. R6-I4H reviews the source-owned Go
 lifecycle candidate; R6-I4I implements its dormant strict Go contract and
-bounded adapter without runtime wiring.
+bounded adapter, and R6-I4J wires fixed authoritative delivery transitions
+under the existing lifecycle opt-in.
 The explicitly authorized first batch now records fixed AI answer
 outcome/request-count samples. The strict
 contracts, 64-case sanitized corpus, seven predeclared thresholds, pure
@@ -473,9 +474,9 @@ the selected memory/durable retrieval and safe assembly only. Both paths are
 failure-isolated, with no reader, exporter, or persistence. R6-I4G emits fixed
 Provider latency/outcome samples around configured `generate` plus result-text
 checking only; deterministic fallback and answer validation remain outside.
-Memos outbox/retry/quarantine
-requires a separate Go-owned design; rebuild/reconciliation requires an
-authoritative cross-process state model.
+Go-owned outbox outcome/retry/quarantine samples are present; outbox lag remains
+blocked on an authoritative oldest-pending query, while rebuild/reconciliation
+requires an authoritative cross-process state model.
 
 Scope:
 

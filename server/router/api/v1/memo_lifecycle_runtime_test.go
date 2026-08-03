@@ -19,6 +19,7 @@ type fakeMemoLifecycleOutbox struct {
 	acknowledged  []string
 	failureCodes  []string
 	prepareCalled int
+	exhaust       bool
 }
 
 func (outbox *fakeMemoLifecycleOutbox) PrepareMemoLifecycleRebuild(
@@ -60,6 +61,10 @@ func (outbox *fakeMemoLifecycleOutbox) RecordMemoLifecycleDeliveryFailure(
 	for _, event := range outbox.events {
 		if event.EventID == eventID {
 			event.Attempts++
+			if outbox.exhaust {
+				event.Status = store.MemoLifecycleOutboxExhausted
+				return event, store.ErrMemoLifecycleDeliveryExhausted
+			}
 			return event, nil
 		}
 	}
@@ -160,4 +165,90 @@ func TestMemoLifecycleSourceRuntimeRecordsSafeFailureAndBlocksActivation(t *test
 	require.ErrorIs(t, err, errMemoLifecycleRuntimeUnavailable)
 	require.Equal(t, []string{"transport_unavailable"}, outbox.failureCodes)
 	require.Nil(t, client.activation)
+}
+
+func TestMemoLifecycleRuntimeRecordsAcknowledgedDelivery(t *testing.T) {
+	event := syntheticMemoLifecycleOutboxEvent()
+	outbox := &fakeMemoLifecycleOutbox{events: []*store.MemoLifecycleOutboxEvent{event}}
+	recorder, err := aiagent.NewBoundedLifecycleObservationRecorder(4)
+	require.NoError(t, err)
+	runtime := newMemoLifecycleSourceRuntimeWithRecorder(
+		outbox, &fakeMemoLifecycleClient{}, recorder,
+	)
+
+	require.NoError(t, runtime.deliver(context.Background(), event))
+
+	require.Equal(t, "success", recorder.Snapshot()[0].Outcome)
+}
+
+func TestMemoLifecycleRuntimeRecordsPersistedRetry(t *testing.T) {
+	event := syntheticMemoLifecycleOutboxEvent()
+	outbox := &fakeMemoLifecycleOutbox{events: []*store.MemoLifecycleOutboxEvent{event}}
+	recorder, err := aiagent.NewBoundedLifecycleObservationRecorder(4)
+	require.NoError(t, err)
+	runtime := newMemoLifecycleSourceRuntimeWithRecorder(
+		outbox,
+		&fakeMemoLifecycleClient{deliverErr: errors.New("raw synthetic failure")},
+		recorder,
+	)
+
+	require.ErrorIs(
+		t, runtime.deliver(context.Background(), event), errMemoLifecycleRuntimeUnavailable,
+	)
+
+	samples := recorder.Snapshot()
+	require.Equal(t, "pending", samples[0].Outcome)
+	require.Equal(t, "retry_count", samples[1].Metric)
+	require.Equal(t, 1, samples[1].Value)
+}
+
+func TestMemoLifecycleRuntimeRecordsPersistedExhaustion(t *testing.T) {
+	event := syntheticMemoLifecycleOutboxEvent()
+	outbox := &fakeMemoLifecycleOutbox{
+		events: []*store.MemoLifecycleOutboxEvent{event}, exhaust: true,
+	}
+	recorder, err := aiagent.NewBoundedLifecycleObservationRecorder(4)
+	require.NoError(t, err)
+	runtime := newMemoLifecycleSourceRuntimeWithRecorder(
+		outbox,
+		&fakeMemoLifecycleClient{deliverErr: errors.New("raw synthetic failure")},
+		recorder,
+	)
+
+	require.ErrorIs(
+		t, runtime.deliver(context.Background(), event), errMemoLifecycleRuntimeUnavailable,
+	)
+
+	samples := recorder.Snapshot()
+	require.Equal(t, "failed", samples[0].Outcome)
+	require.Equal(t, "quarantine_count", samples[1].Metric)
+	require.Equal(t, 1, samples[1].Value)
+}
+
+type failingLifecycleObservationRecorder struct {
+	panicOnRecord bool
+}
+
+func (recorder failingLifecycleObservationRecorder) RecordLifecycleObservation(
+	aiagent.LifecycleObservation,
+) error {
+	if recorder.panicOnRecord {
+		panic("raw synthetic recorder panic")
+	}
+	return errors.New("raw synthetic recorder failure")
+}
+
+func TestMemoLifecycleRuntimeIsolatesRecorderFailureAndPanic(t *testing.T) {
+	for _, panicOnRecord := range []bool{false, true} {
+		event := syntheticMemoLifecycleOutboxEvent()
+		outbox := &fakeMemoLifecycleOutbox{events: []*store.MemoLifecycleOutboxEvent{event}}
+		runtime := newMemoLifecycleSourceRuntimeWithRecorder(
+			outbox,
+			&fakeMemoLifecycleClient{},
+			failingLifecycleObservationRecorder{panicOnRecord: panicOnRecord},
+		)
+
+		require.NoError(t, runtime.deliver(context.Background(), event))
+		require.Equal(t, store.MemoLifecycleOutboxAcknowledged, event.Status)
+	}
 }

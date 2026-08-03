@@ -873,3 +873,16 @@ value=1。adapter 在每次 record 时重新校验完整 shape，capacity 固定
 读取 outbox 文档、ID、error 或 timestamp。测试证明 strict construction、forged shape rejection、容量、淘汰、snapshot
 copy 与 nil/invalid input。R6-I4I 不产生 operational sample；R6-I4J 如继续，只能按 ADR-083 把 optional recorder 注入
 既有 lifecycle-enabled Go composition，并保持 lag/rebuild/reconciliation 阻断。
+
+## ADR-085：R6-I4J 只在 lifecycle store transition 成功后 best-effort 记录
+
+R6-I4J 保留旧 two-argument runtime constructor，并增加只供既有 lifecycle-enabled composition 使用的 recorder
+constructor。composition 创建 capacity 256 的 Go bounded recorder，不新增 flag/env/endpoint。runtime 仅在
+`AcknowledgeMemoLifecycleOutboxEvent` 返回 `ACKNOWLEDGED` 后发出 `success`；仅在
+`RecordMemoLifecycleDeliveryFailure` 返回 `PENDING`/`EXHAUSTED` 后分别发出 `pending + retry_count=1` 或
+`failed + quarantine_count=1`。
+
+sample construction、recorder error 与 panic 均逐条隔离，不得改变 client delivery、ack/failure persistence、exhaustion
+error 或 rebuild activation。fake store/client/recorder tests 已覆盖三种 transition 与 error/panic isolation。该实现没有
+reader/exporter、transport、persistence、独立 clock 或动态 label；outbox lag、rebuild 与 reconciliation 仍按 ADR-083
+阻断。rollback 改回旧 constructor 并删除 composition recorder，无持久数据清理。
