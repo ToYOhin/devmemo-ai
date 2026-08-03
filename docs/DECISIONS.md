@@ -936,3 +936,12 @@ R6 completion audit 将剩余条件固定为四类：Python lint/type/coverage �
 禁止提交未经本地验证的 CI dependency/config 来伪造 engineering gate，也禁止把 R5 browser 证据自动扩展为 R6 refusal
 证据。授权必须按 toolchain install、disposable runtime/browser、feature push/CI、merge/tag/release 顺序独立开放。lag、
 rebuild 与 reconciliation 的缺失 authority 同样保持显式，不通过推断 sample 补齐。
+
+## ADR-090：公共项目文档与本地 AI 接管材料必须隔离
+
+公共仓库只跟踪可由代码、测试、架构或运行记录复现的产品事实。Agent 状态、下一阶段 Prompt、新窗口交接、临时命令、
+本机路径与生成结构图属于本地 AI 协作材料，统一放入 Git 忽略的 `.devmemo-local/`、`graphify-out/` 或操作系统临时目录，
+不得暂存、提交或推送。`.gitignore` 提供仓库级保护，本地 `.git/info/exclude` 可作为额外保护，但不能替代 staged diff 审核。
+
+新窗口接管时先读取公开 roadmap/audit，再读取本地 status/prompt；交接文档只引用已有 ADR、roadmap、audit 与 commit，
+不复制敏感值、真实数据或长日志。任何公共文档更新都必须独立于本地接管材料审核和提交。

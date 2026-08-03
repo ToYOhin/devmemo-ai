@@ -37,3 +37,6 @@ web/coverage/
 
 # Local architecture graph artifacts
 graphify-out/
+
+# Local AI-agent coordination, status, prompts, and handoff artifacts
+/.devmemo-local/

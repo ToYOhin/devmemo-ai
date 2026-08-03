@@ -5,6 +5,22 @@ content-free observability slices, but it is not release-complete. This record
 separates current evidence from gates that still require external tooling,
 runtime authorization, CI publication, or release authority.
 
+## Current project shape
+
+- The Go Memos core owns authentication, Memo visibility, source mutations,
+  lifecycle outbox state, the same-origin Agent BFF, and the safe response
+  projection.
+- The FastAPI AI Service owns provider-neutral Agent contracts, deterministic
+  and optional Provider/vector adapters, derived SQLite/Qdrant state, durable
+  rehydration, the fixed refusal policy, offline evaluation, and bounded
+  in-memory observations.
+- The React Web feature calls the Memos BFF for Evidence Answer. Legacy
+  insight/template/summary panels still use the optional direct AI client and
+  remain a separate compatibility decision.
+- Cross-language fixtures live in `contracts/`; public design and operations
+  evidence lives in `docs/`. Local Agent status, prompts, handoffs, and generated
+  architecture graphs are ignored and are not release artifacts.
+
 ## Verified locally
 
 - The strict 64-case synthetic corpus and seven versioned thresholds run through
@@ -45,6 +61,10 @@ Complete the remaining gates in this order:
 3. authorize pushing the feature branch and verifying all required CI checks;
 4. after review, separately authorize merge/default-branch publication, tag, and
    release.
+
+R7 must not be invented or implemented while these R6 gates remain open. Once
+R6 closes, define R7 outcome, scope, acceptance, rollback, privacy/data-flow
+impact, and authorization gates in both roadmap languages before coding.
 
 Outbox lag remains blocked on an authoritative oldest-pending query. Rebuild
 observability remains blocked on a reviewed cross-process state authority, and

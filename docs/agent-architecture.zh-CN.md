@@ -1,6 +1,13 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I16 已完成 durable retrieval、current-authority rehydration、认证 transport、默认关闭的 runtime ownership、verified answer selection 与 completion audit。获授权的 post-I16 切片现已连接 SQLite mutation/outbox、既有 internal AI listener、generation activation 与 Qdrant derived state；两次 disposable 认证浏览器运行完成 private/public visibility、update/delete、restart、rollback 与精确 cleanup 矩阵。R5 仅在默认关闭的单机范围内完成。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I16 已完成 durable retrieval、current-authority
+> rehydration、认证 transport、默认关闭的 runtime ownership、verified answer selection 与 completion audit。
+> 获授权的 post-I16 切片现已连接 SQLite mutation/outbox、既有 internal AI listener、generation activation
+> 与 Qdrant derived state；两次 disposable 认证浏览器运行完成 private/public visibility、update/delete、restart、
+> rollback 与精确 cleanup 矩阵。R5 仅在默认关闭的单机范围内完成。R6 本地增加 strict 64-case
+> evaluation/threshold/runner、Python/Go/Web 同步的 retrieval 前 fixed refusal，以及有界、无正文的
+> answer/retrieval/Provider/权威 lifecycle observation；这些本地结果尚未关闭 Python 工程工具、R6 disposable
+> browser、clean-checkout CI 与 reviewed merge/tag/release 闸门。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与

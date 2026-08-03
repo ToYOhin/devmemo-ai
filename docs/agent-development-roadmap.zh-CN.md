@@ -376,7 +376,10 @@ browser proof，以及 reviewed default-branch/tag/release publication。
 
 ## 下一阶段
 
-R5 已在文档定义的默认关闭单机边界内完成，详见 [R5 验收记录](r5-acceptance.zh-CN.md)。下一步进入 R6：
-先建立脱敏 evaluation corpus 与版本化 threshold，再增加 content-free observability 及可复现 CI/release 证据。
-R6 不自动授权真实用户数据、外部 Provider、公开 AI 端口、push/tag/release 或多实例部署。任何多实例主张前仍
-必须具备加密 transport 与 shared atomic replay/capability storage。
+R6 本地实现已经组装完成，但尚未达到 release-complete。只能按以下顺序关闭剩余外部闸门：建立并固定经本地验证的
+Python lint/type/coverage 命令；对 refusal、一次 cited answer、disablement 与精确 cleanup 运行 disposable 认证浏览器证明；
+发布 feature branch 并验证 clean-checkout CI；最后把 default-branch merge、tag 与 release 作为独立授权评审。
+
+这些 R6 闸门关闭前，不定义或实现 R7。R6 收口后，必须先在双语 roadmap 中评审 R7 outcome、scope、acceptance、
+rollback、隐私/数据流影响与授权闸门。R6 仍不自动授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何
+多实例主张前仍必须具备加密 transport 与 shared atomic replay/capability storage。

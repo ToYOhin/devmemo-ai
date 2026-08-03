@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-08-02
+更新时间：2026-08-03
 
 ## 顶层目录
 
@@ -42,8 +42,9 @@ cmd/server/store/internal/proto
 ```
 
 Memos 仍是 Memo 原始内容、标签、搜索和用户权限的事实来源。Memos BFF 在实验性 Agent
-启用时计算调用者可见范围；dormant lifecycle outbox adapter 位于 `store/`，但尚未接入
-既有 Memo create/update/delete 路径。AI 派生状态不写回 Memo 业务表，`proto/` 与通用前端
+启用时计算调用者可见范围。默认关闭的单机 lifecycle 路径已把 Memo mutation、SQLite outbox、
+认证 internal AI listener、generation activation 与 Qdrant 派生状态接通；只有显式 runtime flag
+选择它，默认 Compose 不会启动该路径。AI 派生状态不写回 Memo 业务表，`proto/` 与通用前端
 数据层也不承担 AI 派生状态。
 
 ## Web AI feature 结构
@@ -89,7 +90,10 @@ ai-service/
 │   │   ├── memo_insight.py          # AI Inbox/Decision Ledger contract
 │   │   ├── context_pack.py          # context-pack-v1 contract 与 JSON 输出
 │   │   ├── agent.py                 # search_memos-only Agent 请求/结果契约
+│   │   ├── agent_evaluation.py      # R6 sanitized case/corpus/threshold/result contract
+│   │   ├── agent_evaluation_report.py # content-free benchmark report contract
 │   │   ├── agent_lifecycle.py       # A4 lifecycle event/ack/state machine
+│   │   ├── agent_observability.py   # 固定低基数、无正文 observability contract
 │   │   ├── grounded_answer.py       # 严格 Provider answer/citation reference 契约
 │   │   ├── durable_authorized_retrieval.py # R5 两阶段授权 candidate/materialization 契约
 │   │   └── evidence_rehydration.py  # R5 当前 Memos authority 正文 rehydration 契约
@@ -106,9 +110,14 @@ ai-service/
 │   │   ├── public_chunk_retrieval.py # public-chunk-v1 authorization/dedupe/redaction projection
 │   │   ├── agent_delegation.py      # answer HMAC purpose/path 与严格 delegated body
 │   │   ├── evidence_answer_agent.py # 授权检索、Provider 校验与安全回答编排
+│   │   ├── agent_refusal_policy.py  # retrieval 前的固定拒绝策略
+│   │   ├── agent_evaluation_runner.py # deterministic content-free metrics runner
+│   │   ├── agent_evaluation_harness.py # 64-case product-core offline harness
+│   │   ├── agent_observability_runtime.py # 可选进程内 recorder 与固定 sample helper
 │   │   ├── agent_lifecycle_processor.py # dormant ledger/vector lifecycle processor
+│   │   ├── agent_lifecycle_runtime.py # 默认关闭的 lifecycle composition/runtime
 │   │   ├── agent_lifecycle_transport.py # lifecycle HMAC、replay 与 in-process transport
-│   │   ├── durable_authorized_retrieval.py # R5 未接线 repository protocol/service
+│   │   ├── durable_authorized_retrieval.py # R5 candidate/materialization service
 │   │   ├── evidence_rehydration_transport.py # R5 request/response HMAC 与 process-local replay 证明
 │   │   ├── webhook_security.py      # Webhook HMAC-SHA256
 │   │   ├── ops_security.py          # ops token 与错误脱敏
@@ -152,19 +161,21 @@ AI Service 的固定 internal path 只执行 `search_memos`，并用严格 groun
 验证非 deterministic Provider 输出。citation 由服务端已授权证据映射，公开响应不包含原始
 Memo、prompt/context、embedding、身份、可见范围或 secret。
 
-`contracts/memo-lifecycle-v1.json`、Memos-owned SQLite outbox、AI SQLite ledger、认证
-transport 和一次性 integration proof 已存在，但都保持未接线。它们不会由当前 Memo CRUD、
-AI route、dispatcher、worker、定时器、Qdrant 或默认 Compose 自动调用。
+`contracts/memo-lifecycle-v1.json`、Memos-owned SQLite outbox、AI SQLite ledger 与认证 transport
+已在默认关闭的单机 opt-in 下组成 source-owned lifecycle。Go 只在权威 store transition 成功后记录
+固定 delivery/retry/quarantine sample；记录失败不能改变 outbox 结果。outbox lag、rebuild observability
+和 reconciliation 仍缺各自权威状态接口，禁止从异常或计数推断。
 
-R5-I1 至 R5-I7 的持久化授权检索边界分布在 AI Service 的
-`durable_authorized_retrieval.py`、`evidence_rehydration.py`、对应未接线 service/临时 adapter，
-以及 Go `internal/aiagent/evidence_rehydration_transport.go` 与
-`evidence_rehydration_authority.go`，以及 Memos API 内尚未接线的
-`evidence_rehydration_authority_sqlite.go`。跨语言 fixture 位于
+R5 durable authorized retrieval 分布在 AI Service 的 `durable_authorized_retrieval.py`、
+`durable_rehydration_orchestrator.py`、`evidence_rehydration.py`、HTTP client/runtime adapter，以及 Go
+`internal/aiagent/evidence_rehydration_*` authority/transport 与 Memos API composition。跨语言 fixture 位于
 `contracts/memo-evidence-rehydration-v1.json` 和
-`contracts/memo-evidence-rehydration-transport-v1.json`。当前只有纯对象、内存 fake 和临时 SQLite
-证明；R5-I7 只增加真实 SQLite Store/visibility reader 的临时合成 parity，不增加 authority capability
-issuer/resolver、HTTP、runtime secret/config、replay 接线或 Agent runtime selection。
+`contracts/memo-evidence-rehydration-transport-v1.json`。启用 rehydration opt-in 时，Agent 只选择
+lifespan-owned durable orchestrator，不回退到 memory；disabled 时仍保持原 memory retrieval。
+
+R6 在这条产品路径外增加离线工程证据：64 个完全 synthetic case、七项预声明 threshold、pure runner、
+真实 deterministic retrieval/Agent core harness、fixed pre-retrieval refusal，以及 answer/retrieval/Provider/
+lifecycle 的无正文固定 sample。它们不等于真实 Provider、Docker、浏览器、CI 或 release 证据。
 
 ## 默认完整 Memo 索引
 
@@ -223,7 +234,21 @@ web/src/features/ai/
 └── AiMemoSummary.tsx  # 摘要读取、生成与反馈
 ```
 
-前端只访问 AI Service HTTP API，不访问 SQLite。未配置 `VITE_AI_SERVICE_URL`、AI Service 404 或网络失败时，Memo Markdown、标签、搜索和编辑流程继续正常运行。
+Evidence Answer 只访问 same-origin Memos BFF，不把身份、可见 UID、delegation secret 或 AI Service 地址交给浏览器。
+legacy template/summary/insight feature 仍使用可选 AI Service client；Agent-overlay 模式下这些旧面板尚未统一迁移或隐藏。
+前端不访问 SQLite，AI 功能不可用时 Memo Markdown、标签、搜索和编辑流程继续正常运行。
+
+## 当前推进路线与问题
+
+1. **先关闭 R6 工程闸门：** 固定 Python lint/type/coverage 工具并建立本地 baseline；再运行 disposable
+   authenticated-browser refusal/cited-answer/disablement/cleanup 证明；随后发布 feature branch 并验证 clean-checkout CI；
+   merge/tag/release 必须最后单独评审授权。
+2. **再定义 R7：** R6 的工具链、浏览器、CI 与发布证据关闭前，不预设 R7 implementation。R7 必须先在双语 roadmap
+   评审 outcome、scope、acceptance、rollback 与新授权闸门。
+3. **保持未解决问题显式：** lifecycle lag、rebuild、reconciliation 缺权威 state owner；legacy AI panels 的浏览器访问
+   模式尚未统一；多实例仍缺加密 transport 与 shared atomic replay/capability storage。
+4. **保持本地 AI 协作材料隔离：** `.devmemo-local/`、本地状态、接管 Prompt、临时交接和结构图均被 Git 忽略，
+   不得暂存、提交或推送；公共文档只保留可复现的产品事实。
 
 ## Compose 与持久化
 
