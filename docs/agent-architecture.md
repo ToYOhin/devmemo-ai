@@ -1070,6 +1070,26 @@ Memo, prompt, context, trace, identity mapping, Provider output, or secret. Test
 reports use supplied synthetic results only and are not product benchmark,
 Provider-quality, runtime-latency, or cost evidence.
 
+### R6 content-free observability contract
+
+R6-I4A defines the provider-neutral `agent-observability-v1` contract without
+selecting it in any runtime path. Events allow only a fixed component,
+operation, and outcome combination. Metrics separately allow request count,
+tool and Provider latency, outbox lag, retry and quarantine counts, rebuild
+state, and reconciliation state, with fixed units, ranges, and state values.
+Unknown fields, arbitrary labels, identity and request IDs, raw errors, content,
+and generation IDs fail closed.
+
+The dormant in-memory adapter accepts only already validated contract objects.
+Its capacity is fixed at construction, bounded to 1-4096 samples, and overflow
+evicts the oldest item. Snapshots are immutable copies. The adapter has no
+persistence, timer, thread, background task, exporter, network transport, or
+runtime configuration. No endpoint, Agent, retrieval, Provider, lifecycle,
+rebuild, or reconciliation caller records samples yet, so these tests are
+contract evidence rather than operational observability evidence. R6-I4B must
+review and explicitly authorize any minimal runtime instrumentation and its
+default, ownership, cardinality, and rollback boundaries.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,

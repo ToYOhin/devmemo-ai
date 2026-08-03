@@ -719,3 +719,18 @@ direction/boundary/pass、overall pass，以及全部失败 case ID 与固定 fa
 threshold pass 状态、缺少 metric、重复失败 case 或空失败分类，也不包含问题、回答、Memo、prompt、context、trace、
 Provider 原始输出、身份映射或 secret。当前通过/失败 report 都由 synthetic test result 构造，不是产品 benchmark、
 Provider quality、runtime latency 或成本证据。
+
+## ADR-076：R6 可观测性先固定无正文低基数契约与 dormant bounded adapter
+
+R6-I4A 定义独立的 `agent-observability-v1` event/metric contract。event 只接受固定 component、operation、outcome
+组合；metric 只接受 request count、工具/Provider latency、outbox lag、retry/quarantine count、rebuild state 与
+reconciliation state，并固定 unit、数值范围与状态白名单。未知字段、任意 label、身份/request/generation ID、原始
+错误、Memo/query/prompt/context/trace/Provider 正文或 secret 一律拒绝，错误投影保持固定且无正文。
+
+同一切片只增加 constructor-fixed 的 bounded in-memory adapter：容量必须为 1-4096，只记录已验证 contract 对象，
+溢出淘汰最旧项，snapshot 返回不可变副本。它不持久化，不启动 thread、timer 或 background task，不导出到
+Prometheus/OpenTelemetry，不读取 env/config，不访问网络，也不修改 settings、`main.py`、endpoint 或 factory。
+
+因此 I4A 只证明 schema、校验、容量与快照语义，不证明真实 request、tool、Provider、outbox、rebuild 或 reconciliation
+路径会产生观测数据。R6-I4B 必须先评审 instrumentation point、默认关闭策略、ownership、cardinality、失败隔离与
+rollback，并获得明确授权后，才能把最小 caller 接入 runtime。

@@ -316,15 +316,16 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 至 R6-I3 已实现并通过测试。严格 contract、64-case 脱敏 corpus、七项预声明 threshold、纯
+**状态：** R6-I1 至 R6-I4A 已实现并通过测试。严格 contract、64-case 脱敏 corpus、七项预声明 threshold、纯
 deterministic runner 与 content-free report 均已具备。测试 report 只使用调用方提供的 synthetic result，不主张
-产品 benchmark 或 runtime 结果。下一步是 R6-I4：content-free observability contract/adapter。
+产品 benchmark 或 runtime 结果。R6-I4A 增加 dormant 严格 observability contract 与 bounded in-memory adapter，
+但没有 runtime caller 记录 sample。R6-I4B 是任何最小 runtime instrumentation 前必须完成的评审与授权闸门。
 
 范围：
 
 - 50-100 个脱敏问题，覆盖查找、综合、无答案、冲突证据、可见性边界、删除、过期状态和 prompt injection。
 - Recall@5、MRR、citation precision、groundedness/faithfulness、拒答准确率、scope leak 数、延迟，以及适用时的 Provider/token 成本。
-- request outcome、工具/Provider 延迟、outbox lag、重试数、隔离数、rebuild generation 和对账状态的无内容 trace/metrics。
+- request outcome、工具/Provider 延迟、outbox lag、重试数、隔离数、rebuild state 和对账状态的无内容 trace/metrics。
 - Python lint/type/coverage、定向 Go/Web 检查、一次性生命周期集成测试和认证浏览器验证。
 - 面向公开用户的 README、架构与威胁模型图、基准方法/结果、短演示，以及从已评审默认分支产生的 tag/release。
 
