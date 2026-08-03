@@ -456,10 +456,11 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
-**Status:** R6-I1 is implemented and test-verified. The versioned strict
-case/result contract and eight synthetic seed cases cover the required
-evaluation categories without runtime wiring or benchmark claims. R6-I2 is
-next: expand the sanitized corpus and version thresholds before execution.
+**Status:** R6-I1 and R6-I2 are implemented and test-verified. The strict
+case/result contract now has a 64-case sanitized corpus with eight cases per
+required category. Seven versioned metric thresholds are fixed before
+execution; no runner has executed them and no quality score is claimed. R6-I3
+is next: implement deterministic metrics and failure reporting.
 
 Scope:
 
