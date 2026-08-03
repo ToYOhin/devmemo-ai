@@ -1084,11 +1084,10 @@ The dormant in-memory adapter accepts only already validated contract objects.
 Its capacity is fixed at construction, bounded to 1-4096 samples, and overflow
 evicts the oldest item. Snapshots are immutable copies. The adapter has no
 persistence, timer, thread, background task, exporter, network transport, or
-runtime configuration. No endpoint, Agent, retrieval, Provider, lifecycle,
-rebuild, or reconciliation caller records samples yet, so these tests are
-contract evidence rather than operational observability evidence. R6-I4B must
-review and explicitly authorize any minimal runtime instrumentation and its
-default, ownership, cardinality, and rollback boundaries.
+runtime configuration. Later slices wire fixed answer, retrieval, Provider, and
+lifecycle samples under existing opt-in ownership; rebuild and reconciliation
+remain unwired. There is still no reader/exporter, so this is bounded in-process
+emission rather than operator-facing observability.
 
 #### R6-I4B reviewed runtime matrix
 
@@ -1219,6 +1218,15 @@ sample, evicts oldest-first, and returns copied snapshots. It has no runtime
 caller, environment setting, transport, exporter, persistence, timer, or
 background task. Its tests are contract/adapter evidence, not lifecycle runtime
 or operator-facing evidence.
+
+R6-I4J wires that recorder only from the existing lifecycle-enabled Go
+composition. `memoLifecycleSourceRuntime` records after authoritative store
+returns: acknowledged delivery emits `success`; persisted retry emits `pending`
+plus `retry_count=1`; persisted `EXHAUSTED` emits `failed` plus
+`quarantine_count=1`. The old two-argument constructor remains recorder-free
+for compatibility. Recorder errors and panics are isolated per sample and
+cannot change delivery or store state. No lag, rebuild, or reconciliation
+sample is inferred.
 
 ## Future work excluded from this proposal
 

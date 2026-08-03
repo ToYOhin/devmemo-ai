@@ -17,15 +17,26 @@ type memoLifecycleDeliveryClient interface {
 }
 
 type memoLifecycleSourceRuntime struct {
-	outbox store.MemoLifecycleOutboxStore
-	client memoLifecycleDeliveryClient
+	outbox      store.MemoLifecycleOutboxStore
+	client      memoLifecycleDeliveryClient
+	observation aiagent.LifecycleObservationRecorder
 }
 
 func newMemoLifecycleSourceRuntime(
 	outbox store.MemoLifecycleOutboxStore,
 	client memoLifecycleDeliveryClient,
 ) *memoLifecycleSourceRuntime {
-	return &memoLifecycleSourceRuntime{outbox: outbox, client: client}
+	return newMemoLifecycleSourceRuntimeWithRecorder(outbox, client, nil)
+}
+
+func newMemoLifecycleSourceRuntimeWithRecorder(
+	outbox store.MemoLifecycleOutboxStore,
+	client memoLifecycleDeliveryClient,
+	observation aiagent.LifecycleObservationRecorder,
+) *memoLifecycleSourceRuntime {
+	return &memoLifecycleSourceRuntime{
+		outbox: outbox, client: client, observation: observation,
+	}
 }
 
 func (runtime *memoLifecycleSourceRuntime) prepareAndActivate(
@@ -90,10 +101,14 @@ func (runtime *memoLifecycleSourceRuntime) deliver(
 		}
 		return runtime.recordFailure(ctx, event.EventID, errorCode)
 	}
-	if _, err := runtime.outbox.AcknowledgeMemoLifecycleOutboxEvent(
+	acknowledged, err := runtime.outbox.AcknowledgeMemoLifecycleOutboxEvent(
 		ctx, event.EventID,
-	); err != nil {
+	)
+	if err != nil {
 		return errMemoLifecycleRuntimeUnavailable
+	}
+	if acknowledged != nil && acknowledged.Status == store.MemoLifecycleOutboxAcknowledged {
+		runtime.recordLifecycleDispatch("success", "")
 	}
 	return nil
 }
@@ -101,11 +116,44 @@ func (runtime *memoLifecycleSourceRuntime) deliver(
 func (runtime *memoLifecycleSourceRuntime) recordFailure(
 	ctx context.Context, eventID string, errorCode string,
 ) error {
-	_, err := runtime.outbox.RecordMemoLifecycleDeliveryFailure(ctx, eventID, errorCode)
+	event, err := runtime.outbox.RecordMemoLifecycleDeliveryFailure(ctx, eventID, errorCode)
+	if event != nil {
+		switch event.Status {
+		case store.MemoLifecycleOutboxPending:
+			runtime.recordLifecycleDispatch("pending", "retry_count")
+		case store.MemoLifecycleOutboxExhausted:
+			runtime.recordLifecycleDispatch("failed", "quarantine_count")
+		}
+	}
 	if err != nil && !errors.Is(err, store.ErrMemoLifecycleDeliveryExhausted) {
 		return errMemoLifecycleRuntimeUnavailable
 	}
 	return errMemoLifecycleRuntimeUnavailable
+}
+
+func (runtime *memoLifecycleSourceRuntime) recordLifecycleDispatch(
+	outcome string, metric string,
+) {
+	if runtime.observation == nil {
+		return
+	}
+	samples := make([]aiagent.LifecycleObservation, 0, 2)
+	event, err := aiagent.NewLifecycleDispatchEvent(outcome)
+	if err == nil {
+		samples = append(samples, event)
+	}
+	if metric != "" {
+		counter, err := aiagent.NewLifecycleCounterMetric(metric)
+		if err == nil {
+			samples = append(samples, counter)
+		}
+	}
+	for _, sample := range samples {
+		func() {
+			defer func() { _ = recover() }()
+			_ = runtime.observation.RecordLifecycleObservation(sample)
+		}()
+	}
 }
 
 func lifecycleEventRequest(event *store.MemoLifecycleOutboxEvent) aiagent.LifecycleEventRequest {
@@ -140,7 +188,13 @@ func (s *APIV1Service) configureMemoLifecycleRuntime(ctx context.Context) error 
 	if err != nil {
 		return errMemoLifecycleRuntimeUnavailable
 	}
-	runtime := newMemoLifecycleSourceRuntime(outbox, client)
+	observation, err := aiagent.NewBoundedLifecycleObservationRecorder(256)
+	if err != nil {
+		return errMemoLifecycleRuntimeUnavailable
+	}
+	runtime := newMemoLifecycleSourceRuntimeWithRecorder(
+		outbox, client, observation,
+	)
 	if err := runtime.prepareAndActivate(ctx, config.Generation, time.Now().UTC()); err != nil {
 		return err
 	}

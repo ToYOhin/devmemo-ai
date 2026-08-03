@@ -599,6 +599,11 @@ delta；constructor-fixed 1–4096 bounded in-memory recorder 校验每条 sampl
 snapshot。它没有 runtime caller、env setting、transport、exporter、persistence、timer 或 background task。测试只证明
 contract/adapter，不证明 lifecycle runtime 或 operator-facing observability。
 
+R6-I4J 只由既有 lifecycle-enabled Go composition 持有并注入 recorder。`memoLifecycleSourceRuntime` 只在权威 store 返回后
+记录：acknowledged delivery 发出 `success`；已持久 retry 发出 `pending` 加 `retry_count=1`；已持久 `EXHAUSTED` 发出
+`failed` 加 `quarantine_count=1`。旧 two-argument constructor 保持 recorder-free 兼容。每条 sample 的 recorder error/
+panic 都被隔离，不能改变 delivery 或 store state；不推断 lag、rebuild 或 reconciliation sample。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。

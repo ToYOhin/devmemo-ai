@@ -316,9 +316,9 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 至 R6-I4G 已实现并通过测试。R6-I4B runtime ownership、R6-I4D retrieval timing 与 R6-I4F
+**状态：** R6-I1 至 R6-I4J 已实现并通过测试。R6-I4B runtime ownership、R6-I4D retrieval timing 与 R6-I4F
 Provider timing 评审已有文档；R6-I4H 已评审 source-owned Go lifecycle 候选，R6-I4I 已实现 dormant strict Go
-contract/bounded adapter，但仍未接线，
+contract/bounded adapter，R6-I4J 已在既有 lifecycle opt-in 下接线权威 delivery transition，
 明确授权的首批现在记录固定 AI answer outcome/request-count sample。严格 contract、64-case 脱敏 corpus、七项
 预声明 threshold、纯
 deterministic runner 与 content-free report 均已具备；测试 report 只使用 synthetic result，不主张产品 benchmark
