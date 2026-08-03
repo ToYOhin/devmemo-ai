@@ -316,9 +316,9 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 与 R6-I2 已实现并通过测试。严格 case/result 契约现有 64 个脱敏 case，要求的八类各 8 个；
-七项 metric threshold 已在执行前版本化固定。尚未执行 runner，也不主张任何质量分数。下一步是 R6-I3：实现
-deterministic metrics 与失败报告。
+**状态：** R6-I1 至 R6-I3 已实现并通过测试。严格 contract、64-case 脱敏 corpus、七项预声明 threshold、纯
+deterministic runner 与 content-free report 均已具备。测试 report 只使用调用方提供的 synthetic result，不主张
+产品 benchmark 或 runtime 结果。下一步是 R6-I4：content-free observability contract/adapter。
 
 范围：
 
