@@ -457,8 +457,9 @@ retain Memos unchanged.
 project is independently reproducible.
 
 **Status:** R6-I1 through R6-I4C are implemented and test-verified. R6-I4B's
-runtime ownership review is documented, and the explicitly authorized first
-batch now records fixed AI answer outcome/request-count samples. The strict
+runtime ownership review and R6-I4D's retrieval-timing review are documented.
+The explicitly authorized first batch now records fixed AI answer
+outcome/request-count samples. The strict
 contracts, 64-case sanitized corpus, seven predeclared thresholds, pure
 deterministic runner, and content-free report are present. Test reports use
 supplied synthetic results only; no product benchmark or runtime result is
@@ -467,7 +468,8 @@ the internal answer handler emits one fixed event and count per invocation,
 with failure-isolated recording and no exporter or persistence. Retrieval and
 Provider timing are later AI slices. Memos outbox/retry/quarantine requires a
 separate Go-owned design; rebuild/reconciliation requires an authoritative
-cross-process state model.
+cross-process state model. Retrieval timing remains unwired pending explicit
+authorization of the reviewed R6-I4E candidate.
 
 Scope:
 

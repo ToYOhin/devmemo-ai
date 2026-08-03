@@ -771,3 +771,27 @@ no-context、400、401、500、502、503 和 recorder failure isolation。当前
 消费面，因此 I4C 只证明真实 handler 会产生无正文 sample，不证明 operator-facing observability、latency、Provider、
 Go lifecycle、rebuild 或 reconciliation 指标。rollback 只删除 helper、lifespan ownership 与 handler injection，无持久
 数据清理。
+
+## ADR-079：R6 retrieval latency 只覆盖已验证 request 的 selected retrieval 与安全组装
+
+R6-I4D 只评审、不接线 retrieval timing。后续候选由 `EvidenceAnswerAgent._run` 独占 owner：delegation 验签和
+`SearchMemosToolCall` construction 成功后，在 selected memory/durable retrieval 前读取 injected monotonic clock；
+在 `_safe_citation`/`_safe_durable_citation`、context 与 protected-fragment 赋值完成或现有 failure mapping 逸出前读取
+stop clock。`AgentStep`、no-context/answer construction、Provider、response serialization 与 observability record 自身
+均不计入 interval。
+
+memory/durable 非空与空结果分别映射 `success`/`no_context`；memory `RetrievalInputError` 映射 `invalid`；memory
+unavailable/未知 safe-assembly failure 及 durable 的 failure、错误类型、safe-assembly failure 均映射 `unavailable`，
+但不得改变原异常、既有 durable fail-closed mapping、fallback 或 Provider call 规则。Provider 后续失败不能回写已完成
+的 retrieval outcome。
+
+clock 只允许 optional keyword-only `Callable[[], float]`，runtime 候选由 existing enabled answer handler 注入
+`time.monotonic`；不得复用签名用 UTC clock，也不得把 clock 放进 adapter。recorder 或 clock 缺失、clock 抛错、bool/
+非数字/非有限值、负 elapsed 或超过 600,000 ms 时，metric/event 整组丢弃，禁止伪造零值或截断值。stop clock 必须在
+record 前读取；raising recorder 可以独立尝试两条固定 sample，但不能改变 retrieval/answer。sample 绝不携带 question、
+context、citation、Memo/request/user/generation ID、exception、branch name 或动态 label。
+
+已评审 R6-I4E 实现候选只覆盖现有 observability helper、`EvidenceAnswerAgent._run` optional dependency/共享 try-finally、
+internal handler 的 recorder 与 `time.monotonic` 注入，以及 pure/fake tests。旧 constructor 必须默认兼容。rollback 删除
+这些 optional dependency 与 wrapper，保留 I4C answer emission，无持久数据清理。I4D 不授权 I4E；Provider timing、
+Go lifecycle/outbox/retry/quarantine、rebuild/reconciliation、reader/exporter/persistence 均继续后置。

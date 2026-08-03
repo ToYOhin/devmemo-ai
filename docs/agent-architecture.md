@@ -1117,6 +1117,46 @@ answered, no-context, 400, 401, 500, 502, 503, disabled ownership, shutdown,
 and recorder failure. No snapshot reader or operational exporter exists, so
 this is in-process emission evidence, not operator-facing observability.
 
+#### R6-I4D reviewed retrieval timing boundary
+
+R6-I4D changes no runtime code. A later retrieval-only implementation may add
+two keyword-only dependencies to `EvidenceAnswerAgent`: the existing recorder
+protocol and a `Callable[[], float]` monotonic clock. Existing constructors keep
+both as `None`; only the enabled internal answer handler may inject its
+lifespan-owned recorder and `time.monotonic`. The adapter never owns a clock.
+
+| Path | Fixed outcome | Exact timing boundary | Existing behavior that must remain | Required fake proof |
+| --- | --- | --- | --- | --- |
+| Delegation verification or `SearchMemosToolCall` construction fails | No retrieval sample | Before timing starts | Existing delegation/request failure mapping | Clock and recorder remain untouched |
+| Memory retrieval returns safe non-empty/empty evidence | `success` / `no_context` | Start immediately before the selected memory branch; stop after `_safe_citation`, context, and protected-fragment assignment | Exactly one authorized search; Provider remains after the stop point | Fixed clock yields one `tool_latency_ms` and one `search_memos` event |
+| Memory retrieval raises `RetrievalInputError` | `invalid` | Same start; stop before re-raising | Original exception and endpoint 400 mapping | No fallback or Provider call |
+| Memory retrieval is unavailable or safe assembly raises unexpectedly | `unavailable` | Same start; stop before the original failure escapes | Existing unavailable mapping or unexpected exception is unchanged | Recorder failure cannot replace the retrieval failure |
+| Durable retrieval returns safe non-empty/empty evidence | `success` / `no_context` | Start immediately before the selected durable branch; stop after `_safe_durable_citation`, context, and protected-fragment assignment | One durable call, no legacy fallback | Same metric/event shape as memory retrieval |
+| Durable retrieval fails, returns the wrong type, or fails safe assembly | `unavailable` | Same start; stop before the existing `RetrievalUnavailableError` mapping escapes | Existing fail-closed mapping and no Provider call | No raw durable failure is retained |
+| Provider or response serialization later succeeds/fails | Does not change the completed retrieval outcome | Outside the retrieval interval | Retrieval success remains distinct from Provider outcome | Clock is called exactly twice before Provider execution |
+
+The reviewed wrapper starts only after the signed request and tool call are
+valid, surrounds the existing branch without moving its logic, derives the
+outcome from that branch, reads the stop clock before recording, and then lets
+the current `_run` flow continue. Missing recorder/clock, a raising clock, a
+boolean/non-numeric/non-finite clock value, negative elapsed time, or elapsed
+time above the contract's 600,000 ms maximum emits neither retrieval sample.
+It must not substitute zero or a capped value. A raising recorder independently
+attempts the fixed metric and event but cannot change retrieval or answer
+behavior. No question, context, citation, Memo/request/user/generation ID,
+exception, branch name, or dynamic label reaches either sample.
+
+The reviewed R6-I4E candidate is limited to extending
+`agent_observability_runtime.py`, adding the optional keyword-only dependencies
+and shared try/finally boundary in `EvidenceAnswerAgent._run`, and passing the
+current lifespan recorder plus `time.monotonic` from the internal answer
+handler. Tests must cover pure clock validation, memory/durable success,
+no-context, invalid/unavailable failures, Provider exclusion, missing/raising
+dependencies, and backward-compatible constructors. Rollback removes those
+optional dependencies and the retrieval wrapper; R6-I4C answer samples remain
+and no persistent cleanup is required. This candidate is reviewed, not
+authorized. Provider timing and all Go-owned lifecycle metrics remain separate.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,
