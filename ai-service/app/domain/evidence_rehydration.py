@@ -26,7 +26,7 @@ from app.domain.durable_authorized_retrieval import (
 )
 
 
-CONTENT_REHYDRATION_VERSION = "memo-evidence-rehydration-v1"
+CONTENT_REHYDRATION_VERSION: Literal["memo-evidence-rehydration-v1"] = "memo-evidence-rehydration-v1"
 CONTENT_REHYDRATION_PATH = "/internal/ai/agent/evidence/rehydrate"
 CONTENT_REHYDRATION_SIGNATURE_PURPOSE = "devmemo-agent-evidence-rehydration-v1"
 MAX_REHYDRATION_ITEMS = 10

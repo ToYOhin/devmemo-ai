@@ -22,7 +22,7 @@ from app.domain.agent_lifecycle import (
 )
 
 
-DURABLE_RETRIEVAL_VERSION = "durable-authorized-retrieval-v1"
+DURABLE_RETRIEVAL_VERSION: Literal["durable-authorized-retrieval-v1"] = "durable-authorized-retrieval-v1"
 MAX_AUTHORIZED_MEMO_UIDS = 1_000
 MAX_QUERY_CHARS = 4_000
 MAX_RETRIEVAL_LIMIT = 10
@@ -340,10 +340,10 @@ def project_authorized_result(
         raise DerivedRetrievalContractError
     authoritative_uids = {uid: uid for uid in query.authorized_memo_uids}
     by_key: dict[str, DerivedMemoDocument] = {}
-    for document in documents:
-        if document.record_key in by_key:
+    for candidate_document in documents:
+        if candidate_document.record_key in by_key:
             raise DerivedRetrievalContractError
-        by_key[document.record_key] = document
+        by_key[candidate_document.record_key] = candidate_document
 
     evidence: list[AuthorizedRetrievalEvidence] = []
     for index, candidate in enumerate(candidates, start=1):

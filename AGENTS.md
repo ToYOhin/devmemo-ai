@@ -69,7 +69,7 @@ Run the smallest relevant checks after a change:
 
 | Area | Primary checks |
 | --- | --- |
-| AI service | `ai-service/.venv/Scripts/python.exe -m pytest -q ai-service/tests` |
+| AI service | From `ai-service/`, run the pinned Ruff, mypy, and branch-coverage commands in `docs/development.md` |
 | Go backend | `go test -p 1 ./server/router/api/v1` or the closest affected package |
 | Web client | In `web/`: `pnpm lint`, `pnpm test`, and `pnpm build` |
 | Compose/configuration | `docker compose config --quiet` when Docker Desktop is available |

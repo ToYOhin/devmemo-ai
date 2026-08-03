@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-AGENT_VERSION = "evidence-answer-agent-v1"
-SEARCH_MEMOS_TOOL = "search_memos"
+AGENT_VERSION: Literal["evidence-answer-agent-v1"] = "evidence-answer-agent-v1"
+SEARCH_MEMOS_TOOL: Literal["search_memos"] = "search_memos"
 AGENT_REFUSAL_ANSWER = "Request refused by the Agent safety policy."
-MEMO_INDEX_VERSION = "memo-v1"
+MEMO_INDEX_VERSION: Literal["memo-v1"] = "memo-v1"
 MAX_RETRIEVAL_LIMIT = 10
 
 

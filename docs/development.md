@@ -24,6 +24,18 @@ The AI Service container uses the hash-locked `ai-service/requirements.lock.txt`
 After changing `ai-service/requirements.txt`, regenerate the lock with
 `uv pip compile ai-service/requirements.txt --generate-hashes --output-file ai-service/requirements.lock.txt`.
 
+The AI Service quality gate uses a separate hash-locked development superset
+constrained by the production lock. Regenerate and run it from `ai-service/`:
+
+```powershell
+uv pip compile requirements-dev.txt --python-version 3.12 --generate-hashes --output-file requirements-dev.lock.txt
+.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.lock.txt
+.\.venv\Scripts\python.exe -m ruff check app tests scripts main.py database.py embedding.py lifecycle_report.py llm.py rag.py
+.\.venv\Scripts\python.exe -m mypy app main.py database.py embedding.py lifecycle_report.py llm.py rag.py
+.\.venv\Scripts\python.exe -m coverage run --branch -m pytest -q tests
+.\.venv\Scripts\python.exe -m coverage report --show-missing
+```
+
 ## Provider configuration
 
 Use `AI_PROVIDER=deterministic` for a key-free local smoke test. Use `openai` with `OPENAI_API_KEY`, or `ollama` with `OLLAMA_BASE_URL` and `OLLAMA_MODEL`.

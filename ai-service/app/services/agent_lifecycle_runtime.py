@@ -10,7 +10,7 @@ import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from app.adapters.agent_lifecycle_ledger import (
     LifecycleSnapshotAuthority,
@@ -39,6 +39,7 @@ class LifecycleRuntimeError(RuntimeError):
         super().__init__("memo lifecycle runtime is unavailable")
 
 
+@runtime_checkable
 class LifecycleVectorStore(Protocol):
     dimension: int
 
@@ -204,8 +205,7 @@ def build_memo_lifecycle_runtime(
         or settings.vector_store != "qdrant"
         or settings.index_mode != "memo"
         or settings.agent_lifecycle_generation is None
-        or not hasattr(store, "delete_memo_versions")
-        or not hasattr(store, "list_lifecycle_records")
+        or not isinstance(store, LifecycleVectorStore)
     ):
         raise LifecycleRuntimeError
     try:

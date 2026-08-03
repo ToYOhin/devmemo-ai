@@ -52,11 +52,11 @@ class QdrantVectorStore:
                 "before selecting AI_VECTOR_STORE=qdrant"
             ) from error
 
-        client_kwargs: dict[str, object] = {"url": url}
-        if api_key:
-            client_kwargs["api_key"] = api_key
         try:
-            client = QdrantClient(**client_kwargs)
+            if api_key:
+                client = QdrantClient(url=url, api_key=api_key)
+            else:
+                client = QdrantClient(url=url)
             return cls(client, models, dimension, collection_name)
         except Exception as error:
             raise QdrantAdapterError(f"failed to connect to Qdrant at {url}") from error
