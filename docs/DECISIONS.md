@@ -734,3 +734,22 @@ Prometheus/OpenTelemetry，不读取 env/config，不访问网络，也不修改
 因此 I4A 只证明 schema、校验、容量与快照语义，不证明真实 request、tool、Provider、outbox、rebuild 或 reconciliation
 路径会产生观测数据。R6-I4B 必须先评审 instrumentation point、默认关闭策略、ownership、cardinality、失败隔离与
 rollback，并获得明确授权后，才能把最小 caller 接入 runtime。
+
+## ADR-077：R6-I4B 首批只允许 AI answer outcome/count 候选，lifecycle 指标保持 source-owned
+
+R6-I4B 只评审 runtime owner，不接线 contract/adapter。首批候选限定为既有 Agent enablement gate 后的 internal
+answer handler：每次 invocation 最多产生一条固定 `answer` event 和一条 `request_count=1` metric。outcome 只能由
+既有安全结果映射为 `success`、`no_context`、`invalid` 或 `unavailable`；当前 runtime 没有 refusal authority，因此
+不得产生 `refused`。该候选不计时，不捕获 body、result、exception、ID 或动态 label。
+
+若用户单独授权 R6-I4C，AI lifespan 可在既有 Agent opt-in 内构造一个固定容量 256 的 process-local adapter，通过
+`app.state` 注入 handler，并在 shutdown 清空引用。不新增 env/config/secret/port/dependency、endpoint、exporter、
+persistence、global singleton、thread、timer 或 background task。adapter 缺失、容量淘汰或 record failure 必须是
+no-op，不能改变现有 success/no-context/400/401/500/502/503 response；rollback 只删除 lifespan ownership 与 injection，
+没有持久数据清理。
+
+retrieval 与 Provider latency 分别由 `EvidenceAnswerAgent._run` 和 `_answer` 拥有，必须作为后续独立切片使用 injected
+monotonic clock 验证。outbox、retry 与 exhausted backlog 的权威在 Memos Go store/runtime；Python adapter 不得通过
+新增 transport 跨进程复用，且当前 store 没有 oldest-pending-lag projection，也未评审 exhausted 到 quarantine 的
+语义映射。rebuild 状态横跨 Memos prepare 与 AI activate，reconciliation 当前没有专属 authority；二者在正式 state
+machine 前不得从 raw error、generation ID 或任意 mismatch 推断。以上后置项均不包含在首批授权候选中。

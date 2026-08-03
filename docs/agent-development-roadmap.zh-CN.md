@@ -316,10 +316,13 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 至 R6-I4A 已实现并通过测试。严格 contract、64-case 脱敏 corpus、七项预声明 threshold、纯
-deterministic runner 与 content-free report 均已具备。测试 report 只使用调用方提供的 synthetic result，不主张
+**状态：** R6-I1 至 R6-I4A 已实现并通过测试；R6-I4B 已完成 runtime ownership 与授权评审。严格 contract、
+64-case 脱敏 corpus、七项预声明 threshold、纯 deterministic runner 与 content-free report 均已具备。测试 report
+只使用调用方提供的 synthetic result，不主张
 产品 benchmark 或 runtime 结果。R6-I4A 增加 dormant 严格 observability contract 与 bounded in-memory adapter，
-但没有 runtime caller 记录 sample。R6-I4B 是任何最小 runtime instrumentation 前必须完成的评审与授权闸门。
+但没有 runtime caller 记录 sample。已评审首批仅限既有 opt-in 下的 AI answer outcome/request count；获得 R6-I4C
+明确授权前不实施。retrieval/Provider timing 是后续 AI 切片；Memos outbox/retry/quarantine 需要独立 Go-owned design；
+rebuild/reconciliation 还需要权威跨进程 state model。
 
 范围：
 
