@@ -526,11 +526,11 @@ R6-I4C 只在既有 Agent opt-in 启用期间，由 AI lifespan 持有一个
 502、503、disabled ownership、shutdown 与 recorder failure。当前没有 snapshot reader 或运维 exporter，因此只证明
 进程内 emission，不构成 operator-facing observability。
 
-#### R6-I4D 已评审 retrieval timing 边界
+#### R6-I4E retrieval timing 边界
 
-R6-I4D 不修改 runtime code。后续 retrieval-only 实现可为 `EvidenceAnswerAgent` 增加两个 keyword-only dependency：
-既有 recorder protocol 与 `Callable[[], float]` monotonic clock。现有 constructor 默认两者为 `None`；只有 enabled
-internal answer handler 可注入 lifespan-owned recorder 与 `time.monotonic`。adapter 绝不持有 clock。
+R6-I4E 实现 R6-I4D 已评审的 retrieval-only 边界，为 `EvidenceAnswerAgent` 增加两个 keyword-only dependency：既有
+recorder protocol 与 `Callable[[], float]` monotonic clock。现有 constructor 默认两者为 `None`；只有 enabled
+internal answer handler 注入 lifespan-owned recorder 与 `time.monotonic`。adapter 绝不持有 clock。
 
 | 路径 | 固定 outcome | 精确计时边界 | 必须保持的既有行为 | 必需 fake 证明 |
 | --- | --- | --- | --- | --- |
@@ -542,17 +542,17 @@ internal answer handler 可注入 lifespan-owned recorder 与 `time.monotonic`�
 | durable retrieval 失败、返回错误类型或 safe assembly 失败 | `unavailable` | 同一起点；既有 `RetrievalUnavailableError` mapping 逸出前 stop | fail-closed mapping 与无 Provider call | 不保留 raw durable failure |
 | 后续 Provider 或 response serialization 成功/失败 | 不改变已完成 retrieval outcome | retrieval interval 之外 | retrieval success 与 Provider outcome 分离 | Provider 执行前 clock 恰好调用两次 |
 
-已评审 wrapper 只在 signed request 与 tool call 有效后 start，在不搬动分支逻辑的前提下包住现有 branch，由该 branch
+已实现 wrapper 只在 signed request 与 tool call 有效后 start，在不搬动分支逻辑的前提下包住现有 branch，由该 branch
 得出 outcome，先读取 stop clock 再记录，然后继续当前 `_run`。recorder/clock 缺失、clock 抛错、clock value 为 bool、
 非数字、非有限值、elapsed 为负或超过 contract 的 600,000 ms 时，两条 retrieval sample 都不产生；禁止用零或截断值
 代替。raising recorder 仍独立尝试固定 metric/event，但不能改变 retrieval/answer。question、context、citation、Memo/
 request/user/generation ID、exception、branch name 与动态 label 都不得进入 sample。
 
-已评审 R6-I4E 候选只允许扩展 `agent_observability_runtime.py`，为 `EvidenceAnswerAgent._run` 增加 optional keyword-only
-dependency 与共享 try/finally boundary，并由 internal answer handler 传入当前 lifespan recorder 和 `time.monotonic`。
-测试必须覆盖纯 clock validation、memory/durable success、no-context、invalid/unavailable failure、Provider exclusion、
-dependency 缺失/抛错与旧 constructor 兼容性。rollback 删除 optional dependency 与 retrieval wrapper；保留 R6-I4C answer
-sample，无持久数据清理。该候选只完成评审，尚未授权；Provider timing 与全部 Go-owned lifecycle metric 继续独立后置。
+R6-I4E 实现仅扩展 `agent_observability_runtime.py`，为 `EvidenceAnswerAgent._run` 增加 optional keyword-only dependency
+与共享 try/finally boundary，并由 internal answer handler 传入当前 lifespan recorder 和 `time.monotonic`。pure/fake 测试
+覆盖 clock validation、memory/durable success、no-context、invalid/unavailable failure、Provider exclusion、dependency
+缺失/抛错与旧 constructor 兼容性。rollback 删除 optional dependency 与 retrieval wrapper；保留 R6-I4C answer sample，
+无持久数据清理。Provider timing 与全部 Go-owned lifecycle metric 继续独立后置且未接线。
 
 ## 后续工作不包含在本提案内
 

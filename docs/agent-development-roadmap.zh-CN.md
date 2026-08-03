@@ -316,14 +316,14 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 至 R6-I4C 已实现并通过测试。R6-I4B runtime ownership 与 R6-I4D retrieval timing 评审已有文档，
+**状态：** R6-I1 至 R6-I4E 已实现并通过测试。R6-I4B runtime ownership 与 R6-I4D retrieval timing 评审已有文档，
 明确授权的首批现在记录固定 AI answer outcome/request-count sample。严格 contract、64-case 脱敏 corpus、七项
 预声明 threshold、纯
 deterministic runner 与 content-free report 均已具备；测试 report 只使用 synthetic result，不主张产品 benchmark
-或 runtime 结果。adapter 只在既有 Agent opt-in 下由 lifespan 持有；internal answer handler 每次 invocation 发出一条
-固定 event 与 count，记录失败隔离且无 exporter/persistence。retrieval/Provider timing 是后续 AI 切片；Memos
+或 runtime 结果。adapter 只在既有 Agent opt-in 下由 lifespan 持有；internal answer handler 每次 invocation 发出固定
+answer event/count。R6-I4E 还只在 selected memory/durable retrieval 与安全组装边界发出固定 latency metric/outcome event。
+两条路径均隔离记录失败，且无 reader/exporter/persistence。Provider timing 仍未接线，必须独立评审；Memos
 outbox/retry/quarantine 需要独立 Go-owned design；rebuild/reconciliation 还需要权威跨进程 state model。
-retrieval timing 仍未接线，等待用户明确授权已评审的 R6-I4E 候选。
 
 范围：
 

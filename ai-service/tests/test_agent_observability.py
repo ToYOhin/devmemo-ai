@@ -15,7 +15,11 @@ from app.domain.agent_observability import (
     AgentObservabilityMetric,
     parse_observability_sample,
 )
-from app.services.agent_observability_runtime import record_answer_observation
+from app.services.agent_observability_runtime import (
+    record_answer_observation,
+    record_retrieval_observation,
+    start_retrieval_observation,
+)
 
 
 def _event_payload(**overrides):
@@ -335,5 +339,116 @@ def test_answer_observation_attempts_both_samples_when_recorder_raises():
     recorder = RaisingRecorder()
 
     record_answer_observation(recorder, "unavailable")
+
+    assert recorder.calls == 2
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    ["success", "no_context", "invalid", "unavailable"],
+)
+def test_retrieval_observation_records_only_fixed_latency_and_outcome(outcome):
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    readings = iter([10.0, 10.025])
+    clock = lambda: next(readings)
+
+    started_at = start_retrieval_observation(clock)
+    record_retrieval_observation(adapter, clock, started_at, outcome)
+
+    metric, event = adapter.snapshot()
+    assert metric.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "metric",
+        "component": "retrieval",
+        "operation": "search_memos",
+        "metric": "tool_latency_ms",
+        "unit": "milliseconds",
+        "value": pytest.approx(25.0),
+    }
+    assert event.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "event",
+        "component": "retrieval",
+        "operation": "search_memos",
+        "outcome": outcome,
+    }
+
+
+def test_retrieval_observation_is_noop_without_dependencies_or_allowed_outcome():
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = lambda: 10.0
+
+    record_retrieval_observation(None, clock, 9.0, "success")
+    record_retrieval_observation(adapter, None, 9.0, "success")
+    record_retrieval_observation(adapter, clock, 9.0, "refused")
+
+    assert adapter.snapshot() == ()
+
+
+@pytest.mark.parametrize("value", [True, "10", float("nan"), float("inf")])
+def test_retrieval_observation_discards_invalid_start_clock_value(value):
+    assert start_retrieval_observation(lambda: value) is None
+
+
+def test_retrieval_observation_discards_raising_start_clock():
+    def clock():
+        raise RuntimeError("raw synthetic clock failure")
+
+    assert start_retrieval_observation(clock) is None
+
+
+@pytest.mark.parametrize(
+    "readings",
+    [
+        [10.0, True],
+        [10.0, "11"],
+        [10.0, float("nan")],
+        [10.0, float("inf")],
+        [10.0, 9.0],
+        [10.0, 610.001],
+    ],
+)
+def test_retrieval_observation_discards_invalid_elapsed_time(readings):
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    values = iter(readings)
+    clock = lambda: next(values)
+
+    started_at = start_retrieval_observation(clock)
+    record_retrieval_observation(adapter, clock, started_at, "success")
+
+    assert adapter.snapshot() == ()
+
+
+def test_retrieval_observation_discards_raising_stop_clock():
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    calls = 0
+
+    def clock():
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("raw synthetic clock failure")
+        return 10.0
+
+    started_at = start_retrieval_observation(clock)
+    record_retrieval_observation(adapter, clock, started_at, "success")
+
+    assert adapter.snapshot() == ()
+
+
+def test_retrieval_observation_attempts_both_samples_when_recorder_raises():
+    class RaisingRecorder:
+        calls = 0
+
+        def record(self, _sample):
+            self.calls += 1
+            raise RuntimeError("raw synthetic recorder failure")
+
+    recorder = RaisingRecorder()
+    readings = iter([10.0, 10.025])
+    clock = lambda: next(readings)
+
+    started_at = start_retrieval_observation(clock)
+    record_retrieval_observation(recorder, clock, started_at, "unavailable")
 
     assert recorder.calls == 2

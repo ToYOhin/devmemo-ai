@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -552,6 +553,8 @@ async def answer_delegated_agent_request(
             RetrievalService(embedding_service),
             provider,
             durable_retrieval,
+            observability_recorder=recorder,
+            monotonic_clock=time.monotonic if recorder is not None else None,
         ).run_delegated(
             await raw_request.body(),
             AgentDelegationHeaders(signature or "", timestamp or ""),
