@@ -1044,11 +1044,19 @@ answer state, retrieved and cited evidence IDs, an allowlisted failure category,
 and bounded latency, but no answer text, prompt, context, trace payload, Memo
 content, identity mapping, Provider output, or secret.
 
-The eight seed cases prove only that the schema can express lookup, synthesis,
-no-answer, conflicting evidence, visibility boundaries, deletion, stale state,
-and prompt injection. They are not a benchmark and establish no quality score
-or threshold. R6-I2 must separately expand the sanitized corpus and version its
-thresholds before any evaluation run.
+R6-I2 adds `agent-evaluation-corpus-v1` with 64 static synthetic cases, eight
+per required category. Its parser enforces 50-100 unique cases, exact declared
+category counts, at least two cases per category, and an explicit synthetic
+marker in every question. `agent-evaluation-thresholds-v1` binds the corpus and
+result versions and declares separate gates for Recall@5, MRR, citation
+precision, groundedness, refusal accuracy, scope-leak count, and p95 latency.
+Each gate has an exact unit, direction, legal range, boundary, and applicable
+categories; no aggregate score field exists.
+
+These files still establish no observed quality, latency, or cost result. The
+thresholds are predeclared inputs for R6-I3, which must implement the
+deterministic runner and publish every failed case without changing thresholds
+in response to results.
 
 ## Future work excluded from this proposal
 

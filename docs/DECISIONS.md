@@ -685,3 +685,19 @@ expected evidence 必须属于 visible 集合，forbidden evidence 不能属于 
 stale state 与 prompt injection，只证明 schema 表达能力，不构成 50-100 题 benchmark，不产生 threshold、质量分数、
 Provider 成本或产品主张。R6-I2 才能扩展脱敏 corpus 并在执行前版本化 threshold；R6-I1 不连接 endpoint、Provider、
 Qdrant、数据库、Docker、browser 或网络，也不授权真实数据、外部 Provider、push/tag/release 或多实例。
+
+## ADR-074：R6 corpus 固定为 64 个合成样例，threshold 必须先于 runner 版本化
+
+R6-I2 使用 `agent-evaluation-corpus-v1` 保存 64 个静态、可审阅的 synthetic case，lookup、synthesis、no-answer、
+conflicting evidence、visibility boundary、deletion、stale state 与 prompt injection 各 8 个。corpus parser 强制
+总数 50-100、case ID 与问题唯一、每个问题显式包含 synthetic 标记、声明 category count 与实际一致，并要求八类
+每类至少两个。它不接受真实 Memo、身份、credential、secret、生产查询或 prompt/context/trace dump。
+
+`agent-evaluation-thresholds-v1` 在 runner 前绑定 corpus/result 版本，并固定七项独立门槛：Recall@5 >= 0.90、
+MRR >= 0.80、citation precision >= 1.00、groundedness >= 0.90、refusal accuracy >= 0.95、scope leak count <= 0、
+p95 latency <= 5000 ms。每项同时声明 metric、unit、direction、合法 range 和 applicable categories；contract 要求
+指标集合精确完整，不允许 aggregate score、观测值或未知扩展字段。
+
+这些数值是执行前的版本化验收输入，不是运行结果。R6-I2 不实现 runner，不计算 score，不调用 endpoint、Provider、
+Qdrant、数据库、Docker、browser 或网络。R6-I3 必须使用固定 threshold 计算 deterministic metrics，并公开每个失败
+case；不得为获得通过结果而在同次运行后修改门槛。

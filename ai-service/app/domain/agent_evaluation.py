@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from typing import Literal, Mapping, cast
 
 
 EVALUATION_CASE_VERSION = "agent-evaluation-case-v1"
+EVALUATION_CORPUS_VERSION = "agent-evaluation-corpus-v1"
 EVALUATION_RESULT_VERSION = "agent-evaluation-result-v1"
+EVALUATION_THRESHOLDS_VERSION = "agent-evaluation-thresholds-v1"
 MAX_EVALUATION_PAYLOAD_BYTES = 16_384
+MAX_EVALUATION_CORPUS_BYTES = 131_072
 MAX_EVALUATION_QUESTION_CHARS = 500
 MAX_EVALUATION_EVIDENCE_IDS = 20
+MIN_EVALUATION_CORPUS_CASES = 50
+MAX_EVALUATION_CORPUS_CASES = 100
+MIN_EVALUATION_CASES_PER_CATEGORY = 2
 
 EvaluationCategory = Literal[
     "lookup",
@@ -36,6 +43,17 @@ EvaluationFailureCategory = Literal[
     "prompt_injection_followed",
     "runtime_error",
 ]
+EvaluationMetric = Literal[
+    "retrieval_recall_at_5",
+    "retrieval_mrr",
+    "citation_precision",
+    "groundedness",
+    "refusal_accuracy",
+    "scope_leak_count",
+    "latency_p95_ms",
+]
+EvaluationMetricUnit = Literal["ratio", "count", "milliseconds"]
+EvaluationMetricDirection = Literal["at_least", "at_most"]
 
 _CASE_FIELDS = frozenset(
     {
@@ -62,6 +80,19 @@ _CATEGORIES = frozenset(
         "prompt_injection",
     }
 )
+_CATEGORY_ORDER: tuple[EvaluationCategory, ...] = (
+    "lookup",
+    "synthesis",
+    "no_answer",
+    "conflicting_evidence",
+    "visibility_boundary",
+    "deletion",
+    "stale_state",
+    "prompt_injection",
+)
+_CORPUS_FIELDS = frozenset(
+    {"version", "case_version", "category_counts", "cases"}
+)
 _ANSWER_STATES = frozenset({"answer", "no_answer", "refusal"})
 _OBSERVED_ANSWER_STATES = frozenset({"answer", "no_answer", "refusal", "error"})
 _FAILURE_CATEGORIES = frozenset(
@@ -87,6 +118,31 @@ _RESULT_FIELDS = frozenset(
         "latency_ms",
     }
 )
+_THRESHOLD_FIELDS = frozenset(
+    {
+        "metric",
+        "unit",
+        "direction",
+        "boundary",
+        "range_min",
+        "range_max",
+        "applicable_categories",
+    }
+)
+_THRESHOLDS_FIELDS = frozenset(
+    {"version", "corpus_version", "result_version", "thresholds"}
+)
+_METRIC_RULES: dict[
+    EvaluationMetric, tuple[EvaluationMetricUnit, EvaluationMetricDirection, float, float]
+] = {
+    "retrieval_recall_at_5": ("ratio", "at_least", 0.0, 1.0),
+    "retrieval_mrr": ("ratio", "at_least", 0.0, 1.0),
+    "citation_precision": ("ratio", "at_least", 0.0, 1.0),
+    "groundedness": ("ratio", "at_least", 0.0, 1.0),
+    "refusal_accuracy": ("ratio", "at_least", 0.0, 1.0),
+    "scope_leak_count": ("count", "at_most", 0.0, 100.0),
+    "latency_p95_ms": ("milliseconds", "at_most", 0.0, 600_000.0),
+}
 _CASE_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _EVIDENCE_ID_PATTERN = re.compile(r"^evidence-[a-z0-9][a-z0-9_-]{0,63}$")
 
@@ -289,6 +345,249 @@ def parse_evaluation_result(body: bytes) -> AgentEvaluationResult:
     return AgentEvaluationResult.from_dict(payload)
 
 
+@dataclass(frozen=True)
+class AgentEvaluationCorpus:
+    """A reviewable synthetic corpus with exact stratification metadata."""
+
+    cases: tuple[AgentEvaluationCase, ...]
+    category_counts: tuple[tuple[EvaluationCategory, int], ...]
+    case_version: Literal["agent-evaluation-case-v1"] = EVALUATION_CASE_VERSION
+    version: Literal["agent-evaluation-corpus-v1"] = EVALUATION_CORPUS_VERSION
+
+    def __post_init__(self) -> None:
+        if self.version != EVALUATION_CORPUS_VERSION:
+            raise AgentEvaluationContractError
+        if self.case_version != EVALUATION_CASE_VERSION:
+            raise AgentEvaluationContractError
+        if not isinstance(self.cases, tuple) or not (
+            MIN_EVALUATION_CORPUS_CASES
+            <= len(self.cases)
+            <= MAX_EVALUATION_CORPUS_CASES
+        ):
+            raise AgentEvaluationContractError
+        if any(not isinstance(case, AgentEvaluationCase) for case in self.cases):
+            raise AgentEvaluationContractError
+        if len({case.case_id for case in self.cases}) != len(self.cases):
+            raise AgentEvaluationContractError
+        if len({case.question.casefold() for case in self.cases}) != len(self.cases):
+            raise AgentEvaluationContractError
+        if any("synthetic" not in case.question.casefold() for case in self.cases):
+            raise AgentEvaluationContractError
+
+        actual_counts = tuple(
+            (category, sum(case.category == category for case in self.cases))
+            for category in _CATEGORY_ORDER
+        )
+        if self.category_counts != actual_counts:
+            raise AgentEvaluationContractError
+        if any(
+            count < MIN_EVALUATION_CASES_PER_CATEGORY
+            for _, count in self.category_counts
+        ):
+            raise AgentEvaluationContractError
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> AgentEvaluationCorpus:
+        if set(payload) != _CORPUS_FIELDS:
+            raise AgentEvaluationContractError
+        raw_cases = payload["cases"]
+        raw_counts = payload["category_counts"]
+        if not isinstance(raw_cases, list) or not isinstance(raw_counts, dict):
+            raise AgentEvaluationContractError
+        if set(raw_counts) != _CATEGORIES:
+            raise AgentEvaluationContractError
+        counts: list[tuple[EvaluationCategory, int]] = []
+        for category in _CATEGORY_ORDER:
+            count = raw_counts[category]
+            if not isinstance(count, int) or isinstance(count, bool):
+                raise AgentEvaluationContractError
+            counts.append((category, count))
+        try:
+            cases = tuple(
+                AgentEvaluationCase.from_dict(case)
+                for case in cast(list[Mapping[str, object]], raw_cases)
+            )
+        except (AttributeError, TypeError) as error:
+            raise AgentEvaluationContractError from error
+        return cls(
+            version=cast(
+                Literal["agent-evaluation-corpus-v1"], payload["version"]
+            ),
+            case_version=cast(
+                Literal["agent-evaluation-case-v1"], payload["case_version"]
+            ),
+            cases=cases,
+            category_counts=tuple(counts),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "version": self.version,
+            "case_version": self.case_version,
+            "category_counts": dict(self.category_counts),
+            "cases": [case.to_dict() for case in self.cases],
+        }
+
+
+def parse_evaluation_corpus(body: bytes) -> AgentEvaluationCorpus:
+    """Parse an exact bounded corpus without executing any case."""
+
+    payload = _parse_json_object(body, max_bytes=MAX_EVALUATION_CORPUS_BYTES)
+    return AgentEvaluationCorpus.from_dict(payload)
+
+
+@dataclass(frozen=True)
+class AgentEvaluationMetricThreshold:
+    """One predeclared metric gate with no observed value."""
+
+    metric: EvaluationMetric
+    unit: EvaluationMetricUnit
+    direction: EvaluationMetricDirection
+    boundary: float
+    range_min: float
+    range_max: float
+    applicable_categories: tuple[EvaluationCategory, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.metric, str) or self.metric not in _METRIC_RULES:
+            raise AgentEvaluationContractError
+        expected_unit, expected_direction, expected_min, expected_max = (
+            _METRIC_RULES[self.metric]
+        )
+        if self.unit != expected_unit or self.direction != expected_direction:
+            raise AgentEvaluationContractError
+        for value in (self.boundary, self.range_min, self.range_max):
+            if (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not math.isfinite(value)
+            ):
+                raise AgentEvaluationContractError
+        if (self.range_min, self.range_max) != (expected_min, expected_max):
+            raise AgentEvaluationContractError
+        if not self.range_min <= self.boundary <= self.range_max:
+            raise AgentEvaluationContractError
+        if not isinstance(self.applicable_categories, tuple) or not (
+            1 <= len(self.applicable_categories) <= len(_CATEGORY_ORDER)
+        ):
+            raise AgentEvaluationContractError
+        if any(
+            not isinstance(category, str) or category not in _CATEGORIES
+            for category in self.applicable_categories
+        ):
+            raise AgentEvaluationContractError
+        if len(set(self.applicable_categories)) != len(self.applicable_categories):
+            raise AgentEvaluationContractError
+
+    @classmethod
+    def from_dict(
+        cls, payload: Mapping[str, object]
+    ) -> AgentEvaluationMetricThreshold:
+        if set(payload) != _THRESHOLD_FIELDS:
+            raise AgentEvaluationContractError
+        categories = payload["applicable_categories"]
+        if not isinstance(categories, list):
+            raise AgentEvaluationContractError
+        return cls(
+            metric=cast(EvaluationMetric, payload["metric"]),
+            unit=cast(EvaluationMetricUnit, payload["unit"]),
+            direction=cast(EvaluationMetricDirection, payload["direction"]),
+            boundary=cast(float, payload["boundary"]),
+            range_min=cast(float, payload["range_min"]),
+            range_max=cast(float, payload["range_max"]),
+            applicable_categories=tuple(
+                cast(list[EvaluationCategory], categories)
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "metric": self.metric,
+            "unit": self.unit,
+            "direction": self.direction,
+            "boundary": self.boundary,
+            "range_min": self.range_min,
+            "range_max": self.range_max,
+            "applicable_categories": list(self.applicable_categories),
+        }
+
+
+@dataclass(frozen=True)
+class AgentEvaluationThresholds:
+    """The complete versioned gate set declared before benchmark execution."""
+
+    thresholds: tuple[AgentEvaluationMetricThreshold, ...]
+    corpus_version: Literal["agent-evaluation-corpus-v1"] = (
+        EVALUATION_CORPUS_VERSION
+    )
+    result_version: Literal["agent-evaluation-result-v1"] = (
+        EVALUATION_RESULT_VERSION
+    )
+    version: Literal["agent-evaluation-thresholds-v1"] = (
+        EVALUATION_THRESHOLDS_VERSION
+    )
+
+    def __post_init__(self) -> None:
+        if self.version != EVALUATION_THRESHOLDS_VERSION:
+            raise AgentEvaluationContractError
+        if self.corpus_version != EVALUATION_CORPUS_VERSION:
+            raise AgentEvaluationContractError
+        if self.result_version != EVALUATION_RESULT_VERSION:
+            raise AgentEvaluationContractError
+        if not isinstance(self.thresholds, tuple) or any(
+            not isinstance(threshold, AgentEvaluationMetricThreshold)
+            for threshold in self.thresholds
+        ):
+            raise AgentEvaluationContractError
+        metrics = tuple(threshold.metric for threshold in self.thresholds)
+        if len(set(metrics)) != len(metrics) or set(metrics) != set(_METRIC_RULES):
+            raise AgentEvaluationContractError
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> AgentEvaluationThresholds:
+        if set(payload) != _THRESHOLDS_FIELDS:
+            raise AgentEvaluationContractError
+        raw_thresholds = payload["thresholds"]
+        if not isinstance(raw_thresholds, list):
+            raise AgentEvaluationContractError
+        try:
+            thresholds = tuple(
+                AgentEvaluationMetricThreshold.from_dict(threshold)
+                for threshold in cast(
+                    list[Mapping[str, object]], raw_thresholds
+                )
+            )
+        except (AttributeError, TypeError) as error:
+            raise AgentEvaluationContractError from error
+        return cls(
+            version=cast(
+                Literal["agent-evaluation-thresholds-v1"], payload["version"]
+            ),
+            corpus_version=cast(
+                Literal["agent-evaluation-corpus-v1"], payload["corpus_version"]
+            ),
+            result_version=cast(
+                Literal["agent-evaluation-result-v1"], payload["result_version"]
+            ),
+            thresholds=thresholds,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "version": self.version,
+            "corpus_version": self.corpus_version,
+            "result_version": self.result_version,
+            "thresholds": [threshold.to_dict() for threshold in self.thresholds],
+        }
+
+
+def parse_evaluation_thresholds(body: bytes) -> AgentEvaluationThresholds:
+    """Parse predeclared metric gates without executing a benchmark."""
+
+    payload = _parse_json_object(body)
+    return AgentEvaluationThresholds.from_dict(payload)
+
+
 def _as_evidence_ids(value: object) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise AgentEvaluationContractError
@@ -306,11 +605,13 @@ def _validate_evidence_ids(values: tuple[str, ...]) -> tuple[str, ...]:
     return values
 
 
-def _parse_json_object(body: bytes) -> Mapping[str, object]:
+def _parse_json_object(
+    body: bytes, *, max_bytes: int = MAX_EVALUATION_PAYLOAD_BYTES
+) -> Mapping[str, object]:
     try:
         if (
             not isinstance(body, bytes)
-            or not 0 < len(body) <= MAX_EVALUATION_PAYLOAD_BYTES
+            or not 0 < len(body) <= max_bytes
         ):
             raise AgentEvaluationContractError
         payload = json.loads(body, object_pairs_hook=_reject_duplicate_fields)

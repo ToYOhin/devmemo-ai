@@ -475,9 +475,14 @@ R6-I1 独立定义 provider-neutral 的 `agent-evaluation-case-v1` 与
 forbidden evidence ID。result 保持 content-free：只携带观测到的回答状态、检索与引用 evidence ID、白名单失败类别
 和有界延迟，不包含回答正文、prompt、context、完整 trace payload、Memo 正文、身份映射、Provider 输出或 secret。
 
-八个 seed case 只证明 schema 能表达 lookup、synthesis、no-answer、conflicting evidence、visibility boundary、
-deletion、stale state 与 prompt injection；它们不是 benchmark，也不形成质量分数或 threshold。R6-I2 必须单独扩展
-脱敏 corpus，并在任何评估运行前对 threshold 做版本化。
+R6-I2 增加 `agent-evaluation-corpus-v1`：64 个静态 synthetic case，八类各 8 个。parser 强制总数为 50-100、
+case ID 与问题唯一、声明的类别计数与实际一致、每类至少两个，并要求每个问题显式标记 synthetic。
+`agent-evaluation-thresholds-v1` 绑定 corpus/result 版本，分别声明 Recall@5、MRR、citation precision、
+groundedness、refusal accuracy、scope leak 数和 p95 latency 门槛。每个门槛都有固定单位、方向、合法范围、边界值
+和适用类别，不存在 aggregate score 字段。
+
+这些文件仍不形成任何实测质量、延迟或成本结果。threshold 是 R6-I3 的预声明输入；后续 deterministic runner 必须
+公开所有失败 case，不能根据运行结果反向修改 threshold。
 
 ## 后续工作不包含在本提案内
 
