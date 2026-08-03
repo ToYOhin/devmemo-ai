@@ -1117,12 +1117,12 @@ answered, no-context, 400, 401, 500, 502, 503, disabled ownership, shutdown,
 and recorder failure. No snapshot reader or operational exporter exists, so
 this is in-process emission evidence, not operator-facing observability.
 
-#### R6-I4D reviewed retrieval timing boundary
+#### R6-I4E retrieval timing boundary
 
-R6-I4D changes no runtime code. A later retrieval-only implementation may add
-two keyword-only dependencies to `EvidenceAnswerAgent`: the existing recorder
+R6-I4E implements the retrieval-only boundary reviewed in R6-I4D. It adds two
+keyword-only dependencies to `EvidenceAnswerAgent`: the existing recorder
 protocol and a `Callable[[], float]` monotonic clock. Existing constructors keep
-both as `None`; only the enabled internal answer handler may inject its
+both as `None`; only the enabled internal answer handler injects its
 lifespan-owned recorder and `time.monotonic`. The adapter never owns a clock.
 
 | Path | Fixed outcome | Exact timing boundary | Existing behavior that must remain | Required fake proof |
@@ -1135,7 +1135,7 @@ lifespan-owned recorder and `time.monotonic`. The adapter never owns a clock.
 | Durable retrieval fails, returns the wrong type, or fails safe assembly | `unavailable` | Same start; stop before the existing `RetrievalUnavailableError` mapping escapes | Existing fail-closed mapping and no Provider call | No raw durable failure is retained |
 | Provider or response serialization later succeeds/fails | Does not change the completed retrieval outcome | Outside the retrieval interval | Retrieval success remains distinct from Provider outcome | Clock is called exactly twice before Provider execution |
 
-The reviewed wrapper starts only after the signed request and tool call are
+The implemented wrapper starts only after the signed request and tool call are
 valid, surrounds the existing branch without moving its logic, derives the
 outcome from that branch, reads the stop clock before recording, and then lets
 the current `_run` flow continue. Missing recorder/clock, a raising clock, a
@@ -1146,16 +1146,15 @@ attempts the fixed metric and event but cannot change retrieval or answer
 behavior. No question, context, citation, Memo/request/user/generation ID,
 exception, branch name, or dynamic label reaches either sample.
 
-The reviewed R6-I4E candidate is limited to extending
-`agent_observability_runtime.py`, adding the optional keyword-only dependencies
-and shared try/finally boundary in `EvidenceAnswerAgent._run`, and passing the
-current lifespan recorder plus `time.monotonic` from the internal answer
-handler. Tests must cover pure clock validation, memory/durable success,
-no-context, invalid/unavailable failures, Provider exclusion, missing/raising
-dependencies, and backward-compatible constructors. Rollback removes those
-optional dependencies and the retrieval wrapper; R6-I4C answer samples remain
-and no persistent cleanup is required. This candidate is reviewed, not
-authorized. Provider timing and all Go-owned lifecycle metrics remain separate.
+The R6-I4E implementation is limited to the observability helper, the optional
+keyword-only dependencies and shared try/finally boundary in
+`EvidenceAnswerAgent._run`, and injection of the current lifespan recorder plus
+`time.monotonic` by the internal answer handler. Pure/fake tests cover clock
+validation, memory/durable success, no-context, invalid/unavailable failures,
+Provider exclusion, missing/raising dependencies, and compatible constructors.
+Rollback removes those optional dependencies and the retrieval wrapper; R6-I4C
+answer samples remain and no persistent cleanup is required. Provider timing
+and all Go-owned lifecycle metrics remain separate and unwired.
 
 ## Future work excluded from this proposal
 

@@ -1,3 +1,5 @@
+import math
+from collections.abc import Callable
 from typing import Literal, Protocol
 
 from app.domain.agent_observability import (
@@ -14,6 +16,17 @@ AnswerObservabilityOutcome = Literal[
     "unavailable",
 ]
 _ANSWER_OUTCOMES = frozenset({"success", "no_context", "invalid", "unavailable"})
+RetrievalObservabilityOutcome = Literal[
+    "success",
+    "no_context",
+    "invalid",
+    "unavailable",
+]
+MonotonicClock = Callable[[], float]
+_RETRIEVAL_OUTCOMES = frozenset(
+    {"success", "no_context", "invalid", "unavailable"}
+)
+_MAX_RETRIEVAL_LATENCY_MS = 600_000.0
 
 
 class AgentObservabilityRecorder(Protocol):
@@ -52,3 +65,79 @@ def record_answer_observation(
             recorder.record(sample)
         except Exception:
             continue
+
+
+def start_retrieval_observation(clock: MonotonicClock | None) -> float | None:
+    """Read a valid monotonic start without affecting retrieval."""
+
+    return _read_monotonic(clock)
+
+
+def record_retrieval_observation(
+    recorder: AgentObservabilityRecorder | None,
+    clock: MonotonicClock | None,
+    started_at: float | None,
+    outcome: RetrievalObservabilityOutcome,
+) -> None:
+    """Attempt a fixed latency/outcome pair without affecting retrieval."""
+
+    if (
+        recorder is None
+        or not isinstance(outcome, str)
+        or outcome not in _RETRIEVAL_OUTCOMES
+        or started_at is None
+        or not _is_valid_clock_value(started_at)
+    ):
+        return
+    stopped_at = _read_monotonic(clock)
+    if stopped_at is None:
+        return
+    elapsed_ms = (stopped_at - float(started_at)) * 1000
+    if (
+        not math.isfinite(elapsed_ms)
+        or elapsed_ms < 0
+        or elapsed_ms > _MAX_RETRIEVAL_LATENCY_MS
+    ):
+        return
+    try:
+        samples: tuple[AgentObservabilitySample, ...] = (
+            AgentObservabilityMetric(
+                component="retrieval",
+                operation="search_memos",
+                metric="tool_latency_ms",
+                unit="milliseconds",
+                value=elapsed_ms,
+            ),
+            AgentObservabilityEvent(
+                component="retrieval",
+                operation="search_memos",
+                outcome=outcome,
+            ),
+        )
+    except Exception:
+        return
+    for sample in samples:
+        try:
+            recorder.record(sample)
+        except Exception:
+            continue
+
+
+def _read_monotonic(clock: MonotonicClock | None) -> float | None:
+    if clock is None:
+        return None
+    try:
+        value = clock()
+    except Exception:
+        return None
+    if not _is_valid_clock_value(value):
+        return None
+    return float(value)
+
+
+def _is_valid_clock_value(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+    )

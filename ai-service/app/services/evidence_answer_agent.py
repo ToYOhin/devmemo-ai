@@ -26,12 +26,19 @@ from app.domain.grounded_answer import (
     parse_provider_grounded_answer,
     validate_grounded_answer,
 )
-from app.domain.retrieval import RetrievalUnavailableError
+from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationHeaders,
     DelegatedAnswerRequest,
     verify_delegated_request,
+)
+from app.services.agent_observability_runtime import (
+    AgentObservabilityRecorder,
+    MonotonicClock,
+    RetrievalObservabilityOutcome,
+    record_retrieval_observation,
+    start_retrieval_observation,
 )
 from app.services.retrieval_service import RetrievalService
 
@@ -59,10 +66,15 @@ class EvidenceAnswerAgent:
         retrieval_service: RetrievalService,
         provider: object,
         durable_retrieval: DurableAgentRetrieval | None = None,
+        *,
+        observability_recorder: AgentObservabilityRecorder | None = None,
+        monotonic_clock: MonotonicClock | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service
         self._provider = provider
         self._durable_retrieval = durable_retrieval
+        self._observability_recorder = observability_recorder
+        self._monotonic_clock = monotonic_clock
 
     async def run_delegated(
         self,
@@ -90,31 +102,47 @@ class EvidenceAnswerAgent:
             limit=request.limit,
             visibility=visibility,
         )
-        if self._durable_retrieval is None:
-            retrieved = self._retrieval_service.retrieve_authorized(
-                tool_call.question,
-                tool_call.limit,
-                tool_call.visibility.visible_memo_ids,
-            )
-            citations = tuple(
-                _safe_citation(citation, visibility)
-                for citation in retrieved.citations
-            )
-            context = retrieved.context
-            protected_context_fragments = retrieved.protected_context_fragments
-        else:
-            try:
-                durable = await self._durable_retrieval.retrieve(request)
-                if not isinstance(durable, AuthorizedRetrievalResult):
-                    raise TypeError
-                citations = tuple(
-                    _safe_durable_citation(evidence, visibility)
-                    for evidence in durable.evidence
+        started_at = start_retrieval_observation(self._monotonic_clock)
+        retrieval_outcome: RetrievalObservabilityOutcome = "unavailable"
+        try:
+            if self._durable_retrieval is None:
+                retrieved = self._retrieval_service.retrieve_authorized(
+                    tool_call.question,
+                    tool_call.limit,
+                    tool_call.visibility.visible_memo_ids,
                 )
-                context = durable.context
-                protected_context_fragments = durable.protected_context_fragments
-            except Exception as error:
-                raise RetrievalUnavailableError("Agent retrieval unavailable") from error
+                citations = tuple(
+                    _safe_citation(citation, visibility)
+                    for citation in retrieved.citations
+                )
+                context = retrieved.context
+                protected_context_fragments = retrieved.protected_context_fragments
+            else:
+                try:
+                    durable = await self._durable_retrieval.retrieve(request)
+                    if not isinstance(durable, AuthorizedRetrievalResult):
+                        raise TypeError
+                    citations = tuple(
+                        _safe_durable_citation(evidence, visibility)
+                        for evidence in durable.evidence
+                    )
+                    context = durable.context
+                    protected_context_fragments = durable.protected_context_fragments
+                except Exception as error:
+                    raise RetrievalUnavailableError(
+                        "Agent retrieval unavailable"
+                    ) from error
+            retrieval_outcome = "success" if citations else "no_context"
+        except RetrievalInputError:
+            retrieval_outcome = "invalid"
+            raise
+        finally:
+            record_retrieval_observation(
+                self._observability_recorder,
+                self._monotonic_clock,
+                started_at,
+                retrieval_outcome,
+            )
         search_step = AgentStep(
             1,
             "tool",

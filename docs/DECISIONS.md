@@ -795,3 +795,20 @@ context、citation、Memo/request/user/generation ID、exception、branch name �
 internal handler 的 recorder 与 `time.monotonic` 注入，以及 pure/fake tests。旧 constructor 必须默认兼容。rollback 删除
 这些 optional dependency 与 wrapper，保留 I4C answer emission，无持久数据清理。I4D 不授权 I4E；Provider timing、
 Go lifecycle/outbox/retry/quarantine、rebuild/reconciliation、reader/exporter/persistence 均继续后置。
+
+## ADR-080：R6-I4E 仅接线 retrieval latency/outcome，保持 Provider 与持久 authority 隔离
+
+R6-I4E 按 ADR-079 接线：pure helper 使用 optional monotonic clock，只有 start/stop 均为有限数字且 elapsed 位于
+0 至 600,000 ms 时，才 best-effort 写入固定 `retrieval/search_memos/tool_latency_ms` metric 与固定 outcome event。
+整组 timing 无效时两条 sample 都丢弃；recorder 对两条 sample 独立尝试，clock、contract 或 recorder 的任何失败均
+不得改变 retrieval、answer 或原异常。
+
+`EvidenceAnswerAgent._run` 在 delegation 与 tool-call construction 成功后启动计时，以共享 try/finally 包住原有 selected
+memory/durable retrieval 与安全 citation/context/protected-fragment 组装。非空、空、memory input failure 与其他 failure
+分别映射 `success`、`no_context`、`invalid` 与 `unavailable`。stop/record 均位于 `AgentStep` 与 Provider 之前；durable
+fail-closed mapping、无 fallback 和旧 constructor 默认行为保持不变。
+
+只有既有 Agent opt-in internal answer handler 把 lifespan recorder 与 `time.monotonic` 注入 Agent；recorder 缺失时不注入
+clock。实现不新增 env/config/secret/port/dependency、reader/exporter/persistence、thread/timer/background task，也不触碰
+Go lifecycle/outbox/retry/quarantine、rebuild/reconciliation。rollback 删除 retrieval helper/wrapper/injection，保留 I4C
+answer sample，无持久数据清理。Provider timing 仍未接线，下一切片只能先独立评审 owner、边界、outcome、测试与授权条件。

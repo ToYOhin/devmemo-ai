@@ -100,6 +100,20 @@ def _recorded_outcomes(adapter: BoundedInMemoryObservabilityAdapter) -> list[str
     ]
 
 
+def _recorded_metrics(
+    adapter: BoundedInMemoryObservabilityAdapter,
+) -> list[tuple[str, str, str]]:
+    return [
+        (
+            str(payload["component"]),
+            str(payload["operation"]),
+            str(payload["metric"]),
+        )
+        for sample in adapter.snapshot()
+        if (payload := sample.to_dict())["kind"] == "metric"
+    ]
+
+
 def test_internal_agent_route_is_not_available_when_disabled(monkeypatch):
     body = _body(["memo-visible"])
     monkeypatch.setattr(main, "settings", replace(main.settings, agent_enabled=False))
@@ -141,8 +155,12 @@ def test_internal_agent_route_returns_only_safe_authorized_result(monkeypatch):
     assert payload["citations"][0]["memo_id"] == "memo-visible"
     assert payload["trace"]["steps"][0]["name"] == "search_memos"
     assert "content" not in _keys(payload)
-    assert len(adapter.snapshot()) == 2
-    assert _recorded_outcomes(adapter) == ["success"]
+    assert len(adapter.snapshot()) == 4
+    assert _recorded_metrics(adapter) == [
+        ("retrieval", "search_memos", "tool_latency_ms"),
+        ("agent", "answer", "request_count"),
+    ]
+    assert _recorded_outcomes(adapter) == ["success", "success"]
 
 
 def test_internal_agent_route_records_no_context(monkeypatch):
@@ -155,7 +173,7 @@ def test_internal_agent_route_records_no_context(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["trace"]["terminal_state"] == "no_context"
-    assert _recorded_outcomes(adapter) == ["no_context"]
+    assert _recorded_outcomes(adapter) == ["no_context", "no_context"]
 
 
 def test_internal_agent_route_injects_owned_durable_runtime(monkeypatch):
@@ -391,6 +409,9 @@ def test_internal_agent_route_maps_retrieval_and_provider_failures(monkeypatch):
     assert _recorded_outcomes(adapter) == [
         "unavailable",
         "unavailable",
+        "success",
+        "unavailable",
+        "success",
         "unavailable",
     ]
 
@@ -402,7 +423,11 @@ def test_internal_agent_route_records_invalid_input_mapping(monkeypatch):
 
     body = _body(["memo-visible"])
     monkeypatch.setattr(main, "settings", _enabled_settings())
-    monkeypatch.setattr(main, "EvidenceAnswerAgent", lambda *_args: InvalidAgent())
+    monkeypatch.setattr(
+        main,
+        "EvidenceAnswerAgent",
+        lambda *_args, **_kwargs: InvalidAgent(),
+    )
     adapter = _observability(monkeypatch)
 
     response = client.post(INTERNAL_ANSWER_PATH, content=body, headers=_signed_headers(body))
@@ -421,7 +446,11 @@ def test_internal_agent_route_records_unavailable_without_changing_unknown_error
 
     body = _body(["memo-visible"])
     monkeypatch.setattr(main, "settings", _enabled_settings())
-    monkeypatch.setattr(main, "EvidenceAnswerAgent", lambda *_args: BrokenAgent())
+    monkeypatch.setattr(
+        main,
+        "EvidenceAnswerAgent",
+        lambda *_args, **_kwargs: BrokenAgent(),
+    )
     adapter = _observability(monkeypatch)
 
     with pytest.raises(RuntimeError, match="raw synthetic failure"):
@@ -464,4 +493,4 @@ def test_internal_agent_route_ignores_recorder_failure(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["trace"]["terminal_state"] == "answered"
-    assert recorder.calls == 2
+    assert recorder.calls == 4

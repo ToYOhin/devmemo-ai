@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from app.adapters.agent_observability import BoundedInMemoryObservabilityAdapter
 from app.adapters.embedding import DeterministicEmbeddingProvider
 from app.adapters.vector_store import InMemoryVectorStore
 from app.domain.durable_authorized_retrieval import (
@@ -11,7 +12,7 @@ from app.domain.durable_authorized_retrieval import (
     AuthorizedRetrievalResult,
     ServerOwnedCitation,
 )
-from app.domain.retrieval import RetrievalUnavailableError
+from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationError,
@@ -64,7 +65,9 @@ class EchoingProvider(RecordingProvider):
         )
 
 
-def _agent_with_memos() -> tuple[EvidenceAnswerAgent, RecordingProvider]:
+def _agent_with_memos(
+    *, observability_recorder=None, monotonic_clock=None
+) -> tuple[EvidenceAnswerAgent, RecordingProvider]:
     service = EmbeddingService(DeterministicEmbeddingProvider(), InMemoryVectorStore(8))
     index_memo(
         service,
@@ -83,7 +86,15 @@ def _agent_with_memos() -> tuple[EvidenceAnswerAgent, RecordingProvider]:
         ),
     )
     provider = RecordingProvider()
-    return EvidenceAnswerAgent(RetrievalService(service), provider), provider
+    return (
+        EvidenceAnswerAgent(
+            RetrievalService(service),
+            provider,
+            observability_recorder=observability_recorder,
+            monotonic_clock=monotonic_clock,
+        ),
+        provider,
+    )
 
 
 def _delegated_call(
@@ -130,6 +141,24 @@ class FakeDurableRetrieval:
         if self.error is not None:
             raise self.error
         return self.result
+
+
+class SequenceClock:
+    def __init__(self, *values: float) -> None:
+        self._values = iter(values)
+        self.calls = 0
+
+    def __call__(self) -> float:
+        self.calls += 1
+        return next(self._values)
+
+
+class RaisingLegacyRetrieval:
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def retrieve_authorized(self, *args, **kwargs):
+        raise self.error
 
 
 def _durable_result() -> AuthorizedRetrievalResult:
@@ -195,6 +224,139 @@ def test_agent_durable_failure_never_falls_back_or_calls_provider():
 
     assert durable.calls == 1
     assert provider.prompts == []
+
+
+def test_agent_records_memory_retrieval_before_provider_answering():
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
+    clock = SequenceClock(10.0, 10.025)
+    agent, provider = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    original_generate = provider.generate
+
+    async def generate_after_retrieval(prompt):
+        assert clock.calls == 2
+        return await original_generate(prompt)
+
+    provider.generate = generate_after_retrieval
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    metric, event = recorder.snapshot()
+    assert result.trace.terminal_state == "answered"
+    assert len(provider.prompts) == 1
+    assert clock.calls == 2
+    assert metric.to_dict()["value"] == pytest.approx(25.0)
+    assert event.to_dict()["outcome"] == "success"
+
+
+def test_agent_records_memory_no_context_retrieval():
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
+    clock = SequenceClock(10.0, 10.001)
+    agent, provider = _agent_with_memos(
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call([])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert result.trace.terminal_state == "no_context"
+    assert provider.prompts == []
+    assert recorder.snapshot()[1].to_dict()["outcome"] == "no_context"
+
+
+def test_agent_records_durable_retrieval_without_calling_legacy_path():
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
+    clock = SequenceClock(10.0, 10.002)
+    durable = FakeDurableRetrieval(_durable_result())
+    agent = EvidenceAnswerAgent(
+        FailingLegacyRetrieval(),
+        DeterministicProvider(),
+        durable,
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call(
+        ["memo-visible"],
+        memos_authority_ref="rehydration-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+
+    asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert durable.calls == 1
+    assert recorder.snapshot()[1].to_dict()["outcome"] == "success"
+
+
+def test_agent_records_durable_no_context_retrieval():
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
+    clock = SequenceClock(10.0, 10.002)
+    durable = FakeDurableRetrieval(AuthorizedRetrievalResult(()))
+    provider = RecordingProvider()
+    agent = EvidenceAnswerAgent(
+        FailingLegacyRetrieval(),
+        provider,
+        durable,
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call(
+        ["memo-visible"],
+        memos_authority_ref="rehydration-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert result.trace.terminal_state == "no_context"
+    assert provider.prompts == []
+    assert recorder.snapshot()[1].to_dict()["outcome"] == "no_context"
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_outcome"),
+    [
+        (RetrievalInputError("synthetic invalid retrieval"), "invalid"),
+        (RetrievalUnavailableError("synthetic unavailable retrieval"), "unavailable"),
+    ],
+)
+def test_agent_records_memory_retrieval_failure_without_changing_error(
+    error, expected_outcome
+):
+    recorder = BoundedInMemoryObservabilityAdapter(capacity=2)
+    clock = SequenceClock(10.0, 10.003)
+    agent = EvidenceAnswerAgent(
+        RaisingLegacyRetrieval(error),
+        DeterministicProvider(),
+        observability_recorder=recorder,
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    with pytest.raises(type(error)) as raised:
+        asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert raised.value is error
+    assert recorder.snapshot()[1].to_dict()["outcome"] == expected_outcome
+
+
+def test_agent_ignores_retrieval_recorder_failure():
+    class RaisingRecorder:
+        def record(self, _sample):
+            raise RuntimeError("raw synthetic recorder failure")
+
+    clock = SequenceClock(10.0, 10.004)
+    agent, provider = _agent_with_memos(
+        observability_recorder=RaisingRecorder(),
+        monotonic_clock=clock,
+    )
+    body, headers, now = _delegated_call(["memo-visible"])
+
+    result = asyncio.run(agent.run_delegated(body, headers, "test-agent-secret", now))
+
+    assert result.trace.terminal_state == "answered"
+    assert len(provider.prompts) == 1
 
 
 def test_agent_runs_exactly_one_authorized_search_and_returns_safe_evidence(monkeypatch):
