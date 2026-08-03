@@ -47,7 +47,9 @@ Memo 详情页
 完整的目录与运行时边界见 [docs/structure.md](docs/structure.md)，接口契约见
 [docs/api.md](docs/api.md)。实验性 Agent 的设计与剩余交付闸门分别见
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
-[docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。
+[docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。sanitized evaluation 方法/结果与当前
+完成闸门见 [docs/agent-evaluation-benchmark.zh-CN.md](docs/agent-evaluation-benchmark.zh-CN.md) 和
+[docs/r6-completion-audit.zh-CN.md](docs/r6-completion-audit.zh-CN.md)。
 
 ## 快速开始
 
@@ -91,8 +93,8 @@ AI_AGENT_ENABLED=false
 - Qdrant 与 Ollama 只能通过显式 Compose profile 启动。
 - 公共 chunk retrieval 保持关闭；它需要真实的 trusted gateway、Memos visibility
   mapping 以及可验证的关闭与回滚路径。
-- Evidence Answer Agent 仍是显式启用的实验能力；生命周期 outbox/ledger 证明尚未接入
-  Memo CRUD 或自动索引。
+- Evidence Answer Agent 仍是显式启用的实验能力；默认关闭的单机 lifecycle、durable retrieval、fixed refusal 与
+  content-free observability 已具备，但 R6 CI/browser/release 闸门仍未关闭。
 
 如果在受控的本地 Docker 开发拓扑中，确实需要 Memos Webhook 指向 `ai-service`，请使用
 [README_AI.md](README_AI.md) 中记录的 `docker-compose.local-webhook.yml` override。不要

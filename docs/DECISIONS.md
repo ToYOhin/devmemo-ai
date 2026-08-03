@@ -926,3 +926,13 @@ Go BFF 与 Web parser 同步验证 fixed answer/provider/terminal/step/zero-cita
 或 no-context。Web locale/render 只显示安全 answer 与 fixed trace label，不显示 provider。64-case offline baseline 无 failed
 case，七项 threshold 全部通过；positive/near-miss、Python endpoint、Go client 与 Web parser/render tests 提供回归证据。
 这仍不证明真实 Provider/Qdrant、Docker/browser、lifecycle convergence 或 release。rollback 必须三端同步撤销，无持久清理。
+
+## ADR-089：R6 不能用本地 unit evidence 替代工程、浏览器、CI 与发布闸门
+
+R6 completion audit 将剩余条件固定为四类：Python lint/type/coverage 工具链；local R6 commits 的 clean-checkout CI；
+新增 refusal projection 的 disposable authenticated-browser 验收；reviewed default-branch/tag/release publication。当前环境
+没有 ruff/mypy/coverage 或缓存包，且本任务禁止 network、Docker/browser 与 push/release，因此这些条件不能在本切片关闭。
+
+禁止提交未经本地验证的 CI dependency/config 来伪造 engineering gate，也禁止把 R5 browser 证据自动扩展为 R6 refusal
+证据。授权必须按 toolchain install、disposable runtime/browser、feature push/CI、merge/tag/release 顺序独立开放。lag、
+rebuild 与 reconciliation 的缺失 authority 同样保持显式，不通过推断 sample 补齐。

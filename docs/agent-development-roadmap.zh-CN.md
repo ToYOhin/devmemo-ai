@@ -329,6 +329,8 @@ answer event/count。R6-I4E 还只在 selected memory/durable retrieval 与安�
 retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query，rebuild/reconciliation 还需要权威跨进程
 state model。R6-I5C offline product-core baseline 实际执行 64 个 sanitized case，无 failed case，七项 threshold 全部
 通过。fixed refusal contract 已在 Python/Go/Web 同步，并位于 retrieval/Provider 前。
+完成审计仍阻断于 Python lint/type/coverage 工具、local commits 的 clean-checkout CI、新 refusal path 的 disposable
+browser proof，以及 reviewed default-branch/tag/release publication。
 
 范围：
 
