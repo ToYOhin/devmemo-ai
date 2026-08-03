@@ -316,7 +316,7 @@ rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新
 
 **结果：** 质量、安全与可运维主张可量化，项目可由他人独立复现。
 
-**状态：** R6-I1 至 R6-I4J 已实现并通过测试。R6-I4B runtime ownership、R6-I4D retrieval timing 与 R6-I4F
+**状态：** R6-I1 至 R6-I4J 与 R6-I5 已实现并通过测试。R6-I4B runtime ownership、R6-I4D retrieval timing 与 R6-I4F
 Provider timing 评审已有文档；R6-I4H 已评审 source-owned Go lifecycle 候选，R6-I4I 已实现 dormant strict Go
 contract/bounded adapter，R6-I4J 已在既有 lifecycle opt-in 下接线权威 delivery transition，
 明确授权的首批现在记录固定 AI answer outcome/request-count sample。严格 contract、64-case 脱敏 corpus、七项
@@ -325,8 +325,10 @@ deterministic runner 与 content-free report 均已具备；测试 report 只使
 或 runtime 结果。adapter 只在既有 Agent opt-in 下由 lifespan 持有；internal answer handler 每次 invocation 发出固定
 answer event/count。R6-I4E 还只在 selected memory/durable retrieval 与安全组装边界发出固定 latency metric/outcome event。
 两条路径均隔离记录失败，且无 reader/exporter/persistence。R6-I4G 只在 configured `generate` 与 result-text 检查边界
-发出固定 Provider latency/outcome；deterministic fallback 与 answer validation 保持在区间外。Memos
-outbox/retry/quarantine 需要独立 Go-owned design；rebuild/reconciliation 还需要权威跨进程 state model。
+发出固定 Provider latency/outcome；deterministic fallback 与 answer validation 保持在区间外。Go-owned outbox outcome/
+retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query，rebuild/reconciliation 还需要权威跨进程
+state model。R6-I5 offline product-core baseline 实际执行 64 个 sanitized case，暴露 8 个 prompt-injection failure；
+refusal accuracy 为 0.6667，未过 threshold。该失败经评审修正前，R6 不能宣称完成。
 
 范围：
 

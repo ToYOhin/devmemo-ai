@@ -1070,6 +1070,14 @@ Memo, prompt, context, trace, identity mapping, Provider output, or secret. Test
 reports use supplied synthetic results only and are not product benchmark,
 Provider-quality, runtime-latency, or cost evidence.
 
+R6-I5 adds a separate offline product-core harness. It builds a fresh
+deterministic in-memory index per sanitized case, runs the real retrieval and
+Agent core, and feeds content-free observed results to the existing runner. The
+64-case baseline exposes eight prompt-injection refusal failures and therefore
+fails the refusal threshold; no aggregate score hides them. Its injected clock
+and deterministic Provider make it reproducible but do not prove real runtime
+latency, model quality, durable storage, authentication, or lifecycle behavior.
+
 ### R6 content-free observability contract
 
 R6-I4A defines the provider-neutral `agent-observability-v1` contract without

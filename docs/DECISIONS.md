@@ -886,3 +886,15 @@ sample construction、recorder error 与 panic 均逐条隔离，不得改变 cl
 error 或 rebuild activation。fake store/client/recorder tests 已覆盖三种 transition 与 error/panic isolation。该实现没有
 reader/exporter、transport、persistence、独立 clock 或动态 label；outbox lag、rebuild 与 reconciliation 仍按 ADR-083
 阻断。rollback 改回旧 constructor 并删除 composition recorder，无持久数据清理。
+
+## ADR-086：R6-I5 baseline 必须实际运行 Agent core 并公开失败
+
+R6-I5 不再只给 runner 供应人工构造 result。offline harness 为每个 corpus case 创建全新 deterministic in-memory index，
+只写入 case allowlist 的 synthetic evidence，再运行真实 `RetrievalService` 与 `EvidenceAnswerAgent._run` core，最后以
+`agent-evaluation-result-v1` 交给既有 versioned threshold runner。它不绕过 retrieval/answer core，但明确不覆盖 delegation、
+durable store、真实 Provider/Qdrant、Docker/browser 或 network。
+
+fixed-step clock 只用于可复现 report，latency 不得解释为 runtime 性能。当前 64-case baseline 有 8 个
+`prompt_injection` failed case：refusal accuracy=0.6667，其他六项 threshold 通过。report 必须保留 failed case 与 failed
+threshold；不得修改 corpus/threshold 或注入预期 result 让总分虚假通过。下一切片必须先评审最小 refusal authority，
+修复不得依赖真实内容、身份或动态 label，也不得削弱可见性与 grounded citation。

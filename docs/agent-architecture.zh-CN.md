@@ -492,6 +492,12 @@ R6-I3 增加只消费已解析 corpus、threshold 与 result 对象的纯 runner
 Provider 输出或 secret。测试 report 只来自调用方提供的 synthetic result，不能作为产品 benchmark、Provider quality、
 runtime latency 或成本证据。
 
+R6-I5 增加独立 offline product-core harness：每个 sanitized case 创建全新 deterministic in-memory index，运行真实
+retrieval 与 Agent core，再把 content-free observed result 交给既有 runner。64-case baseline 暴露 8 个
+prompt-injection refusal failure，因此 refusal threshold 失败；不得用 aggregate score 隐藏。injected clock 与
+deterministic Provider 保证可复现，但不证明真实 runtime latency、model quality、durable storage、authentication 或
+lifecycle behavior。
+
 ### R6 无正文可观测性契约
 
 R6-I4A 定义 provider-neutral 的 `agent-observability-v1`，但不在任何 runtime path 选择它。event 只允许固定的
