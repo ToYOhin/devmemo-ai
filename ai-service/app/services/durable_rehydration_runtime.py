@@ -7,6 +7,7 @@ from pathlib import Path
 
 from app.adapters.agent_lifecycle_ledger import SQLiteMemoLifecycleLedger
 from app.adapters.durable_vector_candidate_repository import (
+    AuthorizedVectorSearch,
     DurableVectorCandidateRepository,
     LifecycleSnapshotReader,
 )
@@ -39,18 +40,19 @@ def build_durable_rehydration_orchestrator(
 
     if not settings.agent_rehydration_enabled:
         return None
+    store = embedding_service.store
     if (
         client is None
         or settings.vector_store != "qdrant"
         or settings.index_mode != "memo"
-        or not hasattr(embedding_service.store, "search_visible_memos")
+        or not isinstance(store, AuthorizedVectorSearch)
     ):
         raise DurableRehydrationRuntimeError
     try:
         ledger = ledger_factory(database)
         repository = DurableVectorCandidateRepository(
             embedding_service.provider,
-            embedding_service.store,
+            store,
             ledger,
         )
         return DurableRehydrationOrchestrator(repository, client)

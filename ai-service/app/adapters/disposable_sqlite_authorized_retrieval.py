@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 from pathlib import Path
+from typing import cast
 
 from app.domain.agent_lifecycle import MemoLifecycleState
 from app.domain.durable_authorized_retrieval import (
@@ -326,7 +327,7 @@ class DisposableSQLiteAuthorizedRetrievalRepository:
         ).fetchall()
         if len(rows) != 1 or type(rows[0]["snapshot_revision"]) is not int:
             raise RuntimeError("disposable repository snapshot is unavailable")
-        return rows[0]
+        return cast(sqlite3.Row, rows[0])
 
     @staticmethod
     def _insert_lifecycle(

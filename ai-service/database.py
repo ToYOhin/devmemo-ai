@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 DEFAULT_WEBHOOK_MAX_ATTEMPTS = 3
@@ -911,15 +911,18 @@ def _select_webhook_event(
     connection: sqlite3.Connection,
     event_id: str,
 ) -> tuple[Any, ...] | None:
-    return connection.execute(
-        """
-        SELECT event_id, event_type, payload, status, attempts, max_attempts,
-               last_error, created_at, updated_at
-        FROM webhook_events
-        WHERE event_id = ?
-        """,
-        (event_id,),
-    ).fetchone()
+    return cast(
+        tuple[Any, ...] | None,
+        connection.execute(
+            """
+            SELECT event_id, event_type, payload, status, attempts, max_attempts,
+                   last_error, created_at, updated_at
+            FROM webhook_events
+            WHERE event_id = ?
+            """,
+            (event_id,),
+        ).fetchone(),
+    )
 
 
 def _webhook_event_row(row: tuple[Any, ...] | None) -> dict[str, Any]:

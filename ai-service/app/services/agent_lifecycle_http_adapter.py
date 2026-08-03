@@ -160,10 +160,19 @@ def verify_lifecycle_activation_request(
         if not hmac.compare_digest(expected.signature, headers.signature):
             raise LifecycleTransportError("invalid lifecycle activation")
         payload = _load_exact_activation(body)
+        generation = payload["generation"]
+        eligible_count = payload["eligible_count"]
+        manifest_digest = payload["manifest_digest"]
+        if (
+            not isinstance(generation, str)
+            or type(eligible_count) is not int
+            or not isinstance(manifest_digest, str)
+        ):
+            raise LifecycleTransportError("invalid lifecycle activation")
         request = LifecycleActivationRequest(
-            payload["generation"],
-            payload["eligible_count"],
-            payload["manifest_digest"],
+            generation,
+            eligible_count,
+            manifest_digest,
         )
         replay_store.consume(
             headers.nonce,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 
-from app.domain.memo_insight import MemoInsight
+from app.domain.memo_insight import InsightType, MemoInsight
+from app.domain.models import BugReport, CodeSnippet
 from app.services.content_parser import parse_memo_content
 
 
@@ -25,7 +26,7 @@ def _first_sentence(content: str) -> str:
 
 def _build(
     memo_id: str,
-    insight_type: str,
+    insight_type: InsightType,
     title: str,
     summary: str,
     confidence: float,
@@ -35,7 +36,7 @@ def _build(
     return MemoInsight(
         insight_id=insight_id_for(memo_id, insight_type),
         memo_id=memo_id,
-        insight_type=insight_type,  # type: ignore[arg-type]
+        insight_type=insight_type,
         title=title[:160],
         summary=summary[:500],
         confidence=max(0.0, min(1.0, confidence)),
@@ -56,51 +57,51 @@ def derive_memo_insights(
     """Derive bounded candidates without an LLM call or external network."""
 
     parsed = parse_memo_content(content)
-    if parsed.kind == "code" and parsed.template is not None:
-        template = parsed.template
+    if parsed.kind == "code" and isinstance(parsed.template, CodeSnippet):
+        snippet = parsed.template
         insights: list[MemoInsight] = [
             _build(
                 memo_id,
                 "fact",
-                f"Code snippet: {template.title}",
-                f"{template.language} code snippet with {len(template.code.splitlines())} lines.",
+                f"Code snippet: {snippet.title}",
+                f"{snippet.language} code snippet with {len(snippet.code.splitlines())} lines.",
                 0.95,
                 ("template.title", "template.language", "template.code"),
             )
         ]
-        if template.description.strip():
+        if snippet.description.strip():
             insights.append(
                 _build(
                     memo_id,
                     "action",
-                    f"Review: {template.title}",
-                    template.description,
+                    f"Review: {snippet.title}",
+                    snippet.description,
                     0.78,
                     ("template.description",),
                 )
             )
         return tuple(insights)
 
-    if parsed.kind == "bug" and parsed.template is not None:
-        template = parsed.template
-        problem = template.root_cause.strip() or template.error.strip() or template.title
+    if parsed.kind == "bug" and isinstance(parsed.template, BugReport):
+        report = parsed.template
+        problem = report.root_cause.strip() or report.error.strip() or report.title
         insights = [
             _build(
                 memo_id,
                 "bug",
-                template.title,
+                report.title,
                 problem,
                 0.96,
                 ("template.error", "template.root_cause"),
             )
         ]
-        if template.solution.strip():
+        if report.solution.strip():
             insights.append(
                 _build(
                     memo_id,
                     "action",
-                    f"Apply fix: {template.title}",
-                    template.solution,
+                    f"Apply fix: {report.title}",
+                    report.solution,
                     0.86,
                     ("template.solution",),
                 )

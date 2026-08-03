@@ -352,7 +352,9 @@ def test_answer_observation_attempts_both_samples_when_recorder_raises():
 def test_retrieval_observation_records_only_fixed_latency_and_outcome(outcome):
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
     readings = iter([10.0, 10.025])
-    clock = lambda: next(readings)
+
+    def clock():
+        return next(readings)
 
     started_at = start_retrieval_observation(clock)
     record_retrieval_observation(adapter, clock, started_at, outcome)
@@ -378,7 +380,9 @@ def test_retrieval_observation_records_only_fixed_latency_and_outcome(outcome):
 
 def test_retrieval_observation_is_noop_without_dependencies_or_allowed_outcome():
     adapter = BoundedInMemoryObservabilityAdapter(capacity=4)
-    clock = lambda: 10.0
+
+    def clock():
+        return 10.0
 
     record_retrieval_observation(None, clock, 9.0, "success")
     record_retrieval_observation(adapter, None, 9.0, "success")
@@ -413,7 +417,9 @@ def test_retrieval_observation_discards_raising_start_clock():
 def test_retrieval_observation_discards_invalid_elapsed_time(readings):
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
     values = iter(readings)
-    clock = lambda: next(values)
+
+    def clock():
+        return next(values)
 
     started_at = start_retrieval_observation(clock)
     record_retrieval_observation(adapter, clock, started_at, "success")
@@ -448,7 +454,9 @@ def test_retrieval_observation_attempts_both_samples_when_recorder_raises():
 
     recorder = RaisingRecorder()
     readings = iter([10.0, 10.025])
-    clock = lambda: next(readings)
+
+    def clock():
+        return next(readings)
 
     started_at = start_retrieval_observation(clock)
     record_retrieval_observation(recorder, clock, started_at, "unavailable")
@@ -460,7 +468,9 @@ def test_retrieval_observation_attempts_both_samples_when_recorder_raises():
 def test_provider_observation_records_only_fixed_latency_and_outcome(outcome):
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
     readings = iter([20.0, 20.04])
-    clock = lambda: next(readings)
+
+    def clock():
+        return next(readings)
 
     started_at = start_provider_observation(clock)
     record_provider_observation(adapter, clock, started_at, outcome)
@@ -486,7 +496,9 @@ def test_provider_observation_records_only_fixed_latency_and_outcome(outcome):
 
 def test_provider_observation_is_noop_without_dependencies_or_allowed_outcome():
     adapter = BoundedInMemoryObservabilityAdapter(capacity=4)
-    clock = lambda: 20.0
+
+    def clock():
+        return 20.0
 
     record_provider_observation(None, clock, 19.0, "success")
     record_provider_observation(adapter, None, 19.0, "success")
@@ -514,7 +526,9 @@ def test_provider_observation_discards_invalid_start_clock_value(value):
 def test_provider_observation_discards_invalid_elapsed_time(readings):
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
     values = iter(readings)
-    clock = lambda: next(values)
+
+    def clock():
+        return next(values)
 
     started_at = start_provider_observation(clock)
     record_provider_observation(adapter, clock, started_at, "success")
@@ -549,7 +563,9 @@ def test_provider_observation_attempts_both_samples_when_recorder_raises():
 
     recorder = RaisingRecorder()
     readings = iter([20.0, 20.04])
-    clock = lambda: next(readings)
+
+    def clock():
+        return next(readings)
 
     started_at = start_provider_observation(clock)
     record_provider_observation(recorder, clock, started_at, "unavailable")

@@ -27,7 +27,7 @@ from app.domain.grounded_answer import (
     parse_provider_grounded_answer,
     validate_grounded_answer,
 )
-from app.domain.retrieval import RetrievalInputError, RetrievalUnavailableError
+from app.domain.retrieval import Citation, RetrievalInputError, RetrievalUnavailableError
 from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationHeaders,
@@ -63,13 +63,26 @@ class DurableAgentRetrieval(Protocol):
         ...
 
 
+class AgentProviderResult(Protocol):
+    @property
+    def text(self) -> str:
+        ...
+
+
+class AgentProvider(Protocol):
+    name: str
+
+    async def generate(self, prompt: str) -> AgentProviderResult:
+        ...
+
+
 class EvidenceAnswerAgent:
     """Execute one authorized whole-Memo search without HTTP or persistence."""
 
     def __init__(
         self,
         retrieval_service: RetrievalService,
-        provider: object,
+        provider: AgentProvider,
         durable_retrieval: DurableAgentRetrieval | None = None,
         *,
         observability_recorder: AgentObservabilityRecorder | None = None,
@@ -261,9 +274,14 @@ class EvidenceAnswerAgent:
         return validated.answer, validated.citations
 
 
-def _safe_citation(citation: object, visibility: MemoVisibilityScope) -> AgentCitation:
+def _safe_citation(citation: Citation, visibility: MemoVisibilityScope) -> AgentCitation:
     metadata = dict(citation.metadata)
-    tags = tuple(str(tag) for tag in metadata.get("tags", []) if str(tag).strip())
+    raw_tags = metadata.get("tags")
+    tags = (
+        tuple(str(tag) for tag in raw_tags if str(tag).strip())
+        if isinstance(raw_tags, (list, tuple))
+        else ()
+    )
     evidence = VisibleMemoEvidence(
         memo_id=citation.memo_id,
         embedding_id=citation.embedding_id,
@@ -299,5 +317,5 @@ def _safe_durable_citation(
     return safe.citation_for(visibility)
 
 
-def _provider_name(provider: object) -> str:
+def _provider_name(provider: AgentProvider) -> str:
     return str(provider.name)

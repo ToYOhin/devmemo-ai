@@ -7,6 +7,7 @@ import hmac
 import json
 import re
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable, Literal, Protocol
@@ -449,12 +450,11 @@ def parse_rehydration_response(
 
         payload = _load_exact_object(prepared.body)
         if prepared.status_code == 200:
-            result: ContentRehydrationResponse | ContentRehydrationFailure = (
-                ContentRehydrationResponse.from_dict(payload)
-            )
-            if result.snapshot_token != expected_request.snapshot_token:
+            response = ContentRehydrationResponse.from_dict(payload)
+            if response.snapshot_token != expected_request.snapshot_token:
                 raise RehydrationTransportError
-            _require_response_matches_request(result, expected_request)
+            _require_response_matches_request(response, expected_request)
+            result: ContentRehydrationResponse | ContentRehydrationFailure = response
         else:
             result = ContentRehydrationFailure.from_dict(payload)
         response_replay_store.consume(
@@ -602,7 +602,7 @@ def _canonical_response(
     )
 
 
-def _serialize_exact_object(payload: dict[str, object]) -> bytes:
+def _serialize_exact_object(payload: Mapping[str, object]) -> bytes:
     return json.dumps(
         payload,
         ensure_ascii=False,

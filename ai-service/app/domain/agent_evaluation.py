@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from typing import Literal, Mapping, cast
 
 
-EVALUATION_CASE_VERSION = "agent-evaluation-case-v1"
-EVALUATION_CORPUS_VERSION = "agent-evaluation-corpus-v1"
-EVALUATION_RESULT_VERSION = "agent-evaluation-result-v1"
-EVALUATION_THRESHOLDS_VERSION = "agent-evaluation-thresholds-v1"
+EVALUATION_CASE_VERSION: Literal["agent-evaluation-case-v1"] = "agent-evaluation-case-v1"
+EVALUATION_CORPUS_VERSION: Literal["agent-evaluation-corpus-v1"] = "agent-evaluation-corpus-v1"
+EVALUATION_RESULT_VERSION: Literal["agent-evaluation-result-v1"] = "agent-evaluation-result-v1"
+EVALUATION_THRESHOLDS_VERSION: Literal["agent-evaluation-thresholds-v1"] = "agent-evaluation-thresholds-v1"
 MAX_EVALUATION_PAYLOAD_BYTES = 16_384
 MAX_EVALUATION_CORPUS_BYTES = 131_072
 MAX_EVALUATION_QUESTION_CHARS = 500

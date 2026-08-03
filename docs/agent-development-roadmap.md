@@ -480,9 +480,12 @@ requires an authoritative cross-process state model.
 The R6-I5C offline product-core baseline runs all 64 sanitized cases with no
 failed case and all seven thresholds passing. The fixed refusal contract is
 synchronized across Python, Go, and Web and runs before retrieval or Provider.
-The completion audit still blocks R6 on Python lint/type/coverage tooling,
-clean-checkout CI for the local commits, disposable browser proof for the new
-refusal path, and reviewed default-branch/tag/release publication.
+The hash-locked Python engineering gate now passes locally on Windows: Ruff
+checks the explicit AI source/test scope, mypy checks 64 production source
+files, and all 764 tests pass with 88.6% branch coverage against an 88.0%
+fail-under baseline. The completion audit still blocks R6 on clean-checkout CI
+for the local commits, disposable browser proof for the new refusal path, and
+reviewed default-branch/tag/release publication.
 
 Scope:
 
@@ -556,12 +559,12 @@ review, and explicit authorization.
 
 ## Next stage
 
-The local R6 implementation is now assembled, but R6 is not release-complete.
-Proceed only through the remaining external gates in this order: establish and
-pin locally verified Python lint/type/coverage commands; run a disposable
-authenticated-browser proof for refusal, a cited answer, disablement, and exact
-cleanup; publish the feature branch and verify clean-checkout CI; then review
-default-branch merge, tag, and release as a separate authorization.
+The local R6 implementation and Python engineering gate are now assembled, but
+R6 is not release-complete. Proceed only through the remaining external gates
+in this order: run a disposable authenticated-browser proof for refusal, a
+cited answer, disablement, and exact cleanup; publish the feature branch and
+verify clean-checkout CI; then review default-branch merge, tag, and release as
+a separate authorization.
 
 Do not define or implement R7 while those R6 gates remain open. After R6 is
 closed, the bilingual roadmap must first review R7 outcome, scope, acceptance,

@@ -329,8 +329,10 @@ answer event/count。R6-I4E 还只在 selected memory/durable retrieval 与安�
 retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query，rebuild/reconciliation 还需要权威跨进程
 state model。R6-I5C offline product-core baseline 实际执行 64 个 sanitized case，无 failed case，七项 threshold 全部
 通过。fixed refusal contract 已在 Python/Go/Web 同步，并位于 retrieval/Provider 前。
-完成审计仍阻断于 Python lint/type/coverage 工具、local commits 的 clean-checkout CI、新 refusal path 的 disposable
-browser proof，以及 reviewed default-branch/tag/release publication。
+hash-locked Python engineering gate 已在 Windows 本地通过：Ruff 检查明确 AI source/test 范围，mypy 检查 64 个
+production source file，764 个测试全部通过，branch coverage 为 88.6%，初始 fail-under 为 88.0%。完成审计仍阻断于
+local commits 的 clean-checkout CI、新 refusal path 的 disposable browser proof，以及 reviewed default-branch/tag/release
+publication。
 
 范围：
 
@@ -376,9 +378,9 @@ browser proof，以及 reviewed default-branch/tag/release publication。
 
 ## 下一阶段
 
-R6 本地实现已经组装完成，但尚未达到 release-complete。只能按以下顺序关闭剩余外部闸门：建立并固定经本地验证的
-Python lint/type/coverage 命令；对 refusal、一次 cited answer、disablement 与精确 cleanup 运行 disposable 认证浏览器证明；
-发布 feature branch 并验证 clean-checkout CI；最后把 default-branch merge、tag 与 release 作为独立授权评审。
+R6 本地实现与 Python engineering gate 已经组装完成，但尚未达到 release-complete。只能按以下顺序关闭剩余外部闸门：
+对 refusal、一次 cited answer、disablement 与精确 cleanup 运行 disposable 认证浏览器证明；发布 feature branch 并验证
+clean-checkout CI；最后把 default-branch merge、tag 与 release 作为独立授权评审。
 
 这些 R6 闸门关闭前，不定义或实现 R7。R6 收口后，必须先在双语 roadmap 中评审 R7 outcome、scope、acceptance、
 rollback、隐私/数据流影响与授权闸门。R6 仍不自动授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何

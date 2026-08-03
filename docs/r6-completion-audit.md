@@ -33,33 +33,31 @@ runtime authorization, CI publication, or release authority.
   outcome/retry/quarantine samples derive only from persisted outbox transitions.
 - Focused Python, Go, Web, TypeScript, formatting, content-leak, credential, and
   local-path checks pass for the changed slices.
+- The Python engineering gate is pinned with hash-locked Ruff 0.16.1, mypy
+  1.20.2, and coverage.py 7.15.3. On Windows, Ruff passes the explicit AI
+  source/test scope, mypy passes 64 production source files, and all 764 tests
+  pass with 88.6% branch coverage against an 88.0% fail-under baseline.
 
 ## Not yet complete
 
-1. **Python engineering gate:** the repository and current environment provide
-   pytest but no ruff, mypy, coverage, or equivalent cached tool. The AI Service
-   workflow runs tests only. A pinned dev-tool decision, dependency installation,
-   baseline configuration, and locally verified CI commands are still required.
-2. **Clean-checkout CI:** the R6 commits are local. GitHub workflows have not run
+1. **Clean-checkout CI:** the R6 commits are local. GitHub workflows have not run
    against them, so Linux unit/integration/security/build reproducibility is not
    current evidence.
-3. **R6 disposable browser proof:** R5 previously proved the lifecycle/browser
+2. **R6 disposable browser proof:** R5 previously proved the lifecycle/browser
    product path, but the new refusal terminal, safe Go projection, and Web render
    have only unit/TestClient evidence. A disposable authenticated browser run
    must verify refusal, normal cited answer, disablement, and exact cleanup.
-4. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
+3. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
    image, or release artifact exists. README must not claim a released R6 state.
 
 ## Authorization sequence
 
 Complete the remaining gates in this order:
 
-1. authorize network-backed installation and lock/update of the selected Python
-   lint/type/coverage tools;
-2. authorize disposable Docker/Qdrant/temp-account/Memo/volume/secret and
+1. authorize disposable Docker/Qdrant/temp-account/Memo/volume/secret and
    authenticated browser acceptance for the R6 delta;
-3. authorize pushing the feature branch and verifying all required CI checks;
-4. after review, separately authorize merge/default-branch publication, tag, and
+2. authorize pushing the feature branch and verifying all required CI checks;
+3. after review, separately authorize merge/default-branch publication, tag, and
    release.
 
 R7 must not be invented or implemented while these R6 gates remain open. Once

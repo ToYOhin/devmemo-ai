@@ -10,7 +10,7 @@ from typing import Iterable, Literal, Mapping, cast
 from app.domain.agent import AgentCitation
 
 
-GROUNDED_ANSWER_VERSION = "grounded-answer-result-v1"
+GROUNDED_ANSWER_VERSION: Literal["grounded-answer-result-v1"] = "grounded-answer-result-v1"
 MAX_GROUNDED_ANSWER_CHARS = 4_000
 MAX_GROUNDED_CITATIONS = 10
 MAX_PROVIDER_RESULT_BYTES = 16_384

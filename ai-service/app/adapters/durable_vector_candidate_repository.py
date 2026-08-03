@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import Literal, Protocol, TypedDict, runtime_checkable
 
 from app.adapters.agent_lifecycle_ledger import LifecycleSnapshotAuthority
 from app.domain.agent_lifecycle import (
@@ -24,6 +24,13 @@ _GENERATION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
+class CandidateMetadata(TypedDict):
+    source_sequence: int
+    document_hash: str
+    rebuild_generation: str
+    index_version: Literal["memo-v1"]
+
+
 class DurableCandidateRepositoryError(RuntimeError):
     """Map malformed or inconsistent derived state without exposing its values."""
 
@@ -31,6 +38,7 @@ class DurableCandidateRepositoryError(RuntimeError):
         super().__init__("durable candidate repository is unavailable")
 
 
+@runtime_checkable
 class AuthorizedVectorSearch(Protocol):
     dimension: int
 
@@ -163,7 +171,7 @@ class DurableVectorCandidateRepository:
         return snapshot
 
 
-def _candidate_metadata(metadata: Mapping[str, object]) -> dict[str, object]:
+def _candidate_metadata(metadata: Mapping[str, object]) -> CandidateMetadata:
     if "content" in metadata:
         raise DurableCandidateRepositoryError
     source_sequence = metadata.get("source_sequence")
@@ -184,5 +192,5 @@ def _candidate_metadata(metadata: Mapping[str, object]) -> dict[str, object]:
         "source_sequence": source_sequence,
         "document_hash": document_hash,
         "rebuild_generation": rebuild_generation,
-        "index_version": index_version,
+        "index_version": MEMO_INDEX_VERSION,
     }

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Literal, Mapping, cast
 
 
-AGENT_OBSERVABILITY_VERSION = "agent-observability-v1"
+AGENT_OBSERVABILITY_VERSION: Literal["agent-observability-v1"] = "agent-observability-v1"
 MAX_OBSERVABILITY_PAYLOAD_BYTES = 4_096
 
 ObservabilityComponent = Literal[
@@ -291,7 +291,7 @@ class AgentObservabilityMetric:
             kind=cast(Literal["metric"], payload["kind"]),
             component=cast(ObservabilityComponent, payload["component"]),
             operation=cast(ObservabilityOperation, payload["operation"]),
-            metric=cast(ObservabilityMetricName, metric),
+            metric=metric,
             unit=cast(ObservabilityUnit, payload["unit"]),
             value=cast(float | int | None, value),
             state=cast(ObservabilityState | None, state),

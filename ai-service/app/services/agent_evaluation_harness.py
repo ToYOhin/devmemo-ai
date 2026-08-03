@@ -11,8 +11,10 @@ from app.adapters.vector_store import InMemoryVectorStore
 from app.domain.agent_evaluation import (
     AgentEvaluationCase,
     AgentEvaluationCorpus,
+    EvaluationFailureCategory,
     AgentEvaluationResult,
     AgentEvaluationThresholds,
+    ObservedAnswerState,
 )
 from app.domain.agent_evaluation_report import AgentEvaluationReport
 from app.services.agent_delegation import DelegatedAnswerRequest
@@ -68,13 +70,17 @@ async def _run_synthetic_case(
         visible_memo_uids=case.visible_evidence_ids,
     )
     started_at = _read_clock(clock)
+    answer_state: ObservedAnswerState
+    failures: tuple[EvaluationFailureCategory, ...]
     try:
         result = await agent._run(request)
         citations = tuple(citation.memo_id for citation in result.citations)
-        answer_state = {
-            "no_context": "no_answer",
-            "refused": "refusal",
-        }.get(result.trace.terminal_state, "answer")
+        if result.trace.terminal_state == "no_context":
+            answer_state = "no_answer"
+        elif result.trace.terminal_state == "refused":
+            answer_state = "refusal"
+        else:
+            answer_state = "answer"
         failures = ()
     except Exception:
         citations = ()

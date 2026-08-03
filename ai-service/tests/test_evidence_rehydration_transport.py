@@ -18,7 +18,6 @@ from app.domain.evidence_rehydration import (
 )
 from app.services.agent_delegation import INTERNAL_ANSWER_PATH, sign_delegated_request
 from app.services.agent_lifecycle_transport import (
-    INTERNAL_LIFECYCLE_PATH,
     sign_lifecycle_request,
 )
 from app.services.evidence_rehydration_transport import (

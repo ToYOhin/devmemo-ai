@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Literal, Mapping, cast
 
 
-MEMO_INDEX_VERSION = "memo-v1"
+MEMO_INDEX_VERSION: Literal["memo-v1"] = "memo-v1"
 MAX_DOCUMENT_CHARS = 200_000
 
 LifecycleEventType = Literal[

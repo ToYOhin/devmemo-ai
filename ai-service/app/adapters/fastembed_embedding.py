@@ -45,10 +45,10 @@ class FastEmbedEmbeddingProvider:
             ) from error
 
         try:
-            model_kwargs: dict[str, object] = {"model_name": model_name}
             if cache_dir:
-                model_kwargs["cache_dir"] = cache_dir
-            model = TextEmbedding(**model_kwargs)
+                model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
+            else:
+                model = TextEmbedding(model_name=model_name)
         except Exception as error:
             cache_hint = f"; cache_dir={cache_dir}" if cache_dir else ""
             raise FastEmbedInitializationError(

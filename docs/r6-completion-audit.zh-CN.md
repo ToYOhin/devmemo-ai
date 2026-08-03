@@ -21,25 +21,25 @@ R6 已在本地实现 sanitized evaluation、fixed refusal 与 content-free obse
 - AI answer、retrieval、configured Provider 的固定 outcome/latency sample 只在既有 Agent ownership 下产生；Go lifecycle
   outcome/retry/quarantine 只来自已持久 outbox transition。
 - 本次切片的 focused Python/Go/Web、TypeScript、format、content leak、credential 与 local-path 检查通过。
+- Python engineering gate 已固定 hash-locked Ruff 0.16.1、mypy 1.20.2 与 coverage.py 7.15.3。Windows 本地
+  Ruff 对明确 AI source/test 范围通过，mypy 对 64 个 production source file 通过，764 个测试全部通过，branch
+  coverage 为 88.6%，初始 fail-under 为 88.0%。
 
 ## 尚未完成
 
-1. **Python engineering gate：** repo 与当前环境只有 pytest，没有 ruff、mypy、coverage 或等价缓存工具；AI workflow
-   也只运行 tests。仍需选择并固定 dev tool、安装依赖、建立 baseline config，并在本地验证 CI command。
-2. **Clean-checkout CI：** R6 commits 仍在本地，GitHub workflow 尚未运行，不能声称当前 Linux unit/integration/security/
+1. **Clean-checkout CI：** R6 commits 仍在本地，GitHub workflow 尚未运行，不能声称当前 Linux unit/integration/security/
    build 可复现。
-3. **R6 disposable browser proof：** R5 已证明 lifecycle/browser product path，但新增 refusal terminal、Go safe projection
+2. **R6 disposable browser proof：** R5 已证明 lifecycle/browser product path，但新增 refusal terminal、Go safe projection
    与 Web render 目前只有 unit/TestClient 证据。仍需 disposable 认证浏览器验证 refusal、普通 cited answer、disablement 与
    exact cleanup。
-4. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
+3. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
    R6 已发布。
 
 ## 授权顺序
 
-1. 授权通过网络安装并 lock/update 选定 Python lint/type/coverage 工具；
-2. 授权 disposable Docker/Qdrant/temp account/Memo/volume/secret 与认证浏览器验收 R6 delta；
-3. 授权 push feature branch 并验证 required CI；
-4. review 后再单独授权 merge/default-branch publication、tag 与 release。
+1. 授权 disposable Docker/Qdrant/temp account/Memo/volume/secret 与认证浏览器验收 R6 delta；
+2. 授权 push feature branch 并验证 required CI；
+3. review 后再单独授权 merge/default-branch publication、tag 与 release。
 
 上述 R6 闸门关闭前，不虚构或实现 R7。R6 收口后，应先在双语 roadmap 定义 R7 outcome、scope、acceptance、
 rollback、隐私/数据流影响与授权闸门，再进入代码切片。

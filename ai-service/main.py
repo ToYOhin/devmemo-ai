@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal, TypedDict
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -194,6 +194,11 @@ class MemoWebhookRequest(BaseModel):
     activity_type: str = Field(alias="activityType")
     event_id: str | None = Field(default=None, alias="eventId")
     memo: dict[str, object] = Field(default_factory=dict)
+
+
+class WebhookEnqueueResult(TypedDict):
+    is_duplicate: bool
+    event: dict[str, Any]
 
 
 settings = AiSettings.from_env()
@@ -907,14 +912,14 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
         if _webhook_index_enabled():
             try:
                 if _webhook_index_mode() == "chunk":
-                    result = chunk_lifecycle_coordinator.delete_memo(str(memo_id))
+                    chunk_result = chunk_lifecycle_coordinator.delete_memo(str(memo_id))
                     derived_cleanup = delete_memo_ai_state(str(memo_id))
                     return {
                         "code": 0,
                         "message": "ignored deleted memo",
-                        "index_status": "deleted" if result.deleted_count else "skipped",
-                        "index_mode": result.index_mode,
-                        "deleted_chunk_count": result.deleted_count,
+                        "index_status": "deleted" if chunk_result.deleted_count else "skipped",
+                        "index_mode": chunk_result.index_mode,
+                        "deleted_chunk_count": chunk_result.deleted_count,
                         "derived_cleanup": derived_cleanup,
                     }
                 deleted = embedding_service.delete_memo(memo_id)
@@ -943,17 +948,17 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
             memo_id = _memo_id_from_memo(memo)
             if memo_id is not None:
                 try:
-                    result = chunk_lifecycle_coordinator.upsert_memo(
+                    chunk_result = chunk_lifecycle_coordinator.upsert_memo(
                         str(memo_id), "", metadata={"memo_type": "plain"}
                     )
-                    if result.deleted_count:
+                    if chunk_result.deleted_count:
                         return {
                             "code": 0,
                             "message": "ignored empty memo",
                             "memo_type": "plain",
                             "index_status": "deleted",
-                            "index_mode": result.index_mode,
-                            "deleted_chunk_count": result.deleted_count,
+                            "index_mode": chunk_result.index_mode,
+                            "deleted_chunk_count": chunk_result.deleted_count,
                         }
                 except Exception:
                     return {
@@ -966,24 +971,24 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
 
     memo_id = _memo_id_from_memo(memo)
     parsed = parse_memo_content(content)
-    result = await summarize(
+    summary_result = await summarize(
         SummaryRequest(
             memo_id=memo_id,
             title=str(memo.get("name") or ""),
             content=content,
-            tags=[str(tag) for tag in memo.get("tags", []) if tag],
+            tags=_memo_tags(memo),
         )
     )
     response: dict[str, object] = {
         "code": 0,
         "message": "accepted",
-        "ai_note_id": result.ai_note_id,
+        "ai_note_id": summary_result.ai_note_id,
         "memo_type": parsed.kind,
     }
     if parsed.template is not None:
         response["template"] = asdict(parsed.template)
-        if result.template_id is not None:
-            response["template_id"] = result.template_id
+        if summary_result.template_id is not None:
+            response["template_id"] = summary_result.template_id
     if parsed.errors:
         response["parse_errors"] = list(parsed.errors)
     if _webhook_index_enabled():
@@ -996,7 +1001,7 @@ async def _process_memos_webhook(request: MemoWebhookRequest) -> dict[str, objec
 def _read_or_enqueue_webhook_event(
     request: MemoWebhookRequest,
     event_id: str,
-) -> dict[str, object]:
+) -> WebhookEnqueueResult:
     existing = get_webhook_event(event_id)
     if existing is not None:
         return {"is_duplicate": True, "event": existing}
@@ -1043,7 +1048,9 @@ def _public_webhook_event(event: dict[str, object]) -> dict[str, object]:
         "status": event["status"],
         "attempts": event["attempts"],
         "max_attempts": event["max_attempts"],
-        "last_error": summarize_error(event["last_error"]),
+        "last_error": summarize_error(
+            event["last_error"] if isinstance(event["last_error"], str) else None
+        ),
         "created_at": event["created_at"],
         "updated_at": event["updated_at"],
     }
@@ -1086,7 +1093,7 @@ def _deterministic_rag_answer(context: str) -> str:
     return f"根据知识库检索结果：\n{context}"
 
 
-def _memo_id_from_memo(memo: dict[str, object]) -> object:
+def _memo_id_from_memo(memo: dict[str, object]) -> str | int | None:
     uid = str(memo.get("uid") or "").strip()
     if uid:
         return uid
@@ -1101,11 +1108,21 @@ def _memo_id_from_memo(memo: dict[str, object]) -> object:
                 return resource_uid
         return name
 
-    return memo.get("id")
+    raw_id = memo.get("id")
+    if isinstance(raw_id, (str, int)) and not isinstance(raw_id, bool):
+        return raw_id
+    return None
+
+
+def _memo_tags(memo: dict[str, object]) -> list[str]:
+    raw_tags = memo.get("tags")
+    if not isinstance(raw_tags, (list, tuple)):
+        return []
+    return [str(tag) for tag in raw_tags if tag]
 
 
 def _index_webhook_memo(
-    memo_id: object,
+    memo_id: str | int | None,
     content: str,
     memo: dict[str, object],
     memo_type: str | None,
@@ -1114,37 +1131,37 @@ def _index_webhook_memo(
         return {"index_status": "skipped"}
     try:
         if _webhook_index_mode() == "chunk":
-            result = chunk_lifecycle_coordinator.upsert_memo(
+            chunk_result = chunk_lifecycle_coordinator.upsert_memo(
                 str(memo_id),
                 content,
                 metadata={
                     "title": str(memo.get("name") or ""),
-                    "tags": [str(tag) for tag in memo.get("tags", []) if tag],
+                    "tags": _memo_tags(memo),
                     "memo_type": memo_type or "plain",
                 },
             )
             return {
                 "index_status": "indexed",
-                "index_mode": result.index_mode,
-                "index_version": result.index_version,
-                "chunk_count": result.chunk_count,
-                "deleted_chunk_count": result.deleted_count,
-                "embedding_provider": result.provider,
+                "index_mode": chunk_result.index_mode,
+                "index_version": chunk_result.index_version,
+                "chunk_count": chunk_result.chunk_count,
+                "deleted_chunk_count": chunk_result.deleted_count,
+                "embedding_provider": chunk_result.provider,
             }
         document = MemoIndexDocument.from_memo(
             memo_id=str(memo_id),
             content=content,
             metadata={
                 "title": str(memo.get("name") or ""),
-                "tags": [str(tag) for tag in memo.get("tags", []) if tag],
+                "tags": _memo_tags(memo),
                 "memo_type": memo_type or "plain",
             },
         )
-        result = index_memo(embedding_service, document)
+        embedded = index_memo(embedding_service, document)
     except Exception:
         return {"index_status": "failed"}
     return {
         "index_status": "indexed",
-        "embedding_id": result.embedding_id,
-        "embedding_provider": result.provider,
+        "embedding_id": embedded.embedding_id,
+        "embedding_provider": embedded.provider,
     }

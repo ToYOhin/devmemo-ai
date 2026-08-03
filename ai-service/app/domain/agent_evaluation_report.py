@@ -17,7 +17,7 @@ from app.domain.agent_evaluation import (
 )
 
 
-EVALUATION_REPORT_VERSION = "agent-evaluation-report-v1"
+EVALUATION_REPORT_VERSION: Literal["agent-evaluation-report-v1"] = "agent-evaluation-report-v1"
 
 _METRICS = frozenset(
     {
