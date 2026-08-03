@@ -99,15 +99,16 @@ automatic indexing, Qdrant, or default Compose. Read
 [docs/agent-development-roadmap.md](docs/agent-development-roadmap.md) before
 attempting any runtime rollout.
 
-The durable retrieval work through R5-I15 is a default-disabled single-host
-implementation with a disposable synthetic product-path proof. It includes
-authorized candidate selection, current-authority content rehydration, an
-internal authenticated HTTP contract, lifecycle/snapshot filtering, and opt-in
-answer-path selection without legacy fallback. It does not expose a browser
-rehydration API or authorize real-data indexing. Lifecycle dispatch, rebuild
-activation, live Qdrant/Memos, restart reconciliation, and authenticated browser
-acceptance remain separate gates. Memos remains the final content, identity, and
-visibility authority; see the [R5 Acceptance Record](docs/r5-acceptance.md).
+R5 is complete for a default-disabled single-host scope. Authorized candidate
+selection, current-authority rehydration, authenticated internal HTTP,
+Memos-owned lifecycle dispatch, generation-scoped Qdrant state, rebuild
+activation, and no-fallback answer selection have passed disposable Docker and
+authenticated-browser acceptance, including visibility isolation,
+update/delete, restart, rollback, and cleanup. AI Service and Qdrant remain
+unpublished to the host. Real data, external Providers, cross-host transport,
+and multi-instance operation remain separate gates. Memos remains the final
+content, identity, visibility, and lifecycle authority; see the
+[R5 Acceptance Record](docs/r5-acceptance.md).
 
 ## Local development and verification
 

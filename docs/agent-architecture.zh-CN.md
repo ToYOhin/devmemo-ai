@@ -1,6 +1,6 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I9 已完成 durable authorized retrieval、current-authority rehydration、双向 HMAC/replay、Go/Python parity、authority reader/capability 与单机 composition 的未接线证明。R5-I10 已增加单机 `net/http` handler/client contract；R5-I11A 已增加独立 current/previous rehydration keyring 与单一 Memos origin 的严格默认关闭配置；R5-I11B 已增加 matching-key verification 与现有 Memos listener 上的 opt-in route；R5-I11C 已增加 lifespan-owned Python client；R5-I12 已私有委托 Memos-owned capability；R5-I13 已增加带 snapshot recheck 与 request-memory materialization 的 injected durable orchestration；R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation/revision、授权 UID 查询下推和严格默认关闭的 lifespan ownership；R5-I15 已让 verified answer Agent 在同一 opt-in 下选择 owned orchestrator、禁止 legacy fallback，并完成 disposable synthetic 单机产品路径证明；R5-I16 已记录 completion audit 与授权清单。真实 lifecycle activation、运行时与浏览器验收仍未验证。
+> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I16 已完成 durable retrieval、current-authority rehydration、认证 transport、默认关闭的 runtime ownership、verified answer selection 与 completion audit。获授权的 post-I16 切片现已连接 SQLite mutation/outbox、既有 internal AI listener、generation activation 与 Qdrant derived state；两次 disposable 认证浏览器运行完成 private/public visibility、update/delete、restart、rollback 与精确 cleanup 矩阵。R5 仅在默认关闭的单机范围内完成。
 
 交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
 [DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
@@ -376,9 +376,14 @@ no-context 且不调用 Provider。runtime ownership 或 authority 缺失、rehy
 错误或 projection failure 均映射既有 retrieval-unavailable 503，绝不 fallback memory。disposable product-path
 proof 只使用临时 ledger、内存 vectors、合成 delegation 和 fake rehydration client，不主张真实运行时已验收。
 
+后续获授权的单机切片把 Memos SQLite mutation 与 authoritative outbox 原子耦合，经现有 AI listener 验证独立
+lifecycle HMAC，写入无正文 ledger/Qdrant state，并只在 manifest 对账后激活 exact generation。两次 disposable
+运行使用 deterministic Provider、临时账号/Memo/volume/secret，证明同源 BFF、跨用户 private/public 可见性、
+update/delete、restart、rollback 与 cleanup；不增加 listener、host AI port、默认启用或多实例声明。
+
 ## A4 本地 RAG 生命周期契约
 
-本节是实现契约，不是已启用功能。当前通用 Memos Webhook 路径不能作为 A4 传输：Memos 侧使用可能丢弃任务的有界进程内队列，既有 AI 侧 `webhook_events` 表只能证明消费者已接收事件，而且为旧重试流程保存了收到的 payload。A4 要求由 Memos 持有可靠投递记录，并要求 AI 生命周期消费者不持久化 raw Memo 快照。
+本节定义只在显式单机 opt-in 下使用的 lifecycle contract。通用 Memos Webhook 路径不能作为 A4 传输：Memos 侧使用可能丢弃任务的有界进程内队列，既有 AI 侧 `webhook_events` 表只能证明消费者已接收事件，而且为旧重试流程保存了收到的 payload。A4 runtime 由 Memos 持有可靠投递记录，并要求 AI lifecycle consumer 不持久化 raw Memo 快照。
 
 ### 权威与持久化边界
 
@@ -445,7 +450,7 @@ Memos-owned ops 状态公开 event ID、类型、序号、状态、attempts、�
 
 只有同时满足以下条件才能声明索引已同步：pending、failed 和 exhausted 均为零；确认高水位达到捕获的源高水位；store health 与 provider dimension 匹配 `memo-v1`；可索引数量与 manifest digest 一致。任何失败或耗尽事件、持续增长或超龄 backlog、数量或 digest 不一致、版本或维度错误、过期删除、ops 输出携带正文，或 citation 超出 Memos 提供的 scope，都必须阻断 rollout 并产生运维可见的 degraded 状态。
 
-回滚首先关闭 `AI_AGENT_ENABLED` 并暂停生命周期投递，不能改变 Memos 数据或可见性。随后回退生命周期消费者或 provider 配置，隔离并丢弃可疑派生 generation，从 Memos 重建后才可重新启用。scope 泄漏、过期内容复活或 raw content 暴露要求立即关闭并隔离派生索引。delete 只能通过正常 Memos 备份策略恢复权威 Memo 后再 reindex，绝不能从 AI 状态复制正文回 Memos。
+回滚首先关闭 lifecycle 与 rehydration，再恢复 `AI_VECTOR_STORE=memory`；也可设置 `AI_AGENT_ENABLED=false` 完全关闭 Agent。该过程不能改变 Memos 数据或可见性。随后回退 lifecycle consumer 或 provider 配置，隔离并丢弃可疑 derived generation，从 Memos 重建后才可重新启用。scope 泄漏、过期内容复活或 raw content 暴露要求立即关闭并隔离派生索引。delete 只能通过正常 Memos 备份策略恢复权威 Memo 后再 reindex，绝不能从 AI 状态复制正文回 Memos。
 
 ### 最小实现与验证计划
 
@@ -456,11 +461,12 @@ Memos-owned ops 状态公开 event ID、类型、序号、状态、attempts、�
 3. **已完成：** 增加 AI 派生生命周期 ledger 与 fake vector-store 集成测试，证明稳定 upsert、幂等 delete、reservation/vector-finalize 两个崩溃点的重放、tombstone 保护、安全错误脱敏、retrieval quarantine，以及不持久化 raw snapshot。运行时构造仍是独立闸门。
 4. **已完成：** 增加独立认证的生命周期 transport 契约测试，证明严格 request/acknowledgement 投影、domain-separated HMAC、timestamp/nonce/body digest 绑定、有界 replay window 和安全失败映射，但不增加 route、dispatcher、worker 或现有 CRUD 接线。多实例 replay store 仍是后续运行时闸门。
 5. **已完成：** 使用纯临时 store 完成合成、可销毁的进程级集成证明，覆盖按序 outbox-to-ledger 收敛、backlog/high-water/count/digest 投影、四个中断点、有界重试/耗尽、tombstone 防护与 rebuild generation 校验。既有默认值、端口和浏览器边界保持不变并另行复核；没有新增运行时 endpoint。
-6. 只有取得明确批准后，才能在真实 Memos 数据上运行显式 opt-in 的本地迁移/重建；此前必须准备备份、回滚与删除后验证。
+6. **已完成（disposable 单机 SQLite）：** 获授权 opt-in runtime 已连接 mutation/outbox dispatch、既有认证 listener、generation activation、完整 Memo Qdrant state、restart reconciliation、headed-browser authorization、rollback 与精确 cleanup。
+7. 只有再次取得独立明确批准后，才能在真实 Memos 数据上运行 opt-in 迁移/重建；此前必须准备备份、回滚与删除后验证。
 
 ### Chunk 与 Qdrant 闸门
 
-A4 不启用 chunk 或 Qdrant Agent 检索。只有完整 Memo 生命周期已具备 Memos-owned 可靠投递，删除/重试/重建行为已被证明，可观测性保持 scope 安全，回滚已经测试；chunk 使用独立版本和 collection，并具备稳定 delete/tombstone 规则；离线评估和双路径迁移达到已评审质量门槛；可信 Memos gateway 在组装上下文前执行最新可见性约束之后，才能考虑该路线。Agent 的 `search_memos` 继续只接受完整 `memo-v1` 证据。
+A4 仍不启用 chunk retrieval。R5 只在显式、默认关闭的单机 lifecycle 与 rehydration flag 下允许完整 Memo Qdrant Agent retrieval；Memos 继续持有当前 visibility 与 content authority。chunk 仍需独立 version/collection、稳定 delete/tombstone 规则、离线评估、已评审迁移闸门，以及组装 context 前相同的 Memos authority check。`search_memos` 继续只接受完整 `memo-v1` 证据。
 
 ## 后续工作不包含在本提案内
 

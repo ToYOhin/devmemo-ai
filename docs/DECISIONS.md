@@ -649,3 +649,26 @@ Provider。missing authority、client/503、partial/mismatch、snapshot race、�
 client 与 deterministic Provider，证明一次 candidate→rehydration→Agent answer、受控 citation/trace 和无公开正文。
 它不证明真实 Qdrant/Memos、lifecycle dispatcher、rebuild activation、重启对账、Docker 或认证浏览器运行时；这些
 属于 R5-I16 验收审计后的独立授权闸门。
+
+## ADR-072：R5 runtime completion 限定为默认关闭的 disposable 单机闭环
+
+用户明确授权后，R5 只在 SQLite Memos、单一 Memos/AI/Qdrant 实例、deterministic Provider、临时
+account/Memo/volume/secret 与认证 headed browser 范围激活 lifecycle。Memos 的正常 create/update/delete 在同一
+SQLite transaction 写入 authoritative outbox；提交后的 best-effort dispatcher 使用独立 lifecycle HMAC 调用现有
+AI listener。AI 只保存 content-free ledger 与 generation-scoped Qdrant point，rebuild 只从当前 Memos authority
+准备 event，并在 manifest count/digest 对账后激活 generation。所有开关继续默认 false，AI Service 与 Qdrant
+不发布宿主端口，也不增加 listener、自动后台 retry 或真实数据默认迁移。
+
+一次性验收必须同时证明：自有 private 与另一用户 public 可进入 citation；另一用户 private 返回 404 且不进入
+context/citation；browser 只调用 same-origin BFF 并接收安全投影；update 推进 sequence/hash；delete 形成 applied
+tombstone 且 point 不复活；Qdrant、AI、Memos 串行 restart 后重放与 activation 收敛；所有具名 container、network、
+volume、browser state、temp build context、secret 与 image tag 精确清理。两次 disposable 运行完成了该矩阵。
+
+rollback 必须同时关闭 lifecycle 与 rehydration，并恢复 `AI_VECTOR_STORE=memory`；或者设置
+`AI_AGENT_ENABLED=false` 完全关闭 Agent。仅关闭 rehydration 却继续让 legacy memory path 指向 lifecycle-only
+Qdrant point 会安全返回 503，但不能描述为 memory parity。rollback 始终保留 Memos source database，只能清理
+预先解析并确认可重建的 derived state。
+
+此完成结论不覆盖真实用户数据、MySQL/PostgreSQL、backup/restore 执行、外部 Provider、跨主机 transport、
+shared atomic replay/capability state 或多实例。R6 可继续 evaluation、content-free observability 与 release
+工程门禁；上述扩大范围仍需独立设计、威胁建模与授权。

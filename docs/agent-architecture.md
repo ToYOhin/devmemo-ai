@@ -44,8 +44,12 @@
 > default-disabled lifespan ownership. R5-I15 makes the verified answer Agent
 > select that owned orchestrator under the same opt-in, with no legacy fallback,
 > and proves the disposable synthetic single-host product path. R5-I16 records
-> the completion audit and authorization checklist; real lifecycle activation,
-> runtime, and browser acceptance remain unverified.
+> the completion audit and authorization checklist. The authorized post-I16
+> lifecycle slice now connects SQLite mutation/outbox delivery, the existing
+> internal AI listener, generation activation, and Qdrant-derived state. Two
+> disposable authenticated-browser runs completed the private/public visibility,
+> update/delete, restart, rollback, and exact-cleanup matrix. R5 is complete only
+> for this default-disabled single-host scope.
 
 Delivery order, current gaps, acceptance gates, and the resume-ready definition
 of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
@@ -403,6 +407,20 @@ LLM provider.
    UID, source sequence, and `memo-v1`; vector or rehydration metadata cannot
    supply title, tags, visibility, or citation fields. A temporary SQLite,
    in-memory vector, fake-client proof reaches an answered trace with no network.
+31. **Single-host lifecycle activation — complete, opt-in.** Memos SQLite CRUD
+   now writes and dispatches the authoritative outbox under a dedicated flag.
+   The existing AI listener verifies the lifecycle-only HMAC, applies the
+   content-free ledger/Qdrant transition, and activates an exact generation only
+   after manifest reconciliation. Startup rebuild is bounded and fail closed;
+   no new listener, host port, automatic retry worker, or default enablement is
+   introduced.
+32. **Disposable real-runtime acceptance — complete for the R5 boundary.** Two
+   local Compose projects using deterministic providers, temporary accounts and
+   data, SQLite Memos, and local Qdrant proved same-origin BFF answers, owned
+   private and other-user public inclusion, other-user private exclusion,
+   update/delete convergence, restart reconciliation, safe rollback, and exact
+   cleanup. This does not authorize real data, an external Provider, cross-host
+   transport, shared replay state, or multi-instance operation.
 
 ## Acceptance criteria for the first Agent path
 
@@ -792,13 +810,16 @@ rehydration/vector metadata. Empty durable evidence preserves no-context and
 does not call the Provider. Missing runtime ownership, missing authority,
 rehydration failure, snapshot race, malformed result, or projection failure
 maps to the existing retrieval-unavailable 503 and never falls back to memory.
-The disposable product-path proof uses a temporary ledger, in-memory vectors,
-synthetic delegation, and a fake rehydration client; no real runtime is claimed.
+The earlier product-path proof uses a temporary ledger, in-memory vectors,
+synthetic delegation, and a fake rehydration client. The later authorized
+single-host acceptance additionally exercised the production SQLite/HTTP/Qdrant
+objects with disposable data while preserving the same fail-closed contract.
 
 ## A4 local RAG lifecycle contract
 
-This section is an implementation contract, not an enabled feature. The current
-generic Memos Webhook path is not the A4 transport: its Memos-side dispatch uses
+This section defines the lifecycle contract used only by the explicit
+single-host opt-in. The generic Memos Webhook path is not the A4 transport: its
+Memos-side dispatch uses
 a bounded in-process queue that can drop work, while the existing AI-side
 `webhook_events` table proves only receipt at the consumer. It also stores the
 received payload for legacy retry. A4 requires Memos to own the durable delivery
@@ -955,13 +976,15 @@ growing/aged backlog, count or digest mismatch, wrong version/dimension, stale
 delete, content-bearing ops output, or citation outside the Memos-provided scope
 blocks rollout and raises an operator-visible degraded state.
 
-Rollback first disables `AI_AGENT_ENABLED` and pauses lifecycle delivery; it
-does not change Memos data or visibility. Revert the lifecycle consumer or
-provider configuration, discard the suspect derived generation, and rebuild
-from Memos before re-enabling. A scope leak, stale resurrection, or raw-content
-exposure requires immediate disablement and derived-index quarantine. A delete
-is recovered only by restoring the authoritative Memo through the normal Memos
-backup policy and then reindexing, never by copying content back from AI state.
+Rollback first disables lifecycle and rehydration. It then restores
+`AI_VECTOR_STORE=memory`, or disables the complete Agent with
+`AI_AGENT_ENABLED=false`; it does not change Memos data or visibility. Revert
+the lifecycle consumer or provider configuration, discard the suspect derived
+generation, and rebuild from Memos before re-enabling. A scope leak, stale
+resurrection, or raw-content exposure requires immediate disablement and
+derived-index quarantine. A delete is recovered only by restoring the
+authoritative Memo through the normal Memos backup policy and then reindexing,
+never by copying content back from AI state.
 
 ### Minimum implementation and validation plan
 
@@ -993,18 +1016,23 @@ effects:
    bounded retry/exhaustion, tombstone protection, and rebuild-generation
    validation. Existing default/port/browser boundaries remain unchanged and
    are rechecked separately; no runtime endpoint is introduced.
-6. Only after explicit approval, run an opt-in local migration/rebuild against
-   real Memos data with backup, rollback, and post-run deletion verification.
+6. **Complete for disposable single-host SQLite:** the authorized opt-in runtime
+   connected mutation/outbox dispatch, the existing authenticated listener,
+   generation activation, complete-Memo Qdrant state, restart reconciliation,
+   headed-browser authorization, rollback, and exact cleanup.
+7. Only after separate explicit approval, run an opt-in migration/rebuild
+   against real Memos data with backup, rollback, and post-run deletion
+   verification.
 
 ### Chunk and Qdrant gates
 
-A4 does not enable chunk or Qdrant Agent retrieval. That route remains blocked
-until the complete-Memo lifecycle has durable Memos-owned delivery, demonstrated
-delete/retry/rebuild behavior, scope-safe observability, and a tested rollback;
-chunk has a separate version and collection plus stable delete/tombstone rules;
-offline evaluation and dual-path migration meet reviewed quality gates; and a
-trusted Memos gateway enforces current visibility before context assembly. The
-`search_memos` Agent continues to accept only complete `memo-v1` evidence.
+A4 still does not enable chunk retrieval. R5 permits complete-Memo Qdrant Agent
+retrieval only under the explicit, default-disabled single-host lifecycle and
+rehydration flags; Memos remains the current visibility and content authority.
+Chunk retrieval still requires its own version and collection, stable
+delete/tombstone rules, offline evaluation, reviewed migration gates, and the
+same Memos authority check before context assembly. `search_memos` continues to
+accept only complete `memo-v1` evidence.
 
 ## Future work excluded from this proposal
 

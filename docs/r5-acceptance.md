@@ -1,65 +1,58 @@
 # R5 Acceptance Record
 
-R5 code paths and the disposable synthetic product proof are complete. Real
-single-host runtime acceptance is not complete: lifecycle dispatch and rebuild
-generation activation are not connected, and Docker, authenticated browser,
-live Qdrant/Memos, restart, and real-data operations require separate approval.
+R5 is complete for the explicitly bounded, default-disabled single-host scope.
+The lifecycle dispatcher, rebuild-generation activation, durable retrieval, and
+same-origin Agent path are implemented and have passed disposable Docker,
+Qdrant, SQLite Memos, and authenticated headed-browser acceptance. This is not
+a real-data, multi-instance, cross-host, or external-Provider claim.
 
 ## Evidence matrix
 
 | Requirement | Status | Direct evidence and limit |
 | --- | --- | --- |
-| Unauthorized context and citations remain zero | Verified (synthetic) | Go BFF/current-authority tests cover caller-owned private, other-user public, and other-user private Memos. Python durable retrieval tests intersect visibility before materialization and reject leaked candidates. No real multi-user browser run is claimed. |
-| The supported Agent browser path uses only the same-origin Memos BFF | Verified (source and component tests) | The Web client posts only to `/api/ai/agent/answer`. The Agent Compose overlay removes the AI Service host port. Legacy panels are hidden when their separate `VITE_AI_SERVICE_URL` opt-in is absent. Web tests pass, but no headed browser was run for this R5 slice. |
-| Memory and durable retrieval are equivalent within documented tolerance | Verified (synthetic) | The disposable product test proves the same answer state, retrieved count, Memo UID set, and `memo-v1` citation version. Adapter-specific embedding IDs, scores, titles, and tags are intentionally excluded from parity because durable citations do not trust vector or rehydration metadata. |
-| Durable failures never fall back to legacy/raw-content retrieval | Verified (synthetic) | Agent and internal-route tests cover missing ownership and durable failure as the existing safe 503, with no memory or Provider call. Empty durable evidence remains no-context. |
-| Disabled/default behavior and rollback remain safe | Verified (source and tests) | Rehydration is disabled by default. Disabled lifespan constructs no durable objects, the endpoint ignores durable state, and memory retrieval remains selected. Rollback is to disable rehydration/Agent and retain Memos. Runtime rollback has not been executed. |
-| Lifecycle dispatch, rebuild activation, and restart reconciliation are operational | Contradicted by current source | `MemoLifecycleProcessor` and generation activation are used only by tests; there is no production dispatcher or rebuild activation entry point. A newly enabled real runtime therefore has no reviewed path to populate and activate its derived generation. |
-| Live Qdrant/Memos and authenticated browser behavior are proven | Blocked by authorization | Current work forbids Docker, network, Qdrant, accounts, Memos, volumes, secrets, and browser actions. Synthetic tests cannot replace this evidence. |
-| Real-data opt-in is safe to execute | Unverified | A real-data run requires explicit authorization, verified backups, a dry run, exact rollback targets, and post-run reconciliation. None was executed. |
+| Unauthorized context and citations remain zero | Verified (runtime and tests) | Two temporary users proved that an owned private Memo is cited, another user's private Memo returns 404 and never appears in citations, and another user's public Memo is visible and cited. Existing Go/Python tests retain the same visibility matrix. |
+| The supported Agent browser path uses only the same-origin Memos BFF | Verified (runtime, source, and tests) | Headed-browser network evidence showed `POST /api/ai/agent/answer` returning 200 with the safe projection. The Agent overlay published only Memos port 5230; AI Service and Qdrant remained container-internal. Legacy direct-AI panels still fail closed and are not part of the supported Agent path. |
+| Browser Agent responses expose only the controlled projection | Verified (runtime and tests) | The authenticated response contained answer state, bounded citation fields, and execution trace only. It contained no raw Memo body, authority capability, vector metadata, Provider settings, secret, or internal transport data. |
+| Memory and durable retrieval are equivalent within documented tolerance | Verified (synthetic and runtime) | Product tests prove answer state, retrieved count, Memo UID set, and `memo-v1` citation version parity. Runtime durable answers returned only current authorized Memo citations. Adapter-specific embedding IDs, scores, titles, and tags remain intentionally outside parity. |
+| Durable failures never fall back to legacy/raw-content retrieval | Verified (tests and runtime rollback) | Missing ownership and durable failures remain safe 503 with no legacy fallback. Disabling rehydration while retaining lifecycle Qdrant points also failed safely; restoring the default memory store returned a 200 no-context result with zero citations. |
+| Lifecycle dispatch and rebuild activation are operational | Verified (runtime and tests) | Default-disabled Memos mutation hooks delivered authenticated create/update/delete events to the existing AI listener. Startup prepared the authoritative SQLite outbox, replayed current synthetic Memos, and activated the configured generation with 204. |
+| Update and delete converge without stale retrieval | Verified (runtime and tests) | An update advanced the lifecycle sequence and replaced the content-free document hash in the current generation. Delete produced an applied tombstone, removed every target generation point, and the deleted Memo did not reappear in a subsequent answer. |
+| Restart reconciliation is operational | Verified (runtime) | Qdrant, AI Service, and Memos were restarted serially. Memos replayed the authoritative lifecycle state, activation returned 204, the deleted point remained absent, current points remained present, and the authenticated BFF answer still returned 200. |
+| Disabled/default behavior and rollback remain safe | Verified (runtime, source, and tests) | Rehydration and lifecycle remain false by default. The runtime rollback set both false and restored `AI_VECTOR_STORE=memory`; the same authenticated browser received a no-context 200 with zero citations while Memos source data remained intact. Full Agent disable remains available with `AI_AGENT_ENABLED=false`. |
+| Disposable cleanup is exact | Verified (runtime) | Both named disposable Compose projects were removed with their exact containers, networks, and four project volumes. Temporary accounts, Memos, secrets, Qdrant data, browser state, build contexts, generated frontend assets, and acceptance image tags were removed. No push, tag, or release occurred. |
+| Real-data and multi-instance opt-in are safe to execute | Unverified and out of R5 scope | Real user data, MySQL/PostgreSQL, backup/restore execution, external Providers, shared atomic replay/capability state, cross-host encryption, and multi-instance operation require separate design and authorization. |
 
 ## Verified local gates
 
-- Python targeted R5/A4/R4 regression: 404 passed, with one existing TestClient
+- Python targeted R5/A4/R4 regression: 417 passed, with one existing TestClient
   deprecation warning.
-- Go Agent/BFF/SQLite packages: targeted tests and `go vet` passed.
-- Web suite: 153 tests passed; the Evidence Answer API/component tests assert the
-  same-origin BFF path and delayed user-triggered request.
-- Python compile sanity, diff checks, and credential/local-path/source-wiring
-  scans passed.
-
-These checks prove code and synthetic integration behavior only. They do not
-prove a running container topology, browser authentication, real persistence,
-or restart convergence.
+- Related Go Agent/BFF/SQLite tests and `go vet` passed.
+- Web suite: 153 tests passed; the Evidence Answer API/component tests retain
+  the same-origin BFF and delayed-request assertions.
+- Docker Compose static configuration passed with the Agent and Qdrant
+  profiles; runtime topology exposed only Memos port 5230.
+- Python compile sanity, formatting, diff checks, source-wiring scans, and
+  credential/local-path scans passed.
 
 ## Safe rollback
 
-1. Set `AI_AGENT_REHYDRATION_ENABLED=false` and restart the disposable stack.
-2. If the complete Agent path must be disabled, also set
-   `AI_AGENT_ENABLED=false`.
-3. Keep Memos and its source database unchanged.
-4. Delete only pre-identified rebuildable AI ledger/vector state after backup
-   verification; never delete a broad or unresolved volume/path.
-5. Re-enable only after a clean rebuild and reconciliation against Memos.
+1. Set `AI_AGENT_LIFECYCLE_ENABLED=false` and
+   `AI_AGENT_REHYDRATION_ENABLED=false`.
+2. Restore `AI_VECTOR_STORE=memory`, or set `AI_AGENT_ENABLED=false` to disable
+   the complete Agent path. Do not leave the legacy memory path pointed at
+   lifecycle-only Qdrant records and describe the resulting safe 503 as parity.
+3. Restart the single-host stack and verify a no-context response or the
+   expected disabled response through the Memos BFF.
+4. Keep Memos and its source database unchanged.
+5. Delete only pre-identified rebuildable AI ledger/vector state after backup
+   verification; never delete a broad or unresolved volume or path.
+6. Re-enable only after a clean rebuild and reconciliation against Memos.
 
-## Authorization required for real runtime acceptance
+## Completion boundary
 
-Approval must explicitly cover a disposable Compose topology, temporary
-credentials and secrets, temporary accounts, synthetic Memos and visibility,
-temporary volumes, local Qdrant, browser automation, restart, and cleanup.
-Use the deterministic Provider unless a separate Provider authorization exists.
-
-The authorized run must prove:
-
-1. the browser signs in and calls only the same-origin Memos BFF;
-2. an owned private Memo and another user's public Memo may be cited, while
-   another user's private Memo never enters context or citations;
-3. one answer returns controlled citations with no raw content in browser state;
-4. update and delete converge without stale retrieval;
-5. restart preserves or safely rebuilds derived state;
-6. disabling rehydration returns to the memory/disabled path;
-7. cleanup removes only the disposable derived resources and preserves Memos.
-
-Until lifecycle activation exists and this authorized run passes, the accurate
-status is: **R5 code and synthetic product path complete; real runtime acceptance
-blocked by missing lifecycle wiring and runtime authorization.**
+R5 proves a local, single-host, default-disabled Agent architecture with
+Memos-owned authorization and lifecycle authority, Qdrant as rebuildable
+derived state, deterministic disposable runtime acceptance, safe rollback, and
+exact cleanup. The next work may proceed to R6. It must not reinterpret this
+record as approval for real data, an external Provider, public AI ports,
+multi-instance deployment, or cross-host plaintext transport.
