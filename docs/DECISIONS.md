@@ -861,3 +861,15 @@ error code、timestamp、document 或动态 label。rollback 无持久清理。
 当前 `ReadMemoLifecycleBacklog` 只有 pending/failed/exhausted count，没有 oldest-pending timestamp，因此禁止产生
 `outbox_lag_seconds`。rebuild 的 Memos prepare 与 AI activate 尚无统一跨进程 state authority；reconciliation 没有专属
 authority。两者在 state machine 单独评审前不得接线或从 error/backlog 推断状态。R6-I4H 不自动授权 runtime wiring。
+
+## ADR-084：R6-I4I 用独立 Go bounded adapter 保持 lifecycle observability dormant
+
+R6-I4I 只在 `internal/aiagent` 定义 `agent-observability-v1` lifecycle 子集，不复用或传输 Python adapter。event constructor
+只接受 `success`/`pending`/`failed`；metric constructor 只接受 `retry_count`/`quarantine_count`，固定 unit=`count`、
+value=1。adapter 在每次 record 时重新校验完整 shape，capacity 固定为 1–4096，overflow oldest-first eviction，snapshot
+返回 copy。
+
+该 slice 没有 runtime caller、env/config、endpoint、transport、exporter、persistence、thread/timer/background task，也不
+读取 outbox 文档、ID、error 或 timestamp。测试证明 strict construction、forged shape rejection、容量、淘汰、snapshot
+copy 与 nil/invalid input。R6-I4I 不产生 operational sample；R6-I4J 如继续，只能按 ADR-083 把 optional recorder 注入
+既有 lifecycle-enabled Go composition，并保持 lag/rebuild/reconciliation 阻断。
