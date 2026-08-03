@@ -72,7 +72,7 @@ export interface AiEvidenceCitation {
 
 export interface AiEvidenceTraceStep {
   index: number;
-  name: "search_memos" | "answer_from_evidence";
+  name: "search_memos" | "answer_from_evidence" | "refuse_unsafe_request";
   status: "completed";
   result_count?: number;
 }
@@ -81,7 +81,7 @@ export interface AiEvidenceAnswer {
   answer: string;
   citations: AiEvidenceCitation[];
   trace: {
-    terminal_state: "answered" | "no_context";
+    terminal_state: "answered" | "no_context" | "refused";
     steps: AiEvidenceTraceStep[];
   };
 }
@@ -193,13 +193,17 @@ export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null =
 
   if (!isRecord(value.trace) || !hasExactKeys(value.trace, ["terminal_state", "steps"]) || !Array.isArray(value.trace.steps)) return null;
   const terminalState = value.trace.terminal_state;
-  if (terminalState !== "answered" && terminalState !== "no_context") return null;
+  if (terminalState !== "answered" && terminalState !== "no_context" && terminalState !== "refused") return null;
   const steps = value.trace.steps.map((step): AiEvidenceTraceStep | null => {
     if (!isRecord(step)) return null;
     const hasResultCount = Object.hasOwn(step, "result_count");
     if (!hasExactKeys(step, hasResultCount ? ["index", "kind", "name", "status", "result_count"] : ["index", "kind", "name", "status"]))
       return null;
-    if (!Number.isInteger(step.index) || step.kind !== (step.index === 1 ? "tool" : "final") || step.status !== "completed") return null;
+    if (!Number.isInteger(step.index) || step.status !== "completed") return null;
+    if (step.index === 1 && step.kind === "final" && step.name === "refuse_unsafe_request" && !hasResultCount) {
+      return { index: step.index, name: step.name, status: step.status };
+    }
+    if (step.kind !== (step.index === 1 ? "tool" : "final")) return null;
     if (step.index === 1 && step.name === "search_memos" && Number.isInteger(step.result_count) && step.result_count === citations.length) {
       return { index: step.index, name: step.name, status: step.status, result_count: step.result_count };
     }
@@ -210,8 +214,15 @@ export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null =
   });
   if (
     steps.some((step) => step === null) ||
-    (terminalState === "answered" && steps.length !== 2) ||
-    (terminalState === "no_context" && steps.length !== 1)
+    (terminalState === "answered" &&
+      (steps.length !== 2 || steps[0]?.name !== "search_memos" || steps[1]?.name !== "answer_from_evidence")) ||
+    (terminalState === "no_context" && (steps.length !== 1 || steps[0]?.name !== "search_memos")) ||
+    (terminalState === "refused" &&
+      (steps.length !== 1 ||
+        steps[0]?.name !== "refuse_unsafe_request" ||
+        citations.length !== 0 ||
+        provider !== "policy" ||
+        answer !== "Request refused by the Agent safety policy."))
   ) {
     return null;
   }

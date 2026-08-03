@@ -176,11 +176,37 @@ def test_no_context_trace_has_one_search_and_no_provider_finalization():
     assert result.to_dict()["trace"]["terminal_state"] == "no_context"
 
 
+def test_refused_trace_has_one_fixed_final_step_and_no_citations():
+    result = AgentAnswerResult(
+        answer="Request refused by the Agent safety policy.",
+        citations=(),
+        visibility=MemoVisibilityScope(frozenset({"memo-visible"})),
+        provider="policy",
+        retrieved_count=0,
+        trace=AgentTrace(
+            terminal_state="refused",
+            steps=(AgentStep(1, "final", "refuse_unsafe_request", "completed"),),
+        ),
+    )
+
+    assert result.to_dict()["trace"] == {
+        "terminal_state": "refused",
+        "steps": [
+            {
+                "index": 1,
+                "kind": "final",
+                "name": "refuse_unsafe_request",
+                "status": "completed",
+            }
+        ],
+    }
+
+
 def test_trace_rejects_additional_or_non_search_tools():
     with pytest.raises(AgentContractError, match="only permitted Agent tool"):
         AgentStep(1, "tool", "fetch_url", "completed")
 
-    with pytest.raises(AgentContractError, match="exactly one search_memos"):
+    with pytest.raises(AgentContractError, match="only search"):
         AgentTrace(
             terminal_state="no_context",
             steps=(

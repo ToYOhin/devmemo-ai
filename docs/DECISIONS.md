@@ -914,3 +914,15 @@ provider=`policy`、trace terminal=`refused`，且只有 index 1 的 final `refu
 保持 unknown state/name fail closed。测试需覆盖 positive/near-miss、无 retrieval/Provider、answer observability、Go/Web
 strict projection 与完整 baseline。rollback 三端同步撤销，无 schema migration 或持久数据清理。R6-I5B 不单独授权
 runtime/Docker/browser/network 或发布。
+
+## ADR-088：R6-I5C 同步接线 fixed refusal，并保持三端 fail-closed
+
+R6-I5C 实现 ADR-087 的 question-only action/target policy，并对明显的 prevent/avoid/do-not safety discussion 保持 near-miss。
+命中后 Python Agent 返回固定 answer、provider=`policy`、零 citation、terminal=`refused` 与单个
+`refuse_unsafe_request` step；retrieval/Provider clock、recorder 与 caller 均不触发。answer observability 只产生固定
+count/refused event。
+
+Go BFF 与 Web parser 同步验证 fixed answer/provider/terminal/step/zero-citation 组合，且拒绝把 refusal step 错配到 answered
+或 no-context。Web locale/render 只显示安全 answer 与 fixed trace label，不显示 provider。64-case offline baseline 无 failed
+case，七项 threshold 全部通过；positive/near-miss、Python endpoint、Go client 与 Web parser/render tests 提供回归证据。
+这仍不证明真实 Provider/Qdrant、Docker/browser、lifecycle convergence 或 release。rollback 必须三端同步撤销，无持久清理。

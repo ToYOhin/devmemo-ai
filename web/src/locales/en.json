@@ -48,6 +48,7 @@
     "trace": "Execution trace",
     "trace-search_memos": "Search Memos",
     "trace-answer_from_evidence": "Answer from evidence",
+    "trace-refuse_unsafe_request": "Refuse unsafe request",
     "trace-results_one": "{{count}} result",
     "trace-results_other": "{{count}} results",
     "error-invalid": "Enter a question and a citation limit from 1 to 10.",

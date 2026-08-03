@@ -562,11 +562,12 @@ async def answer_delegated_agent_request(
             datetime.now(timezone.utc),
         )
         response = result.to_dict()
-        outcome = (
-            "no_context"
-            if result.trace.terminal_state == "no_context"
-            else "success"
-        )
+        if result.trace.terminal_state == "no_context":
+            outcome = "no_context"
+        elif result.trace.terminal_state == "refused":
+            outcome = "refused"
+        else:
+            outcome = "success"
         return response
     except AgentDelegationError as error:
         outcome = "invalid"

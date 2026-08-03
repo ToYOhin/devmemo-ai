@@ -71,11 +71,10 @@ async def _run_synthetic_case(
     try:
         result = await agent._run(request)
         citations = tuple(citation.memo_id for citation in result.citations)
-        answer_state = (
-            "no_answer"
-            if result.trace.terminal_state == "no_context"
-            else "answer"
-        )
+        answer_state = {
+            "no_context": "no_answer",
+            "refused": "refusal",
+        }.get(result.trace.terminal_state, "answer")
         failures = ()
     except Exception:
         citations = ()
