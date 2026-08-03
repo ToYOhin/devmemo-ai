@@ -1212,6 +1212,14 @@ oldest-pending timestamp query. Rebuild state remains blocked on a reviewed
 cross-process Memos/AI state machine, and reconciliation remains rejected until
 it has a dedicated authority. No inferred lag/state sample is allowed.
 
+R6-I4I implements only the first dormant Go slice in `internal/aiagent`: strict
+constructors admit the three lifecycle outcomes and unit counter deltas only,
+and a constructor-fixed 1-4096 bounded in-memory recorder validates every
+sample, evicts oldest-first, and returns copied snapshots. It has no runtime
+caller, environment setting, transport, exporter, persistence, timer, or
+background task. Its tests are contract/adapter evidence, not lifecycle runtime
+or operator-facing evidence.
+
 ## Future work excluded from this proposal
 
 Write tools require separately reviewed authentication and visibility mapping,

@@ -594,6 +594,11 @@ optional recorder 与 composition ownership，无持久数据清理。
 outbox lag 继续阻断，因为 store 只有 count，没有权威 oldest-pending timestamp query。rebuild state 继续等待已评审的
 Memos/AI 跨进程 state machine；reconciliation 在拥有 dedicated authority 前继续拒绝。不得推断 lag/state sample。
 
+R6-I4I 只在 `internal/aiagent` 实现首个 dormant Go slice：strict constructor 仅接受三种 lifecycle outcome 与单位 counter
+delta；constructor-fixed 1–4096 bounded in-memory recorder 校验每条 sample、oldest-first eviction，并返回 copied
+snapshot。它没有 runtime caller、env setting、transport、exporter、persistence、timer 或 background task。测试只证明
+contract/adapter，不证明 lifecycle runtime 或 operator-facing observability。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。
