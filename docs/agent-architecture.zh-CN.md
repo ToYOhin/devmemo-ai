@@ -578,6 +578,22 @@ parse、grounding validation、token/cost metric、Provider-specific label、str
 均后置；本切片排除 reader/exporter、persistence、settings、network call 与真实 Provider execution。rollback 只删除
 helper 与 inner boundary，保留 answer/retrieval sample。
 
+#### R6-I4H 已评审 source-owned lifecycle observation
+
+R6-I4H 不修改 runtime code。唯一候选 owner 是 Go `memoLifecycleSourceRuntime`，只使用 outbox 返回的权威持久状态。每次
+delivery attempt 最多产生一条固定 `outbox_dispatch` event：acknowledgement 持久化后为 `success`；failure 持久化后，
+仍可重试为 `pending`，status 为 `EXHAUSTED` 时为 `failed`。同一持久 transition 可额外产生整数 delta
+`retry_count=1` 或 `quarantine_count=1`。attempt、event/Memo ID、error code、timestamp 与 transport detail 均不得成为
+label 或 field。
+
+首个切片必须先定义独立 strict Go contract 与 constructor-fixed bounded in-memory adapter，不新增到 Python adapter 的
+transport。若后续接线，只能由既有 lifecycle-enabled composition 注入 optional recorder。每条 sample 都 best-effort，
+不得改变 delivery、acknowledgement、retry/exhaustion persistence、rebuild activation 或 returned error。rollback 删除
+optional recorder 与 composition ownership，无持久数据清理。
+
+outbox lag 继续阻断，因为 store 只有 count，没有权威 oldest-pending timestamp query。rebuild state 继续等待已评审的
+Memos/AI 跨进程 state machine；reconciliation 在拥有 dedicated authority 前继续拒绝。不得推断 lag/state sample。
+
 ## 后续工作不包含在本提案内
 
 任何写工具都需要独立评审认证与 visibility mapping、显式用户确认、幂等、审计与回滚、限流及威胁建模。只读 Agent 不隐含这些能力。

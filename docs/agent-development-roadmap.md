@@ -458,7 +458,8 @@ project is independently reproducible.
 
 **Status:** R6-I1 through R6-I4G are implemented and test-verified. R6-I4B's
 runtime ownership review, R6-I4D's retrieval-timing review, and R6-I4F's
-Provider-timing review are documented.
+Provider-timing review are documented. R6-I4H reviews the source-owned Go
+lifecycle candidate without wiring it.
 The explicitly authorized first batch now records fixed AI answer
 outcome/request-count samples. The strict
 contracts, 64-case sanitized corpus, seven predeclared thresholds, pure

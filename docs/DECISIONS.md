@@ -845,3 +845,19 @@ fake clock/provider/recorder 与 TestClient 已覆盖 nested retrieval/Provider 
 answer 保持 Provider `success`、invalid text、timeout/unavailable、cancellation、recorder failure 与 handler 注入。实现未
 增加 env/config/secret/port/dependency、reader/exporter/persistence、network/真实 Provider、Go lifecycle、rebuild 或
 reconciliation。rollback 只删除 Provider helper 与 inner boundary，保留 I4C answer 和 I4E retrieval sample。
+
+## ADR-083：lifecycle observation 只投影 Go outbox 已持久化的 delivery transition
+
+R6-I4H 只评审、不接线。候选 owner 固定为 Go `memoLifecycleSourceRuntime`，不得把 Python adapter 跨进程复用。一次
+delivery 只有在 outbox 权威操作返回后才允许 emission：acknowledgement 持久化成功为 `outbox_dispatch/success`；
+`RecordMemoLifecycleDeliveryFailure` 返回仍 retryable 的 `PENDING` 为 `pending` event 加 `retry_count=1`；返回
+`EXHAUSTED` 为 `failed` event 加 `quarantine_count=1`。这些 count 是固定 transition delta，不是带 event ID 的 gauge。
+
+首个实现候选只定义 strict Go sample constructor、recorder interface 与 constructor-fixed bounded memory adapter；后续 wiring
+只能由既有 lifecycle enablement composition 注入 optional recorder。record 缺失、eviction 或 panic/error 必须隔离，不能
+改变 transport result、ack、failure persistence、exhaustion 或 runtime error。sample 不得携带 attempt、event/Memo ID、
+error code、timestamp、document 或动态 label。rollback 无持久清理。
+
+当前 `ReadMemoLifecycleBacklog` 只有 pending/failed/exhausted count，没有 oldest-pending timestamp，因此禁止产生
+`outbox_lag_seconds`。rebuild 的 Memos prepare 与 AI activate 尚无统一跨进程 state authority；reconciliation 没有专属
+authority。两者在 state machine 单独评审前不得接线或从 error/backlog 推断状态。R6-I4H 不自动授权 runtime wiring。
