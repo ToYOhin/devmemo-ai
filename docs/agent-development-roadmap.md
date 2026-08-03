@@ -480,6 +480,9 @@ requires an authoritative cross-process state model.
 The R6-I5C offline product-core baseline runs all 64 sanitized cases with no
 failed case and all seven thresholds passing. The fixed refusal contract is
 synchronized across Python, Go, and Web and runs before retrieval or Provider.
+The completion audit still blocks R6 on Python lint/type/coverage tooling,
+clean-checkout CI for the local commits, disposable browser proof for the new
+refusal path, and reviewed default-branch/tag/release publication.
 
 Scope:
 

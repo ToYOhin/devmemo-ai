@@ -60,7 +60,10 @@ See [docs/structure.md](docs/structure.md) for repository and runtime
 boundaries, and [docs/api.md](docs/api.md) for API contracts. The experimental
 Agent design and remaining delivery gates are documented separately in
 [docs/agent-architecture.md](docs/agent-architecture.md) and
-[docs/agent-development-roadmap.md](docs/agent-development-roadmap.md).
+[docs/agent-development-roadmap.md](docs/agent-development-roadmap.md). The
+sanitized evaluation method/results and current completion gates are recorded in
+[docs/agent-evaluation-benchmark.md](docs/agent-evaluation-benchmark.md) and
+[docs/r6-completion-audit.md](docs/r6-completion-audit.md).
 
 ## Quick start
 
@@ -105,8 +108,9 @@ AI_AGENT_ENABLED=false
 - Qdrant and Ollama require explicit Compose profiles.
 - Public chunk retrieval remains disabled. It requires a real trusted gateway,
   Memos visibility mapping, and a verified disable-and-rollback path.
-- The Evidence Answer Agent remains an opt-in experiment. Its lifecycle
-  outbox/ledger proofs are not connected to Memo CRUD or automatic indexing.
+- The Evidence Answer Agent remains an opt-in experiment. Default-disabled
+  single-host lifecycle, durable retrieval, fixed refusal, and content-free
+  observability paths are present, but R6 CI/browser/release gates remain open.
 
 For a controlled local Docker development topology where a Memos Webhook must
 target `ai-service`, use the `docker-compose.local-webhook.yml` override
