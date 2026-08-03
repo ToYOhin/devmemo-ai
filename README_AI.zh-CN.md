@@ -83,12 +83,12 @@ dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
 [docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。
 
-R5-I1 至 R5-I15 的持久化检索工作已形成默认关闭的单机实现，并完成 disposable synthetic
-产品路径证明。它包括授权 candidate 选择、当前权威正文 rehydration、internal authenticated
-HTTP contract、lifecycle/snapshot filtering，以及无 legacy fallback 的 opt-in answer-path selection。
-它不公开浏览器 rehydration API，也不授权真实数据索引。lifecycle dispatch、rebuild activation、
-真实 Qdrant/Memos、重启对账与认证浏览器验收仍是独立闸门。正文、身份与 visibility 的最终权威
-仍属于 Memos；详见 [R5 验收记录](docs/r5-acceptance.zh-CN.md)。
+R5 已在默认关闭的单机范围内完成。授权 candidate 选择、当前权威正文 rehydration、internal
+authenticated HTTP、Memos-owned lifecycle dispatch、generation-scoped Qdrant state、rebuild
+activation 与无 fallback answer selection 已通过 disposable Docker 与认证浏览器验收，覆盖 visibility
+隔离、update/delete、restart、rollback 和 cleanup。AI Service 与 Qdrant 仍不向宿主机发布端口。
+真实数据、外部 Provider、跨主机 transport 与多实例仍是独立闸门。正文、身份、visibility 与 lifecycle
+最终权威仍属于 Memos；详见 [R5 验收记录](docs/r5-acceptance.zh-CN.md)。
 
 ## 本地开发与验证
 

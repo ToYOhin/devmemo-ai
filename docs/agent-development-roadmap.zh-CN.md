@@ -26,8 +26,9 @@
 > 与 signed delegation 内的 opaque ref，R5-I13 已增加带 snapshot recheck 的 injected durable candidate/
 > rehydration orchestration，R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation revision、
 > 授权 UID 查询下推与默认关闭的 lifespan ownership，R5-I15 已在 verified answer path 无 fallback 地选择该
-> owned runtime，并完成 disposable synthetic 单机流程证明；R5-I16 已完成逐项审计：代码与 synthetic 产品行为
-> 完成，lifecycle activation 与真实 Docker/认证浏览器验收仍未验证。
+> owned runtime，并完成 disposable synthetic 单机流程证明；R5-I16 已完成逐项审计。获授权的 post-I16
+> lifecycle/runtime 工作现已连接 dispatch、generation activation 与 Qdrant derived state，并完成 disposable
+> 认证浏览器验收。R5 在默认关闭的单机范围内完成。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -61,8 +62,7 @@ Agent，而不是通用自治助手：
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
-| P0 | durable Agent 回答路径仍缺真实运行时验收 | R5-I16 已证明代码/synthetic 边界，并记录 lifecycle dispatch/rebuild activation、真实 Qdrant/Memos、重启对账和认证浏览器证据仍不可用 | 单独评审 lifecycle activation，再为 disposable Docker/浏览器运行时证明取得明确授权；多实例前必须提供 shared atomic state |
-| P0 | A4 尚未接入运行时生命周期路径 | 契约、SQLite outbox、派生 ledger 恢复、认证 transport 与一次性 integration proof 已具备，但没有 lifecycle route、dispatcher 或正式 consumer 调用它们 | 单独评审并授权单机 runtime route/client/dispatcher；任何多实例主张前必须增加共享 replay 存储 |
+| P0 | R5 证据有意限定为 single-host disposable | 运行时验收已覆盖 SQLite Memos、本地 Qdrant、deterministic Provider、认证 visibility、lifecycle 收敛、restart、rollback 与 cleanup，但不覆盖真实数据或多实例 | 保持 R5 边界；真实数据需 backup/restore 证明，多实例需 shared atomic state 与加密 transport |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
 | P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
 | P1 | 可观测性只停留在单次请求 | 运维无法安全观察延迟、重试积压、隔离记录或重建进度 | 增加无内容 metrics/span，并规定字段白名单和基数上限 |
@@ -282,6 +282,10 @@ server-owned citation 进入既有 Agent result 时，不接受 vector/rehydrati
 metadata。所有 durable error 均映射既有安全 503，不 fallback memory，也不调用 Provider。disabled 保留 memory
 retrieval。临时 SQLite、内存 vector 与 fake-client 证明已到达完整回答 trace，未使用网络、Docker、Qdrant 或
 真实 Provider。
+获授权的 post-I16 切片把 SQLite mutation/outbox delivery 接到既有 AI listener，应用 generation-scoped Qdrant
+transition，并只激活已对账 manifest。两次 disposable headed-browser 运行证明自有 private 与另一用户 public
+可进入证据、另一用户 private 被排除、安全浏览器投影、update/delete 收敛、restart reconstruction、memory
+rollback 与精确 cleanup。AI Service/Qdrant 不发布宿主端口，所有新 runtime flag 仍默认 false。
 
 **结果：** 同一权限边界适用于持久化检索，浏览器只有一种受支持 AI 访问方式。
 
@@ -296,14 +300,17 @@ retrieval。临时 SQLite、内存 vector 与 fake-client 证明已到达完整�
 
 验收条件：
 
-当前证据与运行时授权限制记录在 [R5 验收记录](r5-acceptance.zh-CN.md)。
+当前证据与剩余范围限制记录在 [R5 验收记录](r5-acceptance.zh-CN.md)。
 
 - 跨用户和 private/public 可见性测试中，未授权 citation 与未授权上下文组装均为零。
 - 浏览器不请求 AI Service，且不向宿主机发布 AI 端口。
 - memory store 与选定持久化 adapter 在文档容差内返回等价的授权结果。
+- disposable 单机 Docker/浏览器验收证明 lifecycle activation、current-authority visibility、update/delete、
+  restart、rollback 与 cleanup。
 - 真实数据 opt-in 需要另行授权、备份验证、dry run、回滚命令和运行后对账。
 
-回滚：关闭持久化检索，回到 disabled/deterministic 路径，丢弃可重建派生状态，保持 Memos 不变。
+回滚：关闭 lifecycle 与 rehydration，恢复 memory store 或完全关闭 Agent，只丢弃预先确认的可重建派生状态，
+保持 Memos 不变。
 
 ### R6 — 评估、可观测性、工程门禁与发布
 
@@ -351,11 +358,9 @@ retrieval。临时 SQLite、内存 vector 与 fake-client 证明已到达完整�
 
 只有 R6 完成，并重新进行威胁建模、数据流审查和明确授权后，才能重新评估这些能力。
 
-## 下一授权闸门
+## 下一阶段
 
-R5-I16 已完成证据审计、最终本地门禁、parity tolerance、rollback 和 disposable runtime 授权清单，详见
-[R5 验收记录](r5-acceptance.zh-CN.md)。下一闸门不是隐含批准的新代码切片：lifecycle activation 需要单独设计
-评审；Docker、临时账号/Memo/volume/secret、本地 Qdrant、重启、清理和认证浏览器运行也需要明确授权。两个
-缺口均解决并采集证据前，不得宣称真实运行时验收完成。
-真实 Docker/浏览器验收要等 answer path 接通后另行取得 runtime 授权；多实例前仍需加密 transport 与 shared
-atomic replay/capability storage。
+R5 已在文档定义的默认关闭单机边界内完成，详见 [R5 验收记录](r5-acceptance.zh-CN.md)。下一步进入 R6：
+先建立脱敏 evaluation corpus 与版本化 threshold，再增加 content-free observability 及可复现 CI/release 证据。
+R6 不自动授权真实用户数据、外部 Provider、公开 AI 端口、push/tag/release 或多实例部署。任何多实例主张前仍
+必须具备加密 transport 与 shared atomic replay/capability storage。

@@ -38,9 +38,10 @@
 > generation revision, authorized UID query pushdown, and default-disabled
 > lifespan ownership. R5-I15 selects that owned runtime in the verified answer
 > path without fallback and proves a disposable synthetic single-host flow.
-> R5-I16 records the requirement-by-requirement completion audit: code and
-> synthetic product behavior are complete, while lifecycle activation and real
-> Docker/authenticated-browser acceptance remain unverified.
+> R5-I16 records the requirement-by-requirement completion audit. The authorized
+> post-I16 lifecycle and runtime work has now connected dispatch, generation
+> activation, and Qdrant-derived state and completed disposable authenticated-
+> browser acceptance. R5 is complete for its default-disabled single-host scope.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -88,8 +89,7 @@ answers, measurable quality, and reproducible recovery**.
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | Durable Agent answer path lacks real runtime acceptance | R5-I16 proves the code/synthetic boundary and records that lifecycle dispatch/rebuild activation, live Qdrant/Memos, restart reconciliation, and authenticated browser evidence remain unavailable | Separately review lifecycle activation, then obtain explicit authorization for disposable Docker/browser runtime proof; require shared atomic state before multi-instance use |
-| P0 | A4 is not connected to a runtime lifecycle path | Contract, SQLite outbox, derived-ledger recovery, authenticated transport, and disposable integration proofs exist, but no lifecycle route, dispatcher, or production consumer invokes them | Separately review and authorize a single-host runtime route/client/dispatcher; require shared replay storage before any multi-instance claim |
+| P0 | R5 evidence is intentionally single-host and disposable | Runtime acceptance now covers SQLite Memos, local Qdrant, deterministic Provider, authenticated visibility, lifecycle convergence, restart, rollback, and cleanup, but not real data or multi-instance deployment | Preserve the R5 boundary; require backup/restore proof for real data and shared atomic state plus encrypted transport before multi-instance use |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
 | P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
 | P1 | Observability is request-local | Operators cannot inspect latency, retry backlog, stale/quarantined records, or rebuild progress without risking content exposure | Add content-free metrics and spans with explicit field allowlists and cardinality limits |
@@ -407,6 +407,13 @@ visibility, or citation metadata. Every durable error maps to the existing safe
 503 with no memory fallback or Provider call. Disabled mode retains memory
 retrieval. A temporary SQLite/in-memory-vector/fake-client proof reaches the
 complete answer trace without network, Docker, Qdrant, or a real Provider.
+The authorized post-I16 slice connects SQLite mutation/outbox delivery to the
+existing AI listener, applies generation-scoped Qdrant transitions, and
+activates only a reconciled manifest. Two disposable headed-browser runs prove
+owned private and other-user public inclusion, other-user private exclusion,
+safe browser projection, update/delete convergence, restart reconstruction,
+memory rollback, and exact cleanup. AI Service and Qdrant remain unpublished;
+all new runtime flags remain false by default.
 
 **Outcome:** the same permission boundary works with durable retrieval and the
 browser has one supported AI access pattern.
@@ -427,7 +434,7 @@ Scope:
 
 Acceptance:
 
-Current evidence and runtime authorization limits are tracked in the
+Current evidence and remaining scope limits are tracked in the
 [R5 Acceptance Record](r5-acceptance.md).
 
 - Cross-user and private/public visibility tests show zero unauthorized
@@ -435,11 +442,14 @@ Current evidence and runtime authorization limits are tracked in the
 - No browser request targets the AI Service and no AI host port is published.
 - Store parity tests produce equivalent authorized results for memory and the
   selected durable adapter within documented tolerances.
+- Disposable single-host Docker/browser acceptance proves lifecycle activation,
+  current-authority visibility, update/delete, restart, rollback, and cleanup.
 - A real-data opt-in requires separate authorization, backup verification, dry
   run, rollback command, and post-run reconciliation.
 
-Rollback: disable durable retrieval, revert to the disabled/deterministic path,
-discard rebuildable derived state, and retain Memos unchanged.
+Rollback: disable lifecycle and rehydration, restore the memory store or disable
+the complete Agent, discard only pre-identified rebuildable derived state, and
+retain Memos unchanged.
 
 ### R6 — Evaluation, observability, engineering gates, and release
 
@@ -516,14 +526,12 @@ single-Agent read path is reliable:
 They may be reconsidered only after R6 and with a new threat model, data-flow
 review, and explicit authorization.
 
-## Next authorization gate
+## Next stage
 
-R5-I16 has completed the evidence audit, final local gates, documented parity
-tolerance, rollback, and the disposable runtime authorization checklist in the
-[R5 Acceptance Record](r5-acceptance.md). The next gate is not another implied
-code slice: lifecycle activation needs separate design review, and Docker,
-temporary accounts/Memos/volumes/secrets, local Qdrant, restart, cleanup, and an
-authenticated browser run require explicit authorization. Do not claim real
-runtime acceptance until both gaps are resolved and evidence is captured.
-Docker/browser proof remains later; encrypted transport and shared atomic
-replay/capability storage remain mandatory before multi-instance use.
+R5 is complete for the documented default-disabled single-host boundary; see
+the [R5 Acceptance Record](r5-acceptance.md). Proceed to R6 with a sanitized
+evaluation corpus and versioned thresholds first, followed by content-free
+observability and reproducible CI/release evidence. R6 does not authorize real
+user data, an external Provider, public AI ports, a push/tag/release, or
+multi-instance deployment. Encrypted transport and shared atomic
+replay/capability storage remain mandatory before any multi-instance claim.
