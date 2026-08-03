@@ -456,7 +456,7 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
-**Status:** R6-I1 through R6-I4E are implemented and test-verified. R6-I4B's
+**Status:** R6-I1 through R6-I4G are implemented and test-verified. R6-I4B's
 runtime ownership review, R6-I4D's retrieval-timing review, and R6-I4F's
 Provider-timing review are documented.
 The explicitly authorized first batch now records fixed AI answer
@@ -468,9 +468,10 @@ claimed. The adapter is lifespan-owned only under the existing Agent opt-in;
 the internal answer handler emits one fixed event and count per invocation.
 R6-I4E also emits one fixed retrieval latency metric and outcome event around
 the selected memory/durable retrieval and safe assembly only. Both paths are
-failure-isolated, with no reader, exporter, or persistence. Provider timing is
-still unwired pending explicit authorization of the reviewed configured-call
-boundary. Memos outbox/retry/quarantine
+failure-isolated, with no reader, exporter, or persistence. R6-I4G emits fixed
+Provider latency/outcome samples around configured `generate` plus result-text
+checking only; deterministic fallback and answer validation remain outside.
+Memos outbox/retry/quarantine
 requires a separate Go-owned design; rebuild/reconciliation requires an
 authoritative cross-process state model.
 

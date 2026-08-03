@@ -1156,13 +1156,13 @@ Rollback removes those optional dependencies and the retrieval wrapper; R6-I4C
 answer samples remain and no persistent cleanup is required. Provider timing
 and all Go-owned lifecycle metrics remain separate and unwired.
 
-#### R6-I4F reviewed Provider timing boundary
+#### R6-I4G Provider timing boundary
 
-R6-I4F changes no runtime code. The reviewed owner is the configured-Provider
+R6-I4G implements the R6-I4F reviewed owner in the configured-Provider
 branch of `EvidenceAnswerAgent._answer`; the deterministic fallback performs no
-Provider call and must emit no Provider sample. A later minimal implementation
-may reuse the Agent's optional recorder and monotonic clock without adding a
-second clock owner or changing existing constructors.
+Provider call and must emit no Provider sample. The implementation reuses the
+Agent's optional recorder and monotonic clock without adding a second clock
+owner or changing existing constructors.
 
 | Path | Fixed Provider outcome | Exact timing boundary | Answer behavior that must remain | Required fake proof |
 | --- | --- | --- | --- | --- |
@@ -1172,7 +1172,7 @@ second clock owner or changing existing constructors.
 | `generate` raises, including timeout or cancellation | `unavailable` | Same start; stop before the original failure mapping or cancellation escapes | Existing fixed error mapping; cancellation is re-raised | Clock/recorder failure cannot replace the Provider failure |
 | Grounded-answer parse or validation fails after valid text | Completed Provider outcome remains `success` | Outside the Provider interval | Existing Agent Provider error and answer outcome remain unchanged | Provider success and answer unavailable can coexist |
 
-The candidate uses the same whole-pair discard rules as retrieval timing:
+The implementation uses the same whole-pair discard rules as retrieval timing:
 missing dependencies, raising/boolean/non-numeric/non-finite clock values,
 negative elapsed time, or elapsed time above 600,000 ms emit neither sample.
 Recording happens after the stop read and independently attempts the fixed
@@ -1180,13 +1180,13 @@ Recording happens after the stop read and independently attempts the fixed
 prompt, result text, exception, request/Memo/user/generation ID, or dynamic label
 is retained.
 
-The minimal first batch is one helper plus one inner try/finally around the
+The implemented first batch is one helper plus one inner try/finally around the
 configured `generate` call and result-envelope check. Post-Provider parsing,
 grounding validation, token/cost metrics, Provider-specific labels, streaming,
 retries, and all Go-owned observability are deferred. Reader/exporter,
-persistence, settings, network calls, and real Provider execution are rejected
+persistence, settings, network calls, and real Provider execution are excluded
 from this slice. Rollback removes only the helper and inner boundary; answer and
-retrieval samples remain unchanged. Wiring requires explicit authorization.
+retrieval samples remain unchanged.
 
 ## Future work excluded from this proposal
 

@@ -17,7 +17,9 @@ from app.domain.agent_observability import (
 )
 from app.services.agent_observability_runtime import (
     record_answer_observation,
+    record_provider_observation,
     record_retrieval_observation,
+    start_provider_observation,
     start_retrieval_observation,
 )
 
@@ -450,5 +452,106 @@ def test_retrieval_observation_attempts_both_samples_when_recorder_raises():
 
     started_at = start_retrieval_observation(clock)
     record_retrieval_observation(recorder, clock, started_at, "unavailable")
+
+    assert recorder.calls == 2
+
+
+@pytest.mark.parametrize("outcome", ["success", "invalid", "unavailable"])
+def test_provider_observation_records_only_fixed_latency_and_outcome(outcome):
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    readings = iter([20.0, 20.04])
+    clock = lambda: next(readings)
+
+    started_at = start_provider_observation(clock)
+    record_provider_observation(adapter, clock, started_at, outcome)
+
+    metric, event = adapter.snapshot()
+    assert metric.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "metric",
+        "component": "provider",
+        "operation": "provider_call",
+        "metric": "provider_latency_ms",
+        "unit": "milliseconds",
+        "value": pytest.approx(40.0),
+    }
+    assert event.to_dict() == {
+        "version": AGENT_OBSERVABILITY_VERSION,
+        "kind": "event",
+        "component": "provider",
+        "operation": "provider_call",
+        "outcome": outcome,
+    }
+
+
+def test_provider_observation_is_noop_without_dependencies_or_allowed_outcome():
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=4)
+    clock = lambda: 20.0
+
+    record_provider_observation(None, clock, 19.0, "success")
+    record_provider_observation(adapter, None, 19.0, "success")
+    record_provider_observation(adapter, clock, 19.0, "no_context")
+
+    assert adapter.snapshot() == ()
+
+
+@pytest.mark.parametrize("value", [True, "20", float("nan"), float("inf")])
+def test_provider_observation_discards_invalid_start_clock_value(value):
+    assert start_provider_observation(lambda: value) is None
+
+
+@pytest.mark.parametrize(
+    "readings",
+    [
+        [20.0, True],
+        [20.0, "21"],
+        [20.0, float("nan")],
+        [20.0, float("inf")],
+        [20.0, 19.0],
+        [20.0, 621.0],
+    ],
+)
+def test_provider_observation_discards_invalid_elapsed_time(readings):
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    values = iter(readings)
+    clock = lambda: next(values)
+
+    started_at = start_provider_observation(clock)
+    record_provider_observation(adapter, clock, started_at, "success")
+
+    assert adapter.snapshot() == ()
+
+
+def test_provider_observation_discards_raising_clock():
+    adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
+    calls = 0
+
+    def clock():
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("raw synthetic clock failure")
+        return 20.0
+
+    started_at = start_provider_observation(clock)
+    record_provider_observation(adapter, clock, started_at, "success")
+
+    assert adapter.snapshot() == ()
+
+
+def test_provider_observation_attempts_both_samples_when_recorder_raises():
+    class RaisingRecorder:
+        calls = 0
+
+        def record(self, _sample):
+            self.calls += 1
+            raise RuntimeError("raw synthetic recorder failure")
+
+    recorder = RaisingRecorder()
+    readings = iter([20.0, 20.04])
+    clock = lambda: next(readings)
+
+    started_at = start_provider_observation(clock)
+    record_provider_observation(recorder, clock, started_at, "unavailable")
 
     assert recorder.calls == 2

@@ -36,8 +36,11 @@ from app.services.agent_delegation import (
 from app.services.agent_observability_runtime import (
     AgentObservabilityRecorder,
     MonotonicClock,
+    ProviderObservabilityOutcome,
     RetrievalObservabilityOutcome,
+    record_provider_observation,
     record_retrieval_observation,
+    start_provider_observation,
     start_retrieval_observation,
 )
 from app.services.retrieval_service import RetrievalService
@@ -208,9 +211,21 @@ class EvidenceAnswerAgent:
             for index, citation in enumerate(citations, start=1)
         }
         try:
-            provider_result = await self._provider.generate(prompt)
-            if not isinstance(provider_result.text, str):
-                raise GroundedAnswerContractError
+            provider_started_at = start_provider_observation(self._monotonic_clock)
+            provider_outcome: ProviderObservabilityOutcome = "unavailable"
+            try:
+                provider_result = await self._provider.generate(prompt)
+                if not isinstance(provider_result.text, str):
+                    provider_outcome = "invalid"
+                    raise GroundedAnswerContractError
+                provider_outcome = "success"
+            finally:
+                record_provider_observation(
+                    self._observability_recorder,
+                    self._monotonic_clock,
+                    provider_started_at,
+                    provider_outcome,
+                )
             parsed = parse_provider_grounded_answer(
                 provider_result.text.encode("utf-8")
             )

@@ -331,6 +331,7 @@ def test_internal_agent_route_projects_validated_provider_answer_only(monkeypatc
     monkeypatch.setattr(main, "settings", _enabled_settings())
     monkeypatch.setattr(main, "embedding_service", _indexed_service())
     monkeypatch.setattr(main, "provider", GroundedProvider())
+    adapter = _observability(monkeypatch)
 
     response = client.post(INTERNAL_ANSWER_PATH, content=body, headers=_signed_headers(body))
 
@@ -340,6 +341,12 @@ def test_internal_agent_route_projects_validated_provider_answer_only(monkeypatc
     assert payload["citations"][0]["memo_id"] == "memo-visible"
     assert "citation_refs" not in _keys(payload)
     assert "version" not in _keys(payload)
+    assert _recorded_metrics(adapter) == [
+        ("retrieval", "search_memos", "tool_latency_ms"),
+        ("provider", "provider_call", "provider_latency_ms"),
+        ("agent", "answer", "request_count"),
+    ]
+    assert _recorded_outcomes(adapter) == ["success", "success", "success"]
 
 
 def test_internal_agent_route_rejects_invalid_signature_before_execution(monkeypatch):
@@ -411,6 +418,8 @@ def test_internal_agent_route_maps_retrieval_and_provider_failures(monkeypatch):
         "unavailable",
         "success",
         "unavailable",
+        "unavailable",
+        "success",
         "success",
         "unavailable",
     ]
