@@ -511,18 +511,20 @@ R6-I4B 不修改 runtime code；任何 caller 获得授权前，先固定以下 
 
 | 分类 | owner 与精确位置 | 白名单 emission 与频率 | 计时边界 | 缺失/失败行为 | 测试与 rollback |
 | --- | --- | --- | --- | --- | --- |
-| 最小首批，等待 R6-I4C 明确授权 | AI Service `answer_delegated_agent_request`，位于既有 Agent-enabled gate 之后 | 每次 handler invocation 一条 `request_count=1` 和一条 `answer` event；只允许 `success`、`no_context`、`invalid`、`unavailable` | 无；本批不增加 latency 主张 | recorder 缺失即 no-op；淘汰或 record failure 不得改变既有 response/status | fake 与 raising recorder 必须保持 success/no-context/400/401/500/502/503 投影；rollback 删除 lifespan ownership 与 endpoint injection，无数据清理 |
+| R6-I4C 已实现 | AI Service `answer_delegated_agent_request`，位于既有 Agent-enabled gate 之后 | 每次 handler invocation 一条 `request_count=1` 和一条 `answer` event；只允许 `success`、`no_context`、`invalid`、`unavailable` | 无；本批不增加 latency 主张 | recorder 缺失即 no-op；淘汰或 record failure 不得改变既有 response/status | fake 与 raising recorder 保持 success/no-context/400/401/500/502/503 投影；rollback 删除 lifespan ownership 与 endpoint injection，无数据清理 |
 | 后置 | `EvidenceAnswerAgent._run` 中 selected memory/durable retrieval 分支周围 | 每个有效 search 一条 `search_memos` event 与一条 `tool_latency_ms` | injected monotonic clock，从 retrieval 前到安全 citation/context 组装完成 | 无 recorder 即 no-op；observer failure 不改变 retrieval | fake clock/recorder 覆盖两种 retrieval、no-context、invalid input 与 unavailable mapping |
 | 后置 | `EvidenceAnswerAgent._answer` 中实际 non-deterministic Provider call 周围 | 每次实际调用一条 `provider_call` event 与一条 `provider_latency_ms`；deterministic/no-context 不产生 | injected monotonic clock，从 `generate` 前到 parse/validation 完成 | observer failure 不改变 Provider failure mapping | fake clock/provider 覆盖 success、invalid result、timeout 与 unavailable mapping |
 | 后置到 Go-owned design | Memos `memoLifecycleSourceRuntime` 与 `MemoLifecycleOutboxStore` | 只能由 Go 权威状态投影 outbox outcome、lag、retry 与 quarantine/exhaustion | source-owned UTC timestamp 与 store transaction 边界；绝不使用 Python wall time | 不使用 Python adapter、不加 transport、不加 per-event label | 独立 Go contract/adapter 必须先定义 exhausted 是否等于 quarantined，并增加权威 oldest-pending-lag read |
 | 后置 | Memos rebuild preparation 与 AI `MemoLifecycleRuntime.activate` | 只有评审过的跨进程 state machine 才能产生固定 rebuild state | 状态 transition，不从耗时推断 | partial activation 不得投影为 complete | fake Memos client/store 与 AI ledger 证明 pending/active/complete/failed 及 rollback |
 | 拒绝，直到存在 authority | reconciliation | 当前不 emission：没有专属 owner 或持久 status | 不适用 | 禁止从 raw error 或任意 mismatch 推断 `synced`/`degraded` | instrumentation 前先定义并评审权威 state machine |
 
-建议首批只在既有 Agent opt-in 启用期间，由 AI lifespan 持有一个
+R6-I4C 只在既有 Agent opt-in 启用期间，由 AI lifespan 持有一个
 `BoundedInMemoryObservabilityAdapter(256)`，通过 `app.state` 注入 internal answer handler，并在 shutdown 清空引用。
 它不增加 flag、env、endpoint、exporter、persistence、thread、timer 或 background task。recorder 只接收固定 contract
-对象，不得接收 request body、result content、exception、ID 或动态 label。I4B 只完成评审，没有授权实施；接线必须
-获得 R6-I4C 明确批准。
+对象，不接收 request body、result content、exception、ID 或动态 label。每条固定 sample 都 best-effort 记录；recorder
+缺失或抛错不能改变既有 answer、status、body 或未知异常。TestClient 已覆盖 answered、no-context、400、401、500、
+502、503、disabled ownership、shutdown 与 recorder failure。当前没有 snapshot reader 或运维 exporter，因此只证明
+进程内 emission，不构成 operator-facing observability。
 
 ## 后续工作不包含在本提案内
 

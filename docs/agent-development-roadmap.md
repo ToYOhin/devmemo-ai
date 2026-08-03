@@ -456,15 +456,15 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
-**Status:** R6-I1 through R6-I4A are implemented and test-verified; R6-I4B's
-runtime ownership and authorization review is complete and documented. The strict
+**Status:** R6-I1 through R6-I4C are implemented and test-verified. R6-I4B's
+runtime ownership review is documented, and the explicitly authorized first
+batch now records fixed AI answer outcome/request-count samples. The strict
 contracts, 64-case sanitized corpus, seven predeclared thresholds, pure
 deterministic runner, and content-free report are present. Test reports use
 supplied synthetic results only; no product benchmark or runtime result is
-claimed. R6-I4A adds a dormant strict observability contract and bounded
-in-memory adapter, but no runtime caller records samples. The reviewed first
-batch is limited to AI answer outcome/request count under the existing opt-in;
-it remains unimplemented until explicit R6-I4C authorization. Retrieval and
+claimed. The adapter is lifespan-owned only under the existing Agent opt-in;
+the internal answer handler emits one fixed event and count per invocation,
+with failure-isolated recording and no exporter or persistence. Retrieval and
 Provider timing are later AI slices. Memos outbox/retry/quarantine requires a
 separate Go-owned design; rebuild/reconciliation requires an authoritative
 cross-process state model.
