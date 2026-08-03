@@ -1098,9 +1098,9 @@ before any caller is authorized:
 | Disposition | Owner and exact point | Allowlisted emission and frequency | Timing boundary | Missing/failure behavior | Test and rollback |
 | --- | --- | --- | --- | --- | --- |
 | Implemented by R6-I4C | AI Service `answer_delegated_agent_request`, after the existing Agent-enabled gate | One `request_count=1` metric and one `answer` event per handler invocation; only `success`, `no_context`, `invalid`, or `unavailable` | None; this slice adds no latency claim | Missing recorder is a no-op; eviction or record failure cannot alter the existing response/status | Fake and raising recorders preserve success/no-context/400/401/500/502/503 projections; rollback removes lifespan ownership and endpoint injection, with no data cleanup |
-| Deferred | `EvidenceAnswerAgent._run`, around the selected memory or durable retrieval branch | One `search_memos` event and one `tool_latency_ms` metric per valid search | Injected monotonic clock immediately before retrieval through safe citation/context assembly | No recorder is a no-op; observer failure cannot change retrieval | Fake clock/recorder must cover both retrieval modes, no-context, invalid input, and unavailable mapping |
-| Deferred | `EvidenceAnswerAgent._answer`, only around an actual non-deterministic Provider call | One `provider_call` event and one `provider_latency_ms` metric per actual call; deterministic/no-context paths emit neither | Injected monotonic clock immediately before `generate` through parse/validation | Observer failure cannot change Provider failure mapping | Fake clock/provider must prove success, invalid result, timeout, and unavailable mapping |
-| Deferred to a Go-owned design | Memos `memoLifecycleSourceRuntime` and `MemoLifecycleOutboxStore` | Outbox outcome, lag, retry, and quarantine/exhaustion projections only from authoritative Go state | Source-owned UTC timestamps and store transaction boundaries; never Python wall time | No Python adapter, new transport, or per-event label | A separate Go contract/adapter must define whether exhausted means quarantined and add an authoritative oldest-pending-lag read |
+| Implemented by R6-I4E | `EvidenceAnswerAgent._run`, around the selected memory or durable retrieval branch | One `search_memos` event and one `tool_latency_ms` metric per valid search | Injected monotonic clock immediately before retrieval through safe citation/context assembly | No recorder is a no-op; observer failure cannot change retrieval | Fake clock/recorder covers both retrieval modes, no-context, invalid input, and unavailable mapping |
+| Implemented by R6-I4G | `EvidenceAnswerAgent._answer`, only around an actual non-deterministic Provider call | One `provider_call` event and one `provider_latency_ms` metric per actual call; deterministic/no-context paths emit neither | Injected monotonic clock around `generate` and result-text checking only | Observer failure cannot change Provider failure mapping | Fake clock/provider covers success, invalid result, timeout, unavailable, cancellation, and post-call validation |
+| Reviewed by R6-I4H | Memos `memoLifecycleSourceRuntime` and `MemoLifecycleOutboxStore` | Per authoritative delivery: `success` after acknowledgement, `pending` plus `retry_count=1` after a persisted retry, or `failed` plus `quarantine_count=1` after persisted `EXHAUSTED` | Store transaction result only; no Python clock or cross-process transport | Optional Go recorder failure cannot alter acknowledgement, retry, exhaustion, or returned error | Separate strict Go contract/adapter tests first; then fake store/client/recorder tests and constructor rollback |
 | Deferred | Memos rebuild preparation plus AI `MemoLifecycleRuntime.activate` | Fixed rebuild state only after one reviewed cross-process state machine exists | State transitions, not inferred elapsed time | Partial activation cannot be projected as complete | Fake Memos client/store and AI ledger tests must prove pending/active/complete/failed transitions and rollback |
 | Rejected until an authority exists | Reconciliation | No emission: there is no dedicated reconciliation owner or persisted status today | Not applicable | Never infer `synced`/`degraded` from raw errors or arbitrary mismatches | Define and review an authoritative state machine before instrumentation |
 
@@ -1187,6 +1187,30 @@ retries, and all Go-owned observability are deferred. Reader/exporter,
 persistence, settings, network calls, and real Provider execution are excluded
 from this slice. Rollback removes only the helper and inner boundary; answer and
 retrieval samples remain unchanged.
+
+#### R6-I4H reviewed source-owned lifecycle observations
+
+R6-I4H changes no runtime code. The only authorized candidate owner is the Go
+`memoLifecycleSourceRuntime`, using the returned authoritative outbox state.
+One delivery attempt may emit exactly one fixed `outbox_dispatch` event: after
+acknowledgement persistence it is `success`; after failure persistence it is
+`pending` while retryable or `failed` when status is `EXHAUSTED`. The same
+persisted transition may additionally emit integer delta `retry_count=1` or
+`quarantine_count=1`. Attempts, event/Memo IDs, error codes, timestamps, and
+transport details are not labels or fields.
+
+The first slice must define a separate strict Go contract and constructor-fixed
+bounded in-memory adapter with no transport to the Python adapter. Runtime
+wiring, if separately landed, injects an optional recorder only from the
+existing lifecycle-enabled composition. Every sample is best-effort and cannot
+change delivery, acknowledgement, retry/exhaustion persistence, rebuild
+activation, or returned errors. Rollback removes the optional recorder and
+composition ownership; no persistent data cleanup is needed.
+
+Outbox lag remains blocked because the store exposes counts but no authoritative
+oldest-pending timestamp query. Rebuild state remains blocked on a reviewed
+cross-process Memos/AI state machine, and reconciliation remains rejected until
+it has a dedicated authority. No inferred lag/state sample is allowed.
 
 ## Future work excluded from this proposal
 
