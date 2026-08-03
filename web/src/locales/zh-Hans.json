@@ -39,6 +39,7 @@
     "trace": "执行轨迹",
     "trace-search_memos": "检索 Memo",
     "trace-answer_from_evidence": "根据证据回答",
+    "trace-refuse_unsafe_request": "拒绝不安全请求",
     "trace-results_one": "{{count}} 条结果",
     "trace-results_other": "{{count}} 条结果",
     "error-invalid": "请输入问题，并将引用数量设为 1 到 10。",

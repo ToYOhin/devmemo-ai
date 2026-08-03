@@ -76,4 +76,35 @@ describe("Evidence Answer BFF client", () => {
     expect(parseAiEvidenceAnswer({ ...safeAnswer, content: "raw Memo content" })).toBeNull();
     expect(parseAiEvidenceAnswer({ ...safeAnswer, citations: [{ ...safeAnswer.citations[0], content: "raw Memo content" }] })).toBeNull();
   });
+
+  it("accepts only the fixed refusal projection", () => {
+    const refusal = {
+      answer: "Request refused by the Agent safety policy.",
+      citations: [],
+      provider: "policy",
+      retrieved_count: 0,
+      agent_version: "evidence-answer-agent-v1",
+      trace: {
+        terminal_state: "refused",
+        steps: [{ index: 1, kind: "final", name: "refuse_unsafe_request", status: "completed" }],
+      },
+    };
+
+    expect(parseAiEvidenceAnswer(refusal)).toEqual({
+      answer: refusal.answer,
+      citations: [],
+      trace: {
+        terminal_state: "refused",
+        steps: [{ index: 1, name: "refuse_unsafe_request", status: "completed" }],
+      },
+    });
+    expect(parseAiEvidenceAnswer({ ...refusal, provider: "remote" })).toBeNull();
+    expect(parseAiEvidenceAnswer({ ...refusal, answer: "untrusted refusal text" })).toBeNull();
+    expect(
+      parseAiEvidenceAnswer({
+        ...safeAnswer,
+        trace: { terminal_state: "no_context", steps: refusal.trace.steps },
+      }),
+    ).toBeNull();
+  });
 });

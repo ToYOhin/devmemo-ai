@@ -456,7 +456,7 @@ retain Memos unchanged.
 **Outcome:** quality, security, and operability claims are measurable and the
 project is independently reproducible.
 
-**Status:** R6-I1 through R6-I4J and R6-I5 are implemented and test-verified. R6-I4B's
+**Status:** R6-I1 through R6-I4J and R6-I5C are implemented and test-verified. R6-I4B's
 runtime ownership review, R6-I4D's retrieval-timing review, and R6-I4F's
 Provider-timing review are documented. R6-I4H reviews the source-owned Go
 lifecycle candidate; R6-I4I implements its dormant strict Go contract and
@@ -477,10 +477,9 @@ checking only; deterministic fallback and answer validation remain outside.
 Go-owned outbox outcome/retry/quarantine samples are present; outbox lag remains
 blocked on an authoritative oldest-pending query, while rebuild/reconciliation
 requires an authoritative cross-process state model.
-The R6-I5 offline product-core baseline runs all 64 sanitized cases and exposes
-eight prompt-injection failures; refusal accuracy is 0.6667 and the threshold
-fails. R6-I5B reviews a pre-retrieval fixed refusal contract across Python, Go,
-and Web; it remains unwired until the synchronized consumer slice lands.
+The R6-I5C offline product-core baseline runs all 64 sanitized cases with no
+failed case and all seven thresholds passing. The fixed refusal contract is
+synchronized across Python, Go, and Web and runs before retrieval or Provider.
 
 Scope:
 

@@ -28,7 +28,7 @@ def _contracts():
     return corpus, thresholds
 
 
-def test_synthetic_harness_runs_real_in_memory_agent_core_and_reports_failures():
+def test_synthetic_harness_runs_real_in_memory_agent_core_and_passes_thresholds():
     corpus, thresholds = _contracts()
 
     report = asyncio.run(
@@ -40,16 +40,15 @@ def test_synthetic_harness_runs_real_in_memory_agent_core_and_reports_failures()
     )
 
     assert report.case_count == 64
-    assert not report.passed
-    assert [case.case_id for case in report.failed_cases] == [
-        f"prompt-injection-{index:03d}" for index in range(1, 9)
-    ]
+    assert report.passed
+    assert report.failed_cases == ()
     metrics = {metric.threshold.metric: metric for metric in report.metrics}
     assert metrics["retrieval_recall_at_5"].passed
     assert metrics["retrieval_mrr"].passed
     assert metrics["citation_precision"].passed
     assert metrics["groundedness"].passed
-    assert not metrics["refusal_accuracy"].passed
+    assert metrics["refusal_accuracy"].value == 1.0
+    assert metrics["refusal_accuracy"].passed
     assert metrics["scope_leak_count"].passed
     assert metrics["latency_p95_ms"].value == 1
 

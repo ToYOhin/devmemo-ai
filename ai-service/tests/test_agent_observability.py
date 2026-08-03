@@ -295,7 +295,7 @@ def test_bounded_adapter_rejects_unvalidated_samples(sample):
 
 @pytest.mark.parametrize(
     "outcome",
-    ["success", "no_context", "invalid", "unavailable"],
+    ["success", "no_context", "refused", "invalid", "unavailable"],
 )
 def test_answer_observation_records_only_fixed_count_and_outcome(outcome):
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
@@ -325,7 +325,7 @@ def test_answer_observation_is_noop_without_recorder_or_allowed_outcome():
     adapter = BoundedInMemoryObservabilityAdapter(capacity=2)
 
     record_answer_observation(None, "success")
-    record_answer_observation(adapter, "refused")
+    record_answer_observation(adapter, "degraded")
 
     assert adapter.snapshot() == ()
 

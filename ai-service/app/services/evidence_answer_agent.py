@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Protocol
 
 from app.domain.agent import (
+    AGENT_REFUSAL_ANSWER,
     AgentAnswerResult,
     AgentCitation,
     AgentStep,
@@ -43,6 +44,7 @@ from app.services.agent_observability_runtime import (
     start_provider_observation,
     start_retrieval_observation,
 )
+from app.services.agent_refusal_policy import should_refuse_agent_question
 from app.services.retrieval_service import RetrievalService
 
 
@@ -100,6 +102,25 @@ class EvidenceAnswerAgent:
 
     async def _run(self, request: DelegatedAnswerRequest) -> AgentAnswerResult:
         visibility = MemoVisibilityScope(frozenset(request.visible_memo_uids))
+        if should_refuse_agent_question(request.question):
+            return AgentAnswerResult(
+                answer=AGENT_REFUSAL_ANSWER,
+                citations=(),
+                visibility=visibility,
+                provider="policy",
+                retrieved_count=0,
+                trace=AgentTrace(
+                    terminal_state="refused",
+                    steps=(
+                        AgentStep(
+                            1,
+                            "final",
+                            "refuse_unsafe_request",
+                            "completed",
+                        ),
+                    ),
+                ),
+            )
         tool_call = SearchMemosToolCall(
             question=request.question,
             limit=request.limit,

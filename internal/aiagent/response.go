@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const refusalAnswer = "Request refused by the Agent safety policy."
+
 const agentVersion = "evidence-answer-agent-v1"
 
 // AnswerResponse is the only AI result shape the Memos BFF may return to a browser.
@@ -81,6 +83,10 @@ func (r AnswerResponse) Validate(visibleMemoUIDs []string) error {
 	if r.RetrievedCount != len(r.Citations) {
 		return errors.New("invalid citation count")
 	}
+	if r.Trace.TerminalState == "refused" &&
+		(r.Provider != "policy" || r.Answer != refusalAnswer) {
+		return errors.New("invalid refusal response")
+	}
 	visible := make(map[string]struct{}, len(visibleMemoUIDs))
 	for _, uid := range visibleMemoUIDs {
 		visible[uid] = struct{}{}
@@ -114,11 +120,23 @@ func (c Citation) validate(visible map[string]struct{}) error {
 }
 
 func (t Trace) validate(citationCount int) error {
-	if t.TerminalState != "answered" && t.TerminalState != "no_context" {
+	if t.TerminalState != "answered" &&
+		t.TerminalState != "no_context" &&
+		t.TerminalState != "refused" {
 		return errors.New("invalid trace")
 	}
 	if len(t.Steps) < 1 || len(t.Steps) > 2 {
 		return errors.New("invalid trace")
+	}
+	if t.TerminalState == "refused" {
+		final := t.Steps[0]
+		if citationCount != 0 || len(t.Steps) != 1 ||
+			final.Index != 1 || final.Kind != "final" ||
+			final.Name != "refuse_unsafe_request" ||
+			final.Status != "completed" || final.ResultCount != nil {
+			return errors.New("invalid trace")
+		}
+		return nil
 	}
 	tool := t.Steps[0]
 	if tool.Index != 1 || tool.Kind != "tool" || tool.Name != "search_memos" || tool.Status != "completed" || tool.ResultCount == nil || *tool.ResultCount != citationCount {

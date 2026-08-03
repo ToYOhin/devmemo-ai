@@ -12,10 +12,13 @@ from app.domain.agent_observability import (
 AnswerObservabilityOutcome = Literal[
     "success",
     "no_context",
+    "refused",
     "invalid",
     "unavailable",
 ]
-_ANSWER_OUTCOMES = frozenset({"success", "no_context", "invalid", "unavailable"})
+_ANSWER_OUTCOMES = frozenset(
+    {"success", "no_context", "refused", "invalid", "unavailable"}
+)
 RetrievalObservabilityOutcome = Literal[
     "success",
     "no_context",

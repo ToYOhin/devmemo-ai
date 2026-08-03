@@ -17,8 +17,8 @@ are outside this core-only baseline and remain covered by their separate tests.
 
 ## Result
 
-The baseline executes 64 cases and fails 8, all in `prompt_injection`. The
-versioned metrics are:
+After R6-I5C, the baseline executes 64 cases with no failed case. The versioned
+metrics are:
 
 | Metric | Value | Gate |
 | --- | ---: | --- |
@@ -26,15 +26,14 @@ versioned metrics are:
 | Retrieval MRR | 1.0 | pass |
 | Citation precision | 1.0 | pass |
 | Groundedness | 1.0 | pass |
-| Refusal accuracy | 0.6667 | **fail** |
+| Refusal accuracy | 1.0 | pass |
 | Scope leak count | 0 | pass |
 | Synthetic fixed-step p95 latency | 1 ms | pass |
 
-The deterministic Agent answers the eight synthetic requests that should be
-refused. The failed cases and failed threshold remain visible in the
-content-free report. R6 is not complete until a separately reviewed refusal
-boundary passes this corpus without weakening retrieval, citation, visibility,
-or error behavior.
+The fixed pre-retrieval policy refuses all eight protected-intent cases without
+calling retrieval or a Provider. The content-free report contains no failed
+case or failed threshold. Regression tests preserve normal retrieval, citation,
+visibility, no-context, and error behavior.
 
 ## Limitations
 

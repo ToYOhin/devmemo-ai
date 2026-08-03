@@ -13,6 +13,7 @@ from typing import Literal
 
 AGENT_VERSION = "evidence-answer-agent-v1"
 SEARCH_MEMOS_TOOL = "search_memos"
+AGENT_REFUSAL_ANSWER = "Request refused by the Agent safety policy."
 MEMO_INDEX_VERSION = "memo-v1"
 MAX_RETRIEVAL_LIMIT = 10
 
@@ -204,8 +205,11 @@ class AgentStep:
             raise AgentContractError("trace step index must be positive")
         if self.kind == "tool" and self.name != SEARCH_MEMOS_TOOL:
             raise AgentContractError("the only permitted Agent tool is search_memos")
-        if self.kind == "final" and self.name != "answer_from_evidence":
-            raise AgentContractError("the only permitted final action is answer_from_evidence")
+        if self.kind == "final" and self.name not in {
+            "answer_from_evidence",
+            "refuse_unsafe_request",
+        }:
+            raise AgentContractError("the final Agent action is not permitted")
         if self.result_count is not None and self.result_count < 0:
             raise AgentContractError("trace result_count must not be negative")
 
@@ -223,9 +227,9 @@ class AgentStep:
 
 @dataclass(frozen=True)
 class AgentTrace:
-    """One bounded tool call followed by a final answer, or no-context exit."""
+    """One bounded search flow, or one fixed pre-search refusal."""
 
-    terminal_state: Literal["answered", "no_context"]
+    terminal_state: Literal["answered", "no_context", "refused"]
     steps: tuple[AgentStep, ...]
 
     def __post_init__(self) -> None:
@@ -233,12 +237,21 @@ class AgentTrace:
             raise AgentContractError("trace step indexes must be sequential")
         tool_steps = tuple(step for step in self.steps if step.kind == "tool")
         final_steps = tuple(step for step in self.steps if step.kind == "final")
-        if len(tool_steps) != 1:
-            raise AgentContractError("an Agent trace must contain exactly one search_memos step")
-        if self.terminal_state == "answered" and len(final_steps) != 1:
-            raise AgentContractError("answered traces must contain one final step")
-        if self.terminal_state == "no_context" and final_steps:
-            raise AgentContractError("no_context traces must not contain a final step")
+        if self.terminal_state == "answered":
+            if len(tool_steps) != 1 or len(final_steps) != 1:
+                raise AgentContractError("answered traces must search then answer")
+            if final_steps[0].name != "answer_from_evidence":
+                raise AgentContractError("answered traces require the answer action")
+        elif self.terminal_state == "no_context":
+            if len(tool_steps) != 1 or final_steps:
+                raise AgentContractError("no_context traces must contain only search")
+        elif self.terminal_state == "refused":
+            if tool_steps or len(final_steps) != 1:
+                raise AgentContractError("refused traces must contain only refusal")
+            if final_steps[0].name != "refuse_unsafe_request":
+                raise AgentContractError("refused traces require the refusal action")
+        else:
+            raise AgentContractError("trace terminal_state is not permitted")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -273,8 +286,12 @@ class AgentAnswerResult:
             raise AgentContractError("citations must be visible to the caller")
         if self.retrieved_count != len(self.citations):
             raise AgentContractError("retrieved_count must equal the citation count")
-        if self.trace.terminal_state == "no_context" and self.citations:
-            raise AgentContractError("no_context results must not contain citations")
+        if self.trace.terminal_state in {"no_context", "refused"} and self.citations:
+            raise AgentContractError("non-answer results must not contain citations")
+        if self.trace.terminal_state == "refused" and (
+            self.provider != "policy" or self.answer != AGENT_REFUSAL_ANSWER
+        ):
+            raise AgentContractError("refused results must use the fixed policy result")
         if self.agent_version != AGENT_VERSION:
             raise AgentContractError("agent_version is not supported")
 

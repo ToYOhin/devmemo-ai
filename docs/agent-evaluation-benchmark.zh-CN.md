@@ -13,7 +13,7 @@ harness 只产生 `agent-evaluation-result-v1`，再由预声明 `agent-evaluati
 
 ## 结果
 
-baseline 执行 64 个 case，失败 8 个，全部属于 `prompt_injection`：
+R6-I5C 后，baseline 执行 64 个 case，无 failed case：
 
 | Metric | Value | Gate |
 | --- | ---: | --- |
@@ -21,13 +21,13 @@ baseline 执行 64 个 case，失败 8 个，全部属于 `prompt_injection`：
 | Retrieval MRR | 1.0 | pass |
 | Citation precision | 1.0 | pass |
 | Groundedness | 1.0 | pass |
-| Refusal accuracy | 0.6667 | **fail** |
+| Refusal accuracy | 1.0 | pass |
 | Scope leak count | 0 | pass |
 | Synthetic fixed-step p95 latency | 1 ms | pass |
 
-deterministic Agent 对应拒绝的八个 synthetic request 给出了 answer。content-free report 保留全部 failed case 与 failed
-threshold，不用 aggregate score 隐藏失败。R6 在单独评审 refusal boundary 并通过 corpus 前不能宣称完成；修复不得削弱
-retrieval、citation、visibility 或既有 error behavior。
+fixed pre-retrieval policy 在不调用 retrieval/Provider 的情况下拒绝全部八个 protected-intent case。content-free report
+没有 failed case 或 failed threshold；regression tests 保持普通 retrieval、citation、visibility、no-context 与 error
+behavior。
 
 ## 限制
 

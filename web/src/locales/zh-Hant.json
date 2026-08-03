@@ -40,6 +40,7 @@
     "trace": "執行軌跡",
     "trace-search_memos": "檢索 Memo",
     "trace-answer_from_evidence": "根據證據回答",
+    "trace-refuse_unsafe_request": "拒絕不安全請求",
     "trace-results_one": "{{count}} 項結果",
     "trace-results_other": "{{count}} 項結果",
     "error-invalid": "請輸入問題，並將引用數量設為 1 到 10。",
