@@ -66,8 +66,8 @@ func lifecycleRequest(eventID, reason string) *store.MemoLifecycleEventRequest {
 }
 
 func createLifecycleMemo(
-	t *testing.T,
 	ctx context.Context,
+	t *testing.T,
 	testStore *memoLifecycleTestStore,
 	uid string,
 	eventID string,
@@ -82,7 +82,7 @@ func createLifecycleMemo(
 	return memo
 }
 
-func findMemo(t *testing.T, ctx context.Context, stores *store.Store, uid string) *store.Memo {
+func findMemo(ctx context.Context, t *testing.T, stores *store.Store, uid string) *store.Memo {
 	t.Helper()
 	memo, err := stores.GetMemo(ctx, &store.FindMemo{UID: &uid})
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestMemoLifecycleOutboxCommitsSourceMutationsAndSequencedEventsTogether(t *
 	require.NoError(t, err)
 	require.Equal(t, int64(2), reindexed.SourceSequence)
 	require.Equal(t, store.MemoLifecycleEventReindex, reindexed.EventType)
-	require.Equal(t, updatedContent, findMemo(t, ctx, testStore.store, created.UID).Content)
+	require.Equal(t, updatedContent, findMemo(ctx, t, testStore.store, created.UID).Content)
 
 	archivedStatus := store.Archived
 	archived, err := testStore.adapter.UpdateMemoWithLifecycleEvent(
@@ -132,7 +132,7 @@ func TestMemoLifecycleOutboxCommitsSourceMutationsAndSequencedEventsTogether(t *
 	require.Equal(t, store.MemoLifecycleEventDelete, archived.EventType)
 	require.Nil(t, archived.Document)
 	require.Nil(t, archived.DocumentHash)
-	require.Equal(t, store.Archived, findMemo(t, ctx, testStore.store, created.UID).RowStatus)
+	require.Equal(t, store.Archived, findMemo(ctx, t, testStore.store, created.UID).RowStatus)
 
 	deleted, err := testStore.adapter.DeleteMemoWithLifecycleEvent(
 		ctx,
@@ -144,7 +144,7 @@ func TestMemoLifecycleOutboxCommitsSourceMutationsAndSequencedEventsTogether(t *
 	require.Equal(t, store.MemoLifecycleEventDelete, deleted.EventType)
 	require.Nil(t, deleted.Document)
 	require.Nil(t, deleted.DocumentHash)
-	require.Nil(t, findMemo(t, ctx, testStore.store, created.UID))
+	require.Nil(t, findMemo(ctx, t, testStore.store, created.UID))
 
 	events, err := testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, created.UID)
 	require.NoError(t, err)
@@ -251,13 +251,13 @@ func TestMemoLifecycleOutboxRollsBackSourceAndEventBeforeCommit(t *testing.T) {
 		lifecycleRequest("event-create-rollback", "created"),
 	)
 	require.ErrorIs(t, err, store.ErrMemoLifecycleOutboxFailpoint)
-	require.Nil(t, findMemo(t, ctx, testStore.store, "a4-i2-create-rollback"))
+	require.Nil(t, findMemo(ctx, t, testStore.store, "a4-i2-create-rollback"))
 	events, err := testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, "a4-i2-create-rollback")
 	require.NoError(t, err)
 	require.Empty(t, events)
 
 	updatedMemo := createLifecycleMemo(
-		t, ctx, testStore, "a4-i2-update-rollback", "event-update-base",
+		ctx, t, testStore, "a4-i2-update-rollback", "event-update-base",
 	)
 	updatedContent := "not committed"
 	_, err = testStore.adapter.UpdateMemoWithLifecycleEvent(
@@ -266,13 +266,13 @@ func TestMemoLifecycleOutboxRollsBackSourceAndEventBeforeCommit(t *testing.T) {
 		lifecycleRequest("event-update-rollback", "content_changed"),
 	)
 	require.ErrorIs(t, err, store.ErrMemoLifecycleOutboxFailpoint)
-	require.Equal(t, "initial", findMemo(t, ctx, testStore.store, updatedMemo.UID).Content)
+	require.Equal(t, "initial", findMemo(ctx, t, testStore.store, updatedMemo.UID).Content)
 	events, err = testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, updatedMemo.UID)
 	require.NoError(t, err)
 	require.Len(t, events, 1)
 
 	deletedMemo := createLifecycleMemo(
-		t, ctx, testStore, "a4-i2-delete-rollback", "event-delete-base",
+		ctx, t, testStore, "a4-i2-delete-rollback", "event-delete-base",
 	)
 	_, err = testStore.adapter.DeleteMemoWithLifecycleEvent(
 		failingCtx,
@@ -280,7 +280,7 @@ func TestMemoLifecycleOutboxRollsBackSourceAndEventBeforeCommit(t *testing.T) {
 		lifecycleRequest("event-delete-rollback", "deleted"),
 	)
 	require.ErrorIs(t, err, store.ErrMemoLifecycleOutboxFailpoint)
-	require.NotNil(t, findMemo(t, ctx, testStore.store, deletedMemo.UID))
+	require.NotNil(t, findMemo(ctx, t, testStore.store, deletedMemo.UID))
 	events, err = testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, deletedMemo.UID)
 	require.NoError(t, err)
 	require.Len(t, events, 1)
@@ -289,7 +289,7 @@ func TestMemoLifecycleOutboxRollsBackSourceAndEventBeforeCommit(t *testing.T) {
 func TestMemoLifecycleOutboxConstraintFailureRollsBackSourceUpdate(t *testing.T) {
 	ctx := context.Background()
 	testStore := newMemoLifecycleTestStore(t)
-	memo := createLifecycleMemo(t, ctx, testStore, "a4-i2-constraint", "event-reused")
+	memo := createLifecycleMemo(ctx, t, testStore, "a4-i2-constraint", "event-reused")
 
 	updatedContent := "must roll back"
 	_, err := testStore.adapter.UpdateMemoWithLifecycleEvent(
@@ -298,7 +298,7 @@ func TestMemoLifecycleOutboxConstraintFailureRollsBackSourceUpdate(t *testing.T)
 		lifecycleRequest("event-reused", "content_changed"),
 	)
 	require.Error(t, err)
-	require.Equal(t, "initial", findMemo(t, ctx, testStore.store, memo.UID).Content)
+	require.Equal(t, "initial", findMemo(ctx, t, testStore.store, memo.UID).Content)
 	events, listErr := testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, memo.UID)
 	require.NoError(t, listErr)
 	require.Len(t, events, 1)
@@ -307,7 +307,7 @@ func TestMemoLifecycleOutboxConstraintFailureRollsBackSourceUpdate(t *testing.T)
 func TestMemoLifecycleOutboxRefusesDeleteWithoutValidTombstone(t *testing.T) {
 	ctx := context.Background()
 	testStore := newMemoLifecycleTestStore(t)
-	memo := createLifecycleMemo(t, ctx, testStore, "a4-i2-tombstone", "event-tombstone-base")
+	memo := createLifecycleMemo(ctx, t, testStore, "a4-i2-tombstone", "event-tombstone-base")
 
 	_, err := testStore.adapter.DeleteMemoWithLifecycleEvent(
 		ctx,
@@ -315,7 +315,7 @@ func TestMemoLifecycleOutboxRefusesDeleteWithoutValidTombstone(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	require.NotNil(t, findMemo(t, ctx, testStore.store, memo.UID))
+	require.NotNil(t, findMemo(ctx, t, testStore.store, memo.UID))
 	events, listErr := testStore.adapter.ListMemoLifecycleOutboxEvents(ctx, memo.UID)
 	require.NoError(t, listErr)
 	require.Len(t, events, 1)
@@ -324,7 +324,7 @@ func TestMemoLifecycleOutboxRefusesDeleteWithoutValidTombstone(t *testing.T) {
 func TestMemoLifecycleOutboxBoundsExplicitDeliveryFailures(t *testing.T) {
 	ctx := context.Background()
 	testStore := newMemoLifecycleTestStore(t)
-	memo := createLifecycleMemo(t, ctx, testStore, "a4-i2-retry", "event-retry")
+	memo := createLifecycleMemo(ctx, t, testStore, "a4-i2-retry", "event-retry")
 
 	for attempt := 1; attempt <= store.MaxMemoLifecycleDeliveryAttempts; attempt++ {
 		event, err := testStore.adapter.RecordMemoLifecycleDeliveryFailure(
@@ -401,7 +401,7 @@ func TestMemoLifecycleRebuildSupersedesKnownDeletedMemoWithTombstone(t *testing.
 	ctx := context.Background()
 	testStore := newMemoLifecycleTestStore(t)
 	memo := createLifecycleMemo(
-		t, ctx, testStore, "r5-rebuild-deleted", "event-before-delete",
+		ctx, t, testStore, "r5-rebuild-deleted", "event-before-delete",
 	)
 	require.NoError(t, testStore.store.DeleteMemo(ctx, &store.DeleteMemo{ID: memo.ID}))
 
@@ -422,7 +422,7 @@ func TestMemoLifecycleRebuildSupersedesKnownDeletedMemoWithTombstone(t *testing.
 func TestMemoLifecycleAcknowledgementSupersedesOlderExhaustedEvent(t *testing.T) {
 	ctx := context.Background()
 	testStore := newMemoLifecycleTestStore(t)
-	createLifecycleMemo(t, ctx, testStore, "r5-rebuild-repair", "event-exhausted")
+	createLifecycleMemo(ctx, t, testStore, "r5-rebuild-repair", "event-exhausted")
 	for range store.MaxMemoLifecycleDeliveryAttempts {
 		_, err := testStore.adapter.RecordMemoLifecycleDeliveryFailure(
 			ctx, "event-exhausted", "transport_unavailable",

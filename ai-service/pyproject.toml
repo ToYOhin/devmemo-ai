@@ -15,6 +15,12 @@ warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
+# These imports belong to the explicit Qdrant/FastEmbed runtime profile and are
+# intentionally absent from the base/dev lock used by the production-code gate.
+[[tool.mypy.overrides]]
+module = ["fastembed", "qdrant_client"]
+ignore_missing_imports = true
+
 [tool.coverage.run]
 branch = true
 relative_files = true

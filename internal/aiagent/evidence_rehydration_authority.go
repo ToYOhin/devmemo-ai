@@ -152,8 +152,8 @@ func validEvidenceAuthoritySnapshotBinding(
 	binding EvidenceAuthorityContextBinding,
 	snapshot EvidenceCurrentAuthoritySnapshot,
 ) bool {
-	return snapshot.MemosAuthorityRef == request.MemosAuthorityRef &&
-		snapshot.MemosAuthorityRef == binding.MemosAuthorityRef &&
+	return snapshot.MemosAuthorityRef == binding.MemosAuthorityRef &&
+		binding.MemosAuthorityRef == request.MemosAuthorityRef &&
 		snapshot.AuthenticatedContextToken == binding.AuthenticatedContextToken &&
 		evidenceRehydrationOpaqueIDPattern.MatchString(snapshot.SnapshotRevision) &&
 		evidenceRehydrationOpaqueIDPattern.MatchString(snapshot.AuthorityToken) &&

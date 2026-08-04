@@ -36,12 +36,12 @@ func TestAgentBFFUsesAuthenticatedMemosVisibilityAndSafeProjection(t *testing.T)
 	testStore := teststore.NewTestingStore(ctx, t)
 	t.Cleanup(func() { _ = testStore.Close() })
 	service := &APIV1Service{Store: testStore, Secret: "test-secret"}
-	caller := createAgentVisibilityUser(t, ctx, testStore, "agent-bff-caller")
-	other := createAgentVisibilityUser(t, ctx, testStore, "agent-bff-other")
-	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-private", caller.ID, store.Private)
-	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-public", other.ID, store.Public)
-	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-protected", other.ID, store.Protected)
-	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-hidden", other.ID, store.Private)
+	caller := createAgentVisibilityUser(ctx, t, testStore, "agent-bff-caller")
+	other := createAgentVisibilityUser(ctx, t, testStore, "agent-bff-other")
+	createAgentVisibilityMemo(ctx, t, testStore, "agent-bff-private", caller.ID, store.Private)
+	createAgentVisibilityMemo(ctx, t, testStore, "agent-bff-public", other.ID, store.Public)
+	createAgentVisibilityMemo(ctx, t, testStore, "agent-bff-protected", other.ID, store.Protected)
+	createAgentVisibilityMemo(ctx, t, testStore, "agent-bff-hidden", other.ID, store.Private)
 
 	executor := &recordingAgentExecutor{response: validAgentAnswerResponse("agent-bff-private")}
 	echoServer := echo.New()
@@ -68,8 +68,8 @@ func TestAgentBFFDelegatesMemosOwnedRehydrationCapabilityWithoutBrowserProjectio
 	testStore := teststore.NewTestingStore(ctx, t)
 	t.Cleanup(func() { _ = testStore.Close() })
 	service := &APIV1Service{Store: testStore, Secret: "test-secret"}
-	caller := createAgentVisibilityUser(t, ctx, testStore, "agent-bff-rehydration-caller")
-	createAgentVisibilityMemo(t, ctx, testStore, "agent-bff-rehydration-private", caller.ID, store.Private)
+	caller := createAgentVisibilityUser(ctx, t, testStore, "agent-bff-rehydration-caller")
+	createAgentVisibilityMemo(ctx, t, testStore, "agent-bff-rehydration-private", caller.ID, store.Private)
 	runtime, err := newEvidenceRehydrationMemosRuntime(
 		service,
 		aiagent.EvidenceRehydrationRuntimeConfig{
@@ -105,7 +105,7 @@ func TestAgentBFFRejectsBrowserScopeAndUnauthenticatedRequests(t *testing.T) {
 	testStore := teststore.NewTestingStore(ctx, t)
 	t.Cleanup(func() { _ = testStore.Close() })
 	service := &APIV1Service{Store: testStore, Secret: "test-secret"}
-	caller := createAgentVisibilityUser(t, ctx, testStore, "agent-bff-request")
+	caller := createAgentVisibilityUser(ctx, t, testStore, "agent-bff-request")
 	executor := &recordingAgentExecutor{response: validAgentAnswerResponse("unused")}
 	echoServer := echo.New()
 	service.registerAgentRoutes(echoServer, aiagent.Config{Enabled: true}, executor)
@@ -138,7 +138,7 @@ func TestAgentBFFIsNotAvailableWhenDisabledAndMapsSafeFailures(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, disabledResponse.Code)
 	require.Zero(t, executor.calls)
 
-	caller := createAgentVisibilityUser(t, context.Background(), service.Store, "agent-bff-errors")
+	caller := createAgentVisibilityUser(context.Background(), t, service.Store, "agent-bff-errors")
 	executor.err = errors.New("raw internal error")
 	echoServer = echo.New()
 	service.registerAgentRoutes(echoServer, aiagent.Config{Enabled: true}, executor)

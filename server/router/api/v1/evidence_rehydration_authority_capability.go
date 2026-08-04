@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -185,7 +184,6 @@ func (registry *evidenceAuthorityCapabilityRegistry) issueScope(
 	callerID int32,
 	authorizedMemoUIDs []string,
 ) (evidenceAuthorityCapabilityGrant, error) {
-
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 	now, err := registry.clock.Now()
@@ -400,7 +398,7 @@ type cryptoEvidenceAuthorityCapabilityTokenSource struct{}
 func (cryptoEvidenceAuthorityCapabilityTokenSource) Token() (string, error) {
 	value := make([]byte, 32)
 	if _, err := rand.Read(value); err != nil {
-		return "", fmt.Errorf("token source unavailable")
+		return "", errors.New("token source unavailable")
 	}
 	return "t" + base64.RawURLEncoding.EncodeToString(value), nil
 }
