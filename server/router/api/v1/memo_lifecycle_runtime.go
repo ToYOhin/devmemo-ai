@@ -123,6 +123,8 @@ func (runtime *memoLifecycleSourceRuntime) recordFailure(
 			runtime.recordLifecycleDispatch("pending", "retry_count")
 		case store.MemoLifecycleOutboxExhausted:
 			runtime.recordLifecycleDispatch("failed", "quarantine_count")
+		default:
+			// Future outbox states must not be inferred as an observed outcome.
 		}
 	}
 	if err != nil && !errors.Is(err, store.ErrMemoLifecycleDeliveryExhausted) {

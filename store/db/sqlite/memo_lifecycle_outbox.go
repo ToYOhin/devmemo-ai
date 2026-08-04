@@ -424,18 +424,15 @@ func (d *DB) PrepareMemoLifecycleRebuild(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read memo lifecycle rebuild source")
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var snapshot memoLifecycleSnapshot
 		if err := rows.Scan(&snapshot.UID, &snapshot.Content, &snapshot.RowStatus); err != nil {
-			_ = rows.Close()
 			return nil, err
 		}
 		documentHash := fmt.Sprintf("%x", sha256.Sum256([]byte(snapshot.Content)))
 		manifestEntries = append(manifestEntries, [2]string{snapshot.UID, documentHash})
 		events = append(events, rebuildEvent{snapshot, store.MemoLifecycleEventReindex, "repair"})
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -464,6 +461,7 @@ func (d *DB) PrepareMemoLifecycleRebuild(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read memo lifecycle tombstones")
 	}
+	defer deleteRows.Close()
 	for deleteRows.Next() {
 		var event rebuildEvent
 		event.eventType = store.MemoLifecycleEventDelete
@@ -473,13 +471,9 @@ func (d *DB) PrepareMemoLifecycleRebuild(
 			&event.snapshot.RowStatus,
 			&event.reason,
 		); err != nil {
-			_ = deleteRows.Close()
 			return nil, err
 		}
 		events = append(events, event)
-	}
-	if err := deleteRows.Close(); err != nil {
-		return nil, err
 	}
 	if err := deleteRows.Err(); err != nil {
 		return nil, err

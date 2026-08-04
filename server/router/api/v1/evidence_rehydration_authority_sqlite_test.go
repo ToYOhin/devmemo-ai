@@ -54,8 +54,8 @@ func newR5I7Harness(t *testing.T) *r5I7Harness {
 	require.NoError(t, testStore.Migrate(ctx))
 	lifecycle, ok := driverValue.(store.MemoLifecycleOutboxStore)
 	require.True(t, ok)
-	caller := createR5I7User(t, ctx, testStore, "r5-i7-caller")
-	other := createR5I7User(t, ctx, testStore, "r5-i7-other")
+	caller := createR5I7User(ctx, t, testStore, "r5-i7-caller")
+	other := createR5I7User(ctx, t, testStore, "r5-i7-other")
 	return &r5I7Harness{
 		ctx:       context.WithValue(ctx, auth.UserIDContextKey, caller.ID),
 		store:     testStore,
@@ -71,7 +71,7 @@ func newR5I7Harness(t *testing.T) *r5I7Harness {
 	}
 }
 
-func createR5I7User(t *testing.T, ctx context.Context, testStore *store.Store, username string) *store.User {
+func createR5I7User(ctx context.Context, t *testing.T, testStore *store.Store, username string) *store.User {
 	t.Helper()
 	user, err := testStore.CreateUser(ctx, &store.User{
 		Username: username,
