@@ -331,8 +331,9 @@ state model。R6-I5C offline product-core baseline 实际执行 64 个 sanitized
 通过。fixed refusal contract 已在 Python/Go/Web 同步，并位于 retrieval/Provider 前。
 hash-locked Python engineering gate 已在 Windows 本地通过：Ruff 检查明确 AI source/test 范围，mypy 检查 64 个
 production source file，764 个测试全部通过，branch coverage 为 88.6%，初始 fail-under 为 88.0%。完成审计仍阻断于
-local commits 的 clean-checkout CI、新 refusal path 的 disposable browser proof，以及 reviewed default-branch/tag/release
-publication。
+local commits 的 clean-checkout CI 与 reviewed default-branch/tag/release publication。当前 checkout 的 disposable Windows
+Docker/Qdrant/headed-browser 运行已用纯 synthetic data 与 deterministic Provider 证明 same-origin cited answer、fixed refusal、
+disablement、AI/Qdrant 零 host port 与精确 cleanup；同时再次确认 port 8000 按设计不发布时 legacy direct-AI panels 仍失败。
 
 范围：
 
@@ -378,9 +379,9 @@ publication。
 
 ## 下一阶段
 
-R6 本地实现与 Python engineering gate 已经组装完成，但尚未达到 release-complete。只能按以下顺序关闭剩余外部闸门：
-对 refusal、一次 cited answer、disablement 与精确 cleanup 运行 disposable 认证浏览器证明；发布 feature branch 并验证
-clean-checkout CI；最后把 default-branch merge、tag 与 release 作为独立授权评审。
+R6 本地实现、Python engineering gate 与 disposable 认证浏览器证明已经完成，但尚未达到 release-complete。只能按以下
+顺序关闭剩余外部闸门：发布 feature branch 并验证 clean-checkout CI；最后把 default-branch merge、tag 与 release 作为
+独立授权评审。
 
 这些 R6 闸门关闭前，不定义或实现 R7。R6 收口后，必须先在双语 roadmap 中评审 R7 outcome、scope、acceptance、
 rollback、隐私/数据流影响与授权闸门。R6 仍不自动授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何

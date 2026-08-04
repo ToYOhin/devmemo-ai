@@ -24,22 +24,23 @@ R6 已在本地实现 sanitized evaluation、fixed refusal 与 content-free obse
 - Python engineering gate 已固定 hash-locked Ruff 0.16.1、mypy 1.20.2 与 coverage.py 7.15.3。Windows 本地
   Ruff 对明确 AI source/test 范围通过，mypy 对 64 个 production source file 通过，764 个测试全部通过，branch
   coverage 为 88.6%，初始 fail-under 为 88.0%。
+- 当前 checkout 已完成一次 disposable Windows Docker/Qdrant/headed-browser 验收，仅使用一个 synthetic account、
+  一个 synthetic Memo 与 deterministic Provider。真实认证、same-origin 链路证明了普通 cited answer、零 citation 的固定
+  pre-retrieval refusal、明确 disabled-state UI、AI/Qdrant 零 host port，以及 container、network、volume、验收 image、
+  browser state、临时 build context、credential、data 与 Memos host listener 的精确清理。accepted run 前已关闭 Qdrant
+  telemetry。同一浏览器运行也再次确认：port 8000 按设计不发布时，legacy direct-AI panels 仍然失败。
 
 ## 尚未完成
 
 1. **Clean-checkout CI：** R6 commits 仍在本地，GitHub workflow 尚未运行，不能声称当前 Linux unit/integration/security/
    build 可复现。
-2. **R6 disposable browser proof：** R5 已证明 lifecycle/browser product path，但新增 refusal terminal、Go safe projection
-   与 Web render 目前只有 unit/TestClient 证据。仍需 disposable 认证浏览器验证 refusal、普通 cited answer、disablement 与
-   exact cleanup。
-3. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
+2. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
    R6 已发布。
 
 ## 授权顺序
 
-1. 授权 disposable Docker/Qdrant/temp account/Memo/volume/secret 与认证浏览器验收 R6 delta；
-2. 授权 push feature branch 并验证 required CI；
-3. review 后再单独授权 merge/default-branch publication、tag 与 release。
+1. 授权 push feature branch 并验证 required CI；
+2. review 后再单独授权 merge/default-branch publication、tag 与 release。
 
 上述 R6 闸门关闭前，不虚构或实现 R7。R6 收口后，应先在双语 roadmap 定义 R7 outcome、scope、acceptance、
 rollback、隐私/数据流影响与授权闸门，再进入代码切片。
