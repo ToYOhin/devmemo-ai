@@ -37,27 +37,30 @@ runtime authorization, CI publication, or release authority.
   1.20.2, and coverage.py 7.15.3. On Windows, Ruff passes the explicit AI
   source/test scope, mypy passes 64 production source files, and all 764 tests
   pass with 88.6% branch coverage against an 88.0% fail-under baseline.
+- A disposable Windows Docker/Qdrant/headed-browser run against the current
+  checkout used one synthetic account and Memo with the deterministic Provider.
+  It proved one same-origin cited answer, the fixed pre-retrieval refusal with
+  no citations, explicit disabled-state UI, zero AI/Qdrant host ports, and exact
+  cleanup of containers, network, volumes, acceptance images, browser state,
+  temporary build context, credentials, data, and the Memos host listener.
+  Qdrant telemetry was disabled before the accepted run. The same browser run
+  reconfirmed that legacy direct-AI panels still fail while port 8000 remains
+  intentionally unpublished.
 
 ## Not yet complete
 
 1. **Clean-checkout CI:** the R6 commits are local. GitHub workflows have not run
    against them, so Linux unit/integration/security/build reproducibility is not
    current evidence.
-2. **R6 disposable browser proof:** R5 previously proved the lifecycle/browser
-   product path, but the new refusal terminal, safe Go projection, and Web render
-   have only unit/TestClient evidence. A disposable authenticated browser run
-   must verify refusal, normal cited answer, disablement, and exact cleanup.
-3. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
+2. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
    image, or release artifact exists. README must not claim a released R6 state.
 
 ## Authorization sequence
 
 Complete the remaining gates in this order:
 
-1. authorize disposable Docker/Qdrant/temp-account/Memo/volume/secret and
-   authenticated browser acceptance for the R6 delta;
-2. authorize pushing the feature branch and verifying all required CI checks;
-3. after review, separately authorize merge/default-branch publication, tag, and
+1. authorize pushing the feature branch and verifying all required CI checks;
+2. after review, separately authorize merge/default-branch publication, tag, and
    release.
 
 R7 must not be invented or implemented while these R6 gates remain open. Once
