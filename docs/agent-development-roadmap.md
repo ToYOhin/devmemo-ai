@@ -488,8 +488,10 @@ the current checkout now proves a same-origin cited answer, the fixed refusal,
 disablement, zero AI/Qdrant host ports, and exact cleanup using only synthetic
 data and the deterministic Provider. It also reconfirms the known failure of
 legacy direct-AI panels while port 8000 remains intentionally unpublished. The
-completion audit still blocks R6 on clean-checkout CI for the local commits and
-reviewed default-branch/tag/release publication.
+feature branch is published, and Draft PR #3 at head `30a275d` passes the
+clean-checkout AI Service, Backend, Frontend, Proto Linter, and CodeQL workflows.
+The completion audit now blocks R6 only on reviewed default-branch/tag/release
+publication.
 
 Scope:
 
@@ -563,11 +565,11 @@ review, and explicit authorization.
 
 ## Next stage
 
-The local R6 implementation, Python engineering gate, and disposable
-authenticated-browser proof are now complete, but R6 is not release-complete.
-Proceed only through the remaining external gates in this order: publish the
-feature branch and verify clean-checkout CI; then review default-branch merge,
-tag, and release as a separate authorization.
+The R6 implementation, Python engineering gate, disposable
+authenticated-browser proof, feature-branch publication, and clean-checkout PR
+CI are now complete, but R6 is not release-complete. Review default-branch
+merge, tag, and release as a separate authorization; passing PR CI does not
+authorize those actions.
 
 Do not define or implement R7 while those R6 gates remain open. After R6 is
 closed, the bilingual roadmap must first review R7 outcome, scope, acceptance,

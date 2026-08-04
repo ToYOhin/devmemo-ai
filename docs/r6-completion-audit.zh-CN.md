@@ -1,7 +1,7 @@
 # R6 完成审计
 
-R6 已在本地实现 sanitized evaluation、fixed refusal 与 content-free observability 切片，但尚未达到 release-complete。
-本记录严格区分当前证据，以及仍需外部工具、runtime 授权、CI publication 或 release authority 的闸门。
+R6 已实现 sanitized evaluation、fixed refusal 与 content-free observability 切片，并已在 feature branch 发布且具备
+clean-checkout CI 证据，但尚未达到 release-complete。本记录严格区分当前证据与仍需 release authority 的闸门。
 
 ## 当前项目结构
 
@@ -13,7 +13,7 @@ R6 已在本地实现 sanitized evaluation、fixed refusal 与 content-free obse
 - 跨语言 fixture 位于 `contracts/`，公共设计与运维证据位于 `docs/`；本地 Agent 状态、Prompt、交接与生成结构图被
   Git 忽略，不属于 release artifact。
 
-## 本地已验证
+## 已验证证据
 
 - strict 64-case synthetic corpus 与七项 versioned threshold 已实际运行 deterministic in-memory retrieval/Agent core；
   fixed pre-retrieval refusal 接线后，全部 case 与 threshold 通过。
@@ -29,18 +29,18 @@ R6 已在本地实现 sanitized evaluation、fixed refusal 与 content-free obse
   pre-retrieval refusal、明确 disabled-state UI、AI/Qdrant 零 host port，以及 container、network、volume、验收 image、
   browser state、临时 build context、credential、data 与 Memos host listener 的精确清理。accepted run 前已关闭 Qdrant
   telemetry。同一浏览器运行也再次确认：port 8000 按设计不发布时，legacy direct-AI panels 仍然失败。
+- Draft PR #3 在 feature-branch head `30a275d` 上通过 clean-checkout GitHub CI：AI Service Tests run
+  `30908048004`、Backend Tests run `30908048498`、Frontend Tests run `30908047993`、Proto Linter run
+  `30908048511` 与 CodeQL run `30908042878`。这是 feature branch/PR 证据，不是 default-branch release 证据。
 
 ## 尚未完成
 
-1. **Clean-checkout CI：** R6 commits 仍在本地，GitHub workflow 尚未运行，不能声称当前 Linux unit/integration/security/
-   build 可复现。
-2. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
+1. **Release gate：** 尚无 reviewed default-branch merge、R6 tag、release note、image 或 release artifact；README 不得声称
    R6 已发布。
 
 ## 授权顺序
 
-1. 授权 push feature branch 并验证 required CI；
-2. review 后再单独授权 merge/default-branch publication、tag 与 release。
+review 后仍需单独授权 merge/default-branch publication、tag 与 release。PR CI 通过不授权其中任何操作。
 
 上述 R6 闸门关闭前，不虚构或实现 R7。R6 收口后，应先在双语 roadmap 定义 R7 outcome、scope、acceptance、
 rollback、隐私/数据流影响与授权闸门，再进入代码切片。
