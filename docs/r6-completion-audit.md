@@ -1,9 +1,9 @@
 # R6 Completion Audit
 
-R6 is locally implemented through the sanitized evaluation, fixed refusal, and
-content-free observability slices, but it is not release-complete. This record
-separates current evidence from gates that still require external tooling,
-runtime authorization, CI publication, or release authority.
+R6 is implemented through the sanitized evaluation, fixed refusal, and
+content-free observability slices and is published on the feature branch with
+clean-checkout CI evidence, but it is not release-complete. This record
+separates current evidence from gates that still require release authority.
 
 ## Current project shape
 
@@ -21,7 +21,7 @@ runtime authorization, CI publication, or release authority.
   evidence lives in `docs/`. Local Agent status, prompts, handoffs, and generated
   architecture graphs are ignored and are not release artifacts.
 
-## Verified locally
+## Verified evidence
 
 - The strict 64-case synthetic corpus and seven versioned thresholds run through
   the real deterministic in-memory retrieval and Agent core. All cases and
@@ -46,22 +46,21 @@ runtime authorization, CI publication, or release authority.
   Qdrant telemetry was disabled before the accepted run. The same browser run
   reconfirmed that legacy direct-AI panels still fail while port 8000 remains
   intentionally unpublished.
+- Draft PR #3 at feature-branch head `30a275d` passes clean-checkout GitHub CI:
+  AI Service Tests run `30908048004`, Backend Tests run `30908048498`, Frontend
+  Tests run `30908047993`, Proto Linter run `30908048511`, and CodeQL run
+  `30908042878`. This is feature-branch/PR evidence, not default-branch release
+  evidence.
 
 ## Not yet complete
 
-1. **Clean-checkout CI:** the R6 commits are local. GitHub workflows have not run
-   against them, so Linux unit/integration/security/build reproducibility is not
-   current evidence.
-2. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
+1. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
    image, or release artifact exists. README must not claim a released R6 state.
 
 ## Authorization sequence
 
-Complete the remaining gates in this order:
-
-1. authorize pushing the feature branch and verifying all required CI checks;
-2. after review, separately authorize merge/default-branch publication, tag, and
-   release.
+After review, separately authorize merge/default-branch publication, tag, and
+release. Passing PR CI does not authorize any of those actions.
 
 R7 must not be invented or implemented while these R6 gates remain open. Once
 R6 closes, define R7 outcome, scope, acceptance, rollback, privacy/data-flow
