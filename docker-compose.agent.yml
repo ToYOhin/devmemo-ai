@@ -10,6 +10,9 @@ services:
         COMMIT: ${DEVMEMO_AGENT_COMMIT:-local}
     image: devmemo-ai-memos-agent:local
     profiles: ["agent"]
+    depends_on:
+      ai-service:
+        condition: service_healthy
     environment:
       GOMAXPROCS: "1"
       AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-false}
@@ -31,6 +34,16 @@ services:
     expose:
       - "8000"
     profiles: ["agent"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
     environment:
       AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-false}
       AI_AGENT_INTERNAL_SECRET: ${AI_AGENT_INTERNAL_SECRET:-}
