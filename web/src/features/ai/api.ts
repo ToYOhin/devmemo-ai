@@ -143,53 +143,25 @@ const hasExactKeys = (value: Record<string, unknown>, keys: string[]): boolean =
 };
 
 export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null => {
-  if (!isRecord(value) || !hasExactKeys(value, ["answer", "citations", "provider", "retrieved_count", "agent_version", "trace"]))
-    return null;
+  if (!isRecord(value) || !hasExactKeys(value, ["answer", "citations", "trace"])) return null;
 
   const answer = readString(value.answer);
-  const provider = readString(value.provider);
-  const retrievedCount = value.retrieved_count;
-  const agentVersion = value.agent_version;
-  if (
-    answer === null ||
-    provider === null ||
-    typeof retrievedCount !== "number" ||
-    !Number.isInteger(retrievedCount) ||
-    retrievedCount < 0 ||
-    agentVersion !== "evidence-answer-agent-v1" ||
-    !Array.isArray(value.citations)
-  ) {
+  if (answer === null || !Array.isArray(value.citations)) {
     return null;
   }
 
   const citations = value.citations.map((citation): AiEvidenceCitation | null => {
-    if (!isRecord(citation) || !hasExactKeys(citation, ["memo_id", "embedding_id", "score", "title", "summary", "source_refs", "metadata"]))
-      return null;
+    if (!isRecord(citation) || !hasExactKeys(citation, ["memo_id", "title", "summary", "source_refs"])) return null;
     const memoId = readString(citation.memo_id);
-    const embeddingId = readString(citation.embedding_id);
     const title = readString(citation.title);
     const summary = readString(citation.summary);
     const sourceRefs = readTags(citation.source_refs);
-    const metadata = isRecord(citation.metadata) ? citation.metadata : null;
-    if (
-      memoId === null ||
-      embeddingId === null ||
-      typeof citation.score !== "number" ||
-      !Number.isFinite(citation.score) ||
-      title === null ||
-      summary === null ||
-      sourceRefs === null ||
-      metadata === null ||
-      !hasExactKeys(metadata, ["memo_type", "tags", "index_version"]) ||
-      readString(metadata.memo_type) === null ||
-      readTags(metadata.tags) === null ||
-      metadata.index_version !== "memo-v1"
-    ) {
+    if (memoId === null || title === null || summary === null || sourceRefs === null) {
       return null;
     }
     return { memo_id: memoId, title, summary, source_refs: sourceRefs };
   });
-  if (citations.some((citation) => citation === null) || citations.length !== retrievedCount) return null;
+  if (citations.some((citation) => citation === null)) return null;
 
   if (!isRecord(value.trace) || !hasExactKeys(value.trace, ["terminal_state", "steps"]) || !Array.isArray(value.trace.steps)) return null;
   const terminalState = value.trace.terminal_state;
@@ -197,13 +169,11 @@ export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null =
   const steps = value.trace.steps.map((step): AiEvidenceTraceStep | null => {
     if (!isRecord(step)) return null;
     const hasResultCount = Object.hasOwn(step, "result_count");
-    if (!hasExactKeys(step, hasResultCount ? ["index", "kind", "name", "status", "result_count"] : ["index", "kind", "name", "status"]))
-      return null;
+    if (!hasExactKeys(step, hasResultCount ? ["index", "name", "status", "result_count"] : ["index", "name", "status"])) return null;
     if (!Number.isInteger(step.index) || step.status !== "completed") return null;
-    if (step.index === 1 && step.kind === "final" && step.name === "refuse_unsafe_request" && !hasResultCount) {
+    if (step.index === 1 && step.name === "refuse_unsafe_request" && !hasResultCount) {
       return { index: step.index, name: step.name, status: step.status };
     }
-    if (step.kind !== (step.index === 1 ? "tool" : "final")) return null;
     if (step.index === 1 && step.name === "search_memos" && Number.isInteger(step.result_count) && step.result_count === citations.length) {
       return { index: step.index, name: step.name, status: step.status, result_count: step.result_count };
     }
@@ -221,7 +191,6 @@ export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null =
       (steps.length !== 1 ||
         steps[0]?.name !== "refuse_unsafe_request" ||
         citations.length !== 0 ||
-        provider !== "policy" ||
         answer !== "Request refused by the Agent safety policy."))
   ) {
     return null;

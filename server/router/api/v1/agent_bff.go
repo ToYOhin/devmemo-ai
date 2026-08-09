@@ -22,6 +22,31 @@ type agentBrowserAnswerRequest struct {
 	Limit    int    `json:"limit"`
 }
 
+type agentBrowserAnswerResponse struct {
+	Answer    string                       `json:"answer"`
+	Citations []agentBrowserAnswerCitation `json:"citations"`
+	Trace     agentBrowserAnswerTrace      `json:"trace"`
+}
+
+type agentBrowserAnswerCitation struct {
+	MemoID     string   `json:"memo_id"`
+	Title      string   `json:"title"`
+	Summary    string   `json:"summary"`
+	SourceRefs []string `json:"source_refs"`
+}
+
+type agentBrowserAnswerTrace struct {
+	TerminalState string                   `json:"terminal_state"`
+	Steps         []agentBrowserAnswerStep `json:"steps"`
+}
+
+type agentBrowserAnswerStep struct {
+	Index       int    `json:"index"`
+	Name        string `json:"name"`
+	Status      string `json:"status"`
+	ResultCount *int   `json:"result_count,omitempty"`
+}
+
 type agentRouteRegistrar interface {
 	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) echo.RouteInfo
 }
@@ -57,8 +82,37 @@ func (s *APIV1Service) registerAgentRoutes(router agentRouteRegistrar, config ai
 		if err != nil {
 			return c.JSON(agentErrorStatus(err), map[string]string{"detail": agentErrorDetail(err)})
 		}
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, projectAgentBrowserAnswer(response))
 	})
+}
+
+func projectAgentBrowserAnswer(response aiagent.AnswerResponse) agentBrowserAnswerResponse {
+	citations := make([]agentBrowserAnswerCitation, 0, len(response.Citations))
+	for _, citation := range response.Citations {
+		citations = append(citations, agentBrowserAnswerCitation{
+			MemoID:     citation.MemoID,
+			Title:      citation.Title,
+			Summary:    citation.Summary,
+			SourceRefs: citation.SourceRefs,
+		})
+	}
+	steps := make([]agentBrowserAnswerStep, 0, len(response.Trace.Steps))
+	for _, step := range response.Trace.Steps {
+		steps = append(steps, agentBrowserAnswerStep{
+			Index:       step.Index,
+			Name:        step.Name,
+			Status:      step.Status,
+			ResultCount: step.ResultCount,
+		})
+	}
+	return agentBrowserAnswerResponse{
+		Answer:    response.Answer,
+		Citations: citations,
+		Trace: agentBrowserAnswerTrace{
+			TerminalState: response.Trace.TerminalState,
+			Steps:         steps,
+		},
+	}
 }
 
 func (s *APIV1Service) resolveAgentDelegationScope(ctx context.Context) ([]string, string, error) {
