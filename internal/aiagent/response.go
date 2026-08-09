@@ -12,7 +12,7 @@ const refusalAnswer = "Request refused by the Agent safety policy."
 
 const agentVersion = "evidence-answer-agent-v1"
 
-// AnswerResponse is the only AI result shape the Memos BFF may return to a browser.
+// AnswerResponse is the validated AI Service result shape consumed by the Memos BFF.
 type AnswerResponse struct {
 	Answer         string     `json:"answer"`
 	Citations      []Citation `json:"citations"`

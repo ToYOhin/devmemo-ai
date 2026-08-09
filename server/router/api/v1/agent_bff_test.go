@@ -60,7 +60,28 @@ func TestAgentBFFUsesAuthenticatedMemosVisibilityAndSafeProjection(t *testing.T)
 	require.ElementsMatch(t, []string{
 		"agent-bff-private", "agent-bff-public", "agent-bff-protected",
 	}, executor.delegated.VisibleMemoUIDs)
-	require.NotContains(t, response.Body.String(), "content")
+	require.JSONEq(t, `{
+		"answer":"Authorized answer [1].",
+		"citations":[{
+			"memo_id":"agent-bff-private",
+			"title":"Safe title",
+			"summary":"Authorized complete Memo retrieved as evidence.",
+			"source_refs":["memos/agent-bff-private"]
+		}],
+		"trace":{
+			"terminal_state":"answered",
+			"steps":[
+				{"index":1,"name":"search_memos","status":"completed","result_count":1},
+				{"index":2,"name":"answer_from_evidence","status":"completed"}
+			]
+		}
+	}`, response.Body.String())
+	for _, internalField := range []string{
+		"provider", "retrieved_count", "agent_version", "embedding_id",
+		"score", "metadata", "index_version", "kind",
+	} {
+		require.NotContains(t, response.Body.String(), internalField)
+	}
 }
 
 func TestAgentBFFDelegatesMemosOwnedRehydrationCapabilityWithoutBrowserProjection(t *testing.T) {
