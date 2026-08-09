@@ -36,22 +36,16 @@ const safeAnswer = {
   citations: [
     {
       memo_id: "memo-42",
-      embedding_id: "memo-42",
-      score: 0.9,
       title: "Docker ports",
       summary: "The Compose mapping is the source of the exposed port.",
       source_refs: ["title", "summary"],
-      metadata: { memo_type: "memo", tags: ["docker"], index_version: "memo-v1" },
     },
   ],
-  provider: "deterministic",
-  retrieved_count: 1,
-  agent_version: "evidence-answer-agent-v1",
   trace: {
     terminal_state: "answered",
     steps: [
-      { index: 1, kind: "tool", name: "search_memos", status: "completed", result_count: 1 },
-      { index: 2, kind: "final", name: "answer_from_evidence", status: "completed" },
+      { index: 1, name: "search_memos", status: "completed", result_count: 1 },
+      { index: 2, name: "answer_from_evidence", status: "completed" },
     ],
   },
 };
@@ -104,12 +98,9 @@ describe("Evidence Answer entry", () => {
     const refusal = {
       answer: "Request refused by the Agent safety policy.",
       citations: [],
-      provider: "policy",
-      retrieved_count: 0,
-      agent_version: "evidence-answer-agent-v1",
       trace: {
         terminal_state: "refused",
-        steps: [{ index: 1, kind: "final", name: "refuse_unsafe_request", status: "completed" }],
+        steps: [{ index: 1, name: "refuse_unsafe_request", status: "completed" }],
       },
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(refusal), { status: 200 })));
