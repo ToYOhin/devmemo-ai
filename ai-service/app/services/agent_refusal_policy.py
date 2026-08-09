@@ -15,7 +15,9 @@ _REFUSAL_INTENTS = (
         ("reveal ", "expose ", "print "),
         (
             "hidden system instructions",
+            "hidden prompt",
             "secret value",
+            "private secret",
             "hidden context",
             "identity mapping",
         ),
