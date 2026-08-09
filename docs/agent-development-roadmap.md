@@ -1,47 +1,16 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-03
+> Status date: 2026-08-09
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
 >
-> Current delivery state: A0-A3, the A4 lifecycle design, R1/A4-I1 pure
-> lifecycle contracts, the SQLite-only A4-I2 source-outbox transaction proof,
-> the dormant A4-I3 derived-ledger/fake-vector recovery proof, A4-I4
-> authenticated transport contracts, and the A4-I5 synthetic disposable
-> lifecycle integration proof are complete on the Agent feature branch. R4-I1
-> adds strict provider-neutral grounded-answer result contracts, and R4-I2
-> safely integrates them using synthetic evidence and fake Provider results.
-> R4-I3 adds a disposable local Provider compatibility smoke. R5-I1 adds an
-> unwired, fake-verified durable authorized-retrieval contract, and R5-I2 adds
-> an unwired disposable SQLite repository-adapter parity proof. R5-I3 selects
-> authenticated current-authority Memos rehydration and request-memory-only
-> content retention through a pure design contract and synthetic fixture.
-> R5-I4 adds an unwired in-process proof for domain-separated request/response
-> HMAC, freshness, exact parsing, and bounded process-local replay. R5-I5 adds
-> unwired Go/Python canonical and exact-payload parity against the shared fixture.
-> R5-I6 adds the unwired pure Go current-authority reader contract and in-memory
-> all-or-nothing parity proof. R5-I7 adds the unwired real single-host SQLite
-> current-authority reader and temporary-database parity proof. R5-I8 adds the
-> unwired process-local authority capability issuer/resolver and bounded registry
-> proof. R5-I9 adds the unwired single-host transport composition and dedicated
-> process-local request-replay proof. R5-I10 adds an unregistered single-host
-> HTTP handler/client contract with strict projection, fixed five-second timeout,
-> and recorder/fake-transport proof. R5-I11A adds strict, disabled-by-default
-> Go/Python configuration for a dedicated current/previous rehydration keyring
-> and one AI-side Memos origin. R5-I11B adds fixed-order matching-key handling
-> and opt-in registration on the existing Memos listener. R5-I11C adds the
-> AI-side Python HTTP client and deterministic lifespan shutdown. R5-I12 adds
-> Memos-owned capability issuance and an opaque ref inside signed delegation.
-> R5-I13 adds injected durable candidate/rehydration orchestration with snapshot
-> recheck. R5-I14 adds a content-free vector/lifecycle adapter, ledger-owned
-> generation revision, authorized UID query pushdown, and default-disabled
-> lifespan ownership. R5-I15 selects that owned runtime in the verified answer
-> path without fallback and proves a disposable synthetic single-host flow.
-> R5-I16 records the requirement-by-requirement completion audit. The authorized
-> post-I16 lifecycle and runtime work has now connected dispatch, generation
-> activation, and Qdrant-derived state and completed disposable authenticated-
-> browser acceptance. R5 is complete for its default-disabled single-host scope.
+> Current delivery state: A0-A4 and R1-R5 are complete for the documented,
+> default-disabled single-host scope. R6 implementation, evaluation, Python
+> engineering gates, disposable authenticated-browser acceptance, review, and
+> default-branch CI are complete on `main` at `b8012ba`. Three subsequent
+> canary fixes for BFF projection, refusal synonyms, and Compose readiness are
+> locally verified but remain unpublished. R6 has no tag or release artifact.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -91,10 +60,10 @@ answers, measurable quality, and reproducible recovery**.
 | --- | --- | --- | --- |
 | P0 | R5 evidence is intentionally single-host and disposable | Runtime acceptance now covers SQLite Memos, local Qdrant, deterministic Provider, authenticated visibility, lifecycle convergence, restart, rollback, and cleanup, but not real data or multi-instance deployment | Preserve the R5 boundary; require backup/restore proof for real data and shared atomic state plus encrypted transport before multi-instance use |
 | P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
-| P1 | Evaluation is synthetic and too small | Retrieval and safety claims are not supported by a representative, repeatable benchmark | Publish a sanitized evaluation set, thresholds, failure categories, and a reproducible report |
-| P1 | Observability is request-local | Operators cannot inspect latency, retry backlog, stale/quarantined records, or rebuild progress without risking content exposure | Add content-free metrics and spans with explicit field allowlists and cardinality limits |
-| P1 | AI Service boundaries are concentrated in large modules and Python quality gates are limited | Changes to routing, storage, and Agent behavior are harder to review safely | Extract domain/service boundaries as touched and add lint, type, coverage, and focused integration gates |
-| P1 | The Agent exists only on a feature branch with no public demonstration | Reviewers cannot reproduce the full product claim from the default branch or a release | Merge through review, publish a tagged release, architecture/threat-model docs, evaluation results, and a short reproducible demo |
+| P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
+| P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
+| P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
+| P1 | The default branch lacks the three canary fixes and no R6 release exists | Main has the reviewed R6 baseline, but not the safe-projection, refusal-synonym, and readiness corrections or a tagged artifact | Publish the fix branch, pass exact-head CI, review/merge it, then separately authorize a tagged release and reproducible demo |
 
 ## Delivery rules
 
@@ -480,18 +449,19 @@ requires an authoritative cross-process state model.
 The R6-I5C offline product-core baseline runs all 64 sanitized cases with no
 failed case and all seven thresholds passing. The fixed refusal contract is
 synchronized across Python, Go, and Web and runs before retrieval or Provider.
-The hash-locked Python engineering gate now passes locally on Windows: Ruff
-checks the explicit AI source/test scope, mypy checks 64 production source
-files, and all 764 tests pass with 88.6% branch coverage against an 88.0%
-fail-under baseline. A disposable Windows Docker/Qdrant/headed-browser run on
-the current checkout now proves a same-origin cited answer, the fixed refusal,
-disablement, zero AI/Qdrant host ports, and exact cleanup using only synthetic
-data and the deterministic Provider. It also reconfirms the known failure of
-legacy direct-AI panels while port 8000 remains intentionally unpublished. The
-feature branch is published, and Draft PR #3 at head `30a275d` passes the
-clean-checkout AI Service, Backend, Frontend, Proto Linter, and CodeQL workflows.
-The completion audit now blocks R6 only on reviewed default-branch/tag/release
-publication.
+The hash-locked Python engineering gate passes locally on Windows: Ruff checks
+the explicit AI source/test scope, mypy checks 64 production source files, and
+the merged baseline passes 764 tests with 88.6% branch coverage against an
+88.0% fail-under baseline. PR #3 was reviewed and merged by GitHub rebase to
+`main` at `b8012ba`; AI Service, Backend, Frontend, Proto Linter, and CodeQL
+post-merge runs pass on that exact commit. A later local candidate passes 767
+tests at the same coverage baseline and fixes browser-safe BFF projection,
+protected-prompt/private-secret refusal synonyms, and Compose readiness. Its
+resource-bounded Windows Docker/Qdrant/authenticated-browser acceptance proves
+the safe real BFF body, normal cited answer, both refusal forms before
+retrieval, disablement, zero AI/Qdrant host ports, and exact cleanup using only
+synthetic data and the deterministic Provider. The candidate remains
+unpublished and has no clean-checkout Linux CI. R6 also has no tag or release.
 
 Scope:
 
@@ -565,15 +535,22 @@ review, and explicit authorization.
 
 ## Next stage
 
-The R6 implementation, Python engineering gate, disposable
-authenticated-browser proof, feature-branch publication, and clean-checkout PR
-CI are now complete, but R6 is not release-complete. Review default-branch
-merge, tag, and release as a separate authorization; passing PR CI does not
-authorize those actions.
+Close R6 in three separately authorized steps:
 
-Do not define or implement R7 while those R6 gates remain open. After R6 is
-closed, the bilingual roadmap must first review R7 outcome, scope, acceptance,
-rollback, privacy/data-flow impact, and authorization gates. R6 still does not
-authorize real user data, an external Provider, public AI ports, or
+1. Publish the local canary-fix branch and verify required clean-checkout CI on
+   its exact remote head.
+2. Review and merge the fixes to `main`, then verify post-merge required CI.
+3. Separately authorize the R6 tag, release notes, image/artifact, and release
+   publication.
+
+Only after R6 release closure, perform the bilingual R7-I0 definition gate
+before implementation. Define `AgentRun`, `AgentStep`, `RunEvent`,
+`ApprovalRequest`, and `Artifact`; specify at least `search_memos`,
+`get_memo_evidence`, and `create_report_artifact`; keep future Memo write tools
+approval-gated; and review bounded planning, step/time budgets, idempotency,
+checkpoint/retry/resume, a complete redacted timeline, a fixed multi-tool task
+set, acceptance, rollback, privacy/data flow, and authorization boundaries.
+
+R6 does not authorize real user data, an external Provider, public AI ports, or
 multi-instance deployment. Encrypted transport and shared atomic
 replay/capability storage remain mandatory before any multi-instance claim.

@@ -1,34 +1,13 @@
 # DevMemo Agent 开发路线
 
-> 状态日期：2026-08-03
+> 状态日期：2026-08-09
 >
 > 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
 >
-> 当前交付状态：Agent 功能分支已完成 A0-A3、A4 生命周期设计、R1/A4-I1
-> 纯生命周期契约、仅 SQLite 的 A4-I2 源端 outbox 事务证明、dormant 的
-> A4-I3 派生 ledger/fake vector 崩溃恢复证明、A4-I4 认证 transport 契约，
-> 以及 A4-I5 合成一次性 lifecycle 集成证明；lifecycle route、dispatcher、
-> 运行时接线和可用于正式产品的回答链路尚未实现。R4-I1 已增加严格、
-> provider-neutral 的 grounded-answer 结果契约，R4-I2 已用合成证据和 fake Provider
-> 将其安全接入回答路径，R4-I3 已增加一次性本地 Provider 兼容性 smoke，R5-I1 已增加
-> 尚未接线、经 fake 验证的持久化授权检索契约，R5-I2 已增加尚未接线的一次性 SQLite
-> repository-adapter parity proof，R5-I3 已通过纯设计契约与合成 fixture 选择认证的 Memos 当前权威
-> rehydration 和请求内存正文 retention，R5-I4 已增加尚未接线的进程内证明，覆盖独立 request/response
-> HMAC、时效、精确解析和有界 process-local replay，R5-I5 已基于共享 fixture 增加尚未接线的 Go/Python
-> canonical 与 exact payload parity，R5-I6 已增加尚未接线的纯 Go current-authority reader 契约与内存
-> all-or-nothing parity proof，R5-I7 已增加尚未接线的真实单机 SQLite current-authority reader 与临时数据库
-> parity proof，R5-I8 已增加尚未接线的 process-local authority capability issuer/resolver 与有界 registry
-> 证明，R5-I9 已增加尚未接线的单机 transport composition 与专用 process-local request replay 证明，
-> R5-I10 已增加单机 HTTP handler/client contract、严格投影、固定五秒 timeout 与 recorder/fake-transport
-> 证明，R5-I11A 已增加独立 current/previous rehydration keyring 与 AI 侧单一 Memos origin 的严格默认关闭
-> 配置，R5-I11B 已增加 matching-key handling 与现有 Memos listener 上的 opt-in registration，R5-I11C 已
-> 增加 AI 侧 Python HTTP client 与确定性 lifespan shutdown，R5-I12 已增加 Memos-owned capability issuance
-> 与 signed delegation 内的 opaque ref，R5-I13 已增加带 snapshot recheck 的 injected durable candidate/
-> rehydration orchestration，R5-I14 已增加无正文 vector/lifecycle adapter、ledger-owned generation revision、
-> 授权 UID 查询下推与默认关闭的 lifespan ownership，R5-I15 已在 verified answer path 无 fallback 地选择该
-> owned runtime，并完成 disposable synthetic 单机流程证明；R5-I16 已完成逐项审计。获授权的 post-I16
-> lifecycle/runtime 工作现已连接 dispatch、generation activation 与 Qdrant derived state，并完成 disposable
-> 认证浏览器验收。R5 在默认关闭的单机范围内完成。
+> 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、Python
+> engineering gate、disposable 认证浏览器验收、review 与 default-branch CI 已在 `main` 的 `b8012ba`
+> 完成。随后针对 BFF 投影、refusal 同义表达与 Compose readiness 的三项 canary 修复已在本地验证，但尚未
+> 发布；R6 仍无 tag 或 release artifact。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -64,10 +43,10 @@ Agent，而不是通用自治助手：
 | --- | --- | --- | --- |
 | P0 | R5 证据有意限定为 single-host disposable | 运行时验收已覆盖 SQLite Memos、本地 Qdrant、deterministic Provider、认证 visibility、lifecycle 收敛、restart、rollback 与 cleanup，但不覆盖真实数据或多实例 | 保持 R5 边界；真实数据需 backup/restore 证明，多实例需 shared atomic state 与加密 transport |
 | P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
-| P1 | 评估集过小且主要是合成样例 | 检索与安全主张缺少有代表性、可重复的基准 | 发布脱敏评估集、阈值、失败类别与可复现报告 |
-| P1 | 可观测性只停留在单次请求 | 运维无法安全观察延迟、重试积压、隔离记录或重建进度 | 增加无内容 metrics/span，并规定字段白名单和基数上限 |
-| P1 | AI Service 路由、存储和 Agent 行为集中在大模块中，Python 质量门禁有限 | 改动更难审查和隔离 | 随功能切片提取 domain/service 边界，并增加 lint、类型、覆盖率和定向集成门禁 |
-| P1 | Agent 只存在于功能分支，没有公开演示 | 审阅者无法从默认分支或 release 复现完整主张 | 评审合并、发布 tag、架构/威胁模型、评估结果和短演示 |
+| P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
+| P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
+| P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
+| P1 | 默认分支缺少三项 canary 修复，且没有 R6 release | main 已有评审后的 R6 基线，但缺少安全投影、refusal 同义覆盖和 readiness 修复，也没有 tag artifact | 发布修复分支、通过精确 head CI、评审合并，再单独授权 tag/release 与可复现演示 |
 
 ## 交付规则
 
@@ -330,11 +309,13 @@ retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query
 state model。R6-I5C offline product-core baseline 实际执行 64 个 sanitized case，无 failed case，七项 threshold 全部
 通过。fixed refusal contract 已在 Python/Go/Web 同步，并位于 retrieval/Provider 前。
 hash-locked Python engineering gate 已在 Windows 本地通过：Ruff 检查明确 AI source/test 范围，mypy 检查 64 个
-production source file，764 个测试全部通过，branch coverage 为 88.6%，初始 fail-under 为 88.0%。完成审计仍阻断于
-reviewed default-branch/tag/release publication。feature branch 已发布，Draft PR #3 在 head `30a275d` 上通过 clean-checkout
-AI Service、Backend、Frontend、Proto Linter 与 CodeQL workflows。当前 checkout 的 disposable Windows
-Docker/Qdrant/headed-browser 运行已用纯 synthetic data 与 deterministic Provider 证明 same-origin cited answer、fixed refusal、
-disablement、AI/Qdrant 零 host port 与精确 cleanup；同时再次确认 port 8000 按设计不发布时 legacy direct-AI panels 仍失败。
+production source file；合并基线的 764 个测试全部通过，branch coverage 为 88.6%，fail-under 为 88.0%。PR #3
+已通过 GitHub rebase 合并到 `main` 的 `b8012ba`，该精确提交的 AI Service、Backend、Frontend、Proto Linter
+与 CodeQL post-merge runs 全部通过。后续本地候选在相同覆盖率基线上通过 767 个测试，并修复 browser-safe BFF
+projection、protected-prompt/private-secret refusal 同义覆盖与 Compose readiness。低资源 Windows
+Docker/Qdrant/认证浏览器验收只使用 synthetic data 与 deterministic Provider，证明安全真实 BFF body、普通 cited
+answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdrant 零 host port 与精确 cleanup。该候选尚未发布，
+没有 clean-checkout Linux CI；R6 也没有 tag 或 release。
 
 范围：
 
@@ -380,9 +361,16 @@ disablement、AI/Qdrant 零 host port 与精确 cleanup；同时再次确认 por
 
 ## 下一阶段
 
-R6 实现、Python engineering gate、disposable 认证浏览器证明、feature-branch publication 与 clean-checkout PR CI 已完成，
-但尚未达到 release-complete。必须把 default-branch merge、tag 与 release 作为独立授权评审；PR CI 通过不授权这些操作。
+按三个独立授权步骤收口 R6：
 
-这些 R6 闸门关闭前，不定义或实现 R7。R6 收口后，必须先在双语 roadmap 中评审 R7 outcome、scope、acceptance、
-rollback、隐私/数据流影响与授权闸门。R6 仍不自动授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何
-多实例主张前仍必须具备加密 transport 与 shared atomic replay/capability storage。
+1. 发布本地 canary-fix 分支，并在精确远端 head 上验证 required clean-checkout CI。
+2. 评审并把修复合并到 `main`，随后验证 post-merge required CI。
+3. 单独授权 R6 tag、release note、image/artifact 与 release publication。
+
+R6 release 真正关闭后，先执行双语 R7-I0 definition gate，再进入实现。定义 `AgentRun`、`AgentStep`、
+`RunEvent`、`ApprovalRequest` 与 `Artifact`；至少明确 `search_memos`、`get_memo_evidence` 与
+`create_report_artifact`；未来 Memo 写工具必须审批；评审 bounded planning、step/time budget、idempotency、
+checkpoint/retry/resume、完整但脱敏的 timeline、固定多工具任务集、acceptance、rollback、隐私/数据流与授权边界。
+
+R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport
+与 shared atomic replay/capability storage。
