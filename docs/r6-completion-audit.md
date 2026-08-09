@@ -1,72 +1,92 @@
 # R6 Completion Audit
 
-R6 is implemented through the sanitized evaluation, fixed refusal, and
-content-free observability slices and is published on the feature branch with
-clean-checkout CI evidence, but it is not release-complete. This record
-separates current evidence from gates that still require release authority.
+R6 is merged to the default branch at `b8012ba` and its post-merge required CI
+is green. It is still not release-complete: three canary fixes remain on a
+local, unpublished candidate branch, and no R6 tag or release artifact exists.
+This record separates default-branch evidence, local candidate evidence, and
+the authorization gates that remain open.
 
 ## Current project shape
 
 - The Go Memos core owns authentication, Memo visibility, source mutations,
-  lifecycle outbox state, the same-origin Agent BFF, and the safe response
-  projection.
+  lifecycle outbox state, the same-origin Agent BFF, and the browser-safe
+  response projection.
 - The FastAPI AI Service owns provider-neutral Agent contracts, deterministic
   and optional Provider/vector adapters, derived SQLite/Qdrant state, durable
-  rehydration, the fixed refusal policy, offline evaluation, and bounded
-  in-memory observations.
-- The React Web feature calls the Memos BFF for Evidence Answer. Legacy
+  rehydration, fixed refusal, offline evaluation, and bounded content-free
+  observations.
+- React Evidence Answer calls only the Memos BFF. Legacy
   insight/template/summary panels still use the optional direct AI client and
   remain a separate compatibility decision.
 - Cross-language fixtures live in `contracts/`; public design and operations
-  evidence lives in `docs/`. Local Agent status, prompts, handoffs, and generated
-  architecture graphs are ignored and are not release artifacts.
+  evidence lives in `docs/`. Local Agent state, prompts, handoffs, generated
+  graphs, and browser artifacts are ignored or stored outside the repository
+  and are not release artifacts.
 
-## Verified evidence
+## Verified default-branch evidence
 
-- The strict 64-case synthetic corpus and seven versioned thresholds run through
-  the real deterministic in-memory retrieval and Agent core. All cases and
-  thresholds pass after the fixed pre-retrieval refusal contract.
-- Python, Go, and Web exact parsers agree on answered, no-context, and fixed
-  refusal projections; unknown or mixed trace shapes fail closed.
-- AI answer count/outcome, retrieval latency/outcome, and configured Provider
-  latency/outcome are emitted only under existing Agent ownership. Go lifecycle
-  outcome/retry/quarantine samples derive only from persisted outbox transitions.
-- Focused Python, Go, Web, TypeScript, formatting, content-leak, credential, and
-  local-path checks pass for the changed slices.
-- The Python engineering gate is pinned with hash-locked Ruff 0.16.1, mypy
-  1.20.2, and coverage.py 7.15.3. On Windows, Ruff passes the explicit AI
-  source/test scope, mypy passes 64 production source files, and all 764 tests
-  pass with 88.6% branch coverage against an 88.0% fail-under baseline.
-- A disposable Windows Docker/Qdrant/headed-browser run against the current
-  checkout used one synthetic account and Memo with the deterministic Provider.
-  It proved one same-origin cited answer, the fixed pre-retrieval refusal with
-  no citations, explicit disabled-state UI, zero AI/Qdrant host ports, and exact
-  cleanup of containers, network, volumes, acceptance images, browser state,
-  temporary build context, credentials, data, and the Memos host listener.
-  Qdrant telemetry was disabled before the accepted run. The same browser run
-  reconfirmed that legacy direct-AI panels still fail while port 8000 remains
-  intentionally unpublished.
-- Draft PR #3 at feature-branch head `30a275d` passes clean-checkout GitHub CI:
-  AI Service Tests run `30908048004`, Backend Tests run `30908048498`, Frontend
-  Tests run `30908047993`, Proto Linter run `30908048511`, and CodeQL run
-  `30908042878`. This is feature-branch/PR evidence, not default-branch release
-  evidence.
+- PR #3 was merged by GitHub rebase to `main` as `b8012ba` on 2026-08-09.
+- Required post-merge runs on that exact commit passed: AI Service Tests
+  `31290057008`, Backend Tests `31290056997`, Frontend Tests `31290057010`,
+  Proto Linter `31290057002`, and CodeQL `31290058919`.
+- The strict 64-case synthetic corpus and seven versioned thresholds pass
+  through the deterministic retrieval and Agent core. Python, Go, and Web
+  parsers agree on answered, no-context, and fixed-refusal projections.
+- The Python engineering gate pins hash-locked Ruff 0.16.1, mypy 1.20.2, and
+  coverage.py 7.15.3. Its established Windows baseline passes Ruff, mypy over
+  64 production files, and 764 tests with 88.6% branch coverage against an
+  88.0% fail-under threshold.
+- A disposable Windows Docker/Qdrant/authenticated-browser run using only
+  synthetic data proved a same-origin cited answer, fixed pre-retrieval
+  refusal, explicit disablement, zero AI/Qdrant host ports, and exact cleanup.
 
-## Not yet complete
+## Verified local candidate evidence
 
-1. **Release gate:** no reviewed default-branch merge, R6 tag, release notes,
-   image, or release artifact exists. README must not claim a released R6 state.
+The unpublished `codex/r6-canary-demo-fixes` candidate adds three narrow fixes:
 
-## Authorization sequence
+1. `80b657b` projects only the browser-safe BFF answer, citation, and bounded
+   trace fields instead of forwarding internal response fields.
+2. `b0f76d8` extends the fixed pre-retrieval refusal policy to the accepted
+   protected-prompt and private-secret synonym families.
+3. `5f505b0` makes Memos wait for AI Service health in the Agent Compose overlay
+   while keeping AI Service and Qdrant off host-published ports.
 
-After review, separately authorize merge/default-branch publication, tag, and
-release. Passing PR CI does not authorize any of those actions.
+On Windows, the candidate passes Ruff, mypy over 64 production files, and 767
+tests with 88.6% branch coverage and the 88.0% fail-under threshold. The same
+resource-bounded canary browser acceptance proves a safe real BFF response
+body, normal cited answer, original and synonym refusal before retrieval,
+disablement, Compose readiness, zero AI/Qdrant host ports, and exact cleanup.
+These are local candidate facts, not Linux or clean-checkout GitHub CI evidence.
 
-R7 must not be invented or implemented while these R6 gates remain open. Once
-R6 closes, define R7 outcome, scope, acceptance, rollback, privacy/data-flow
-impact, and authorization gates in both roadmap languages before coding.
+## Remaining problems
 
-Outbox lag remains blocked on an authoritative oldest-pending query. Rebuild
-observability remains blocked on a reviewed cross-process state authority, and
-reconciliation remains blocked until it has a dedicated owner. These metrics
-must not be inferred to make R6 appear complete.
+- The three canary fixes have not been pushed, reviewed, merged to `main`, or
+  verified by clean-checkout Linux CI.
+- Legacy insight/template/summary panels are not yet migrated to Memos BFF or
+  hidden in Agent-overlay mode.
+- The deterministic Provider answer is useful for acceptance but is not a
+  polished user-facing synthesis, and refusal currently shares the generic
+  empty-result presentation.
+- Authoritative oldest-pending outbox lag, cross-process rebuild state, and a
+  dedicated reconciliation owner are still missing; these states must not be
+  inferred.
+- Multi-instance deployment still requires encrypted transport and shared
+  atomic replay/capability storage.
+- The Docker build context remains larger and more failure-prone than desired;
+  startup readiness is fixed, but build-transfer efficiency is separate work.
+
+## Authorization and next stage
+
+1. Separately authorize publishing `codex/r6-canary-demo-fixes`, then verify
+   required clean-checkout GitHub CI on the exact remote head.
+2. After review, separately authorize merging those fixes to `main` and verify
+   post-merge required CI.
+3. Separately authorize an R6 tag, release notes, image/artifact, and release
+   publication. Passing CI does not authorize release operations.
+4. Only after R6 release closure, perform the bilingual R7-I0 definition gate
+   before coding: outcome, scope, acceptance, rollback, privacy/data flow,
+   approval boundaries, bounded planning, durable run state, recovery, and a
+   fixed multi-tool task set.
+
+Real user data, external Providers, public AI ports, and multi-instance use are
+not authorized by any of the evidence above.

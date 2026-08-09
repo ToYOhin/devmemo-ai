@@ -108,9 +108,9 @@ AI_AGENT_ENABLED=false
 - Qdrant and Ollama require explicit Compose profiles.
 - Public chunk retrieval remains disabled. It requires a real trusted gateway,
   Memos visibility mapping, and a verified disable-and-rollback path.
-- The Evidence Answer Agent remains an opt-in experiment. Default-disabled
-  single-host lifecycle, durable retrieval, fixed refusal, and content-free
-  observability paths are present, but R6 CI/browser/release gates remain open.
+- The Evidence Answer Agent remains an opt-in experiment. The reviewed R6
+  baseline and default-branch CI/browser evidence are present, but three local
+  canary fixes still require publication and review, and no R6 release exists.
 
 For a controlled local Docker development topology where a Memos Webhook must
 target `ai-service`, use the `docker-compose.local-webhook.yml` override
