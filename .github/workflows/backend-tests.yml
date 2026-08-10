@@ -9,6 +9,8 @@ on:
       - "go.mod"
       - "go.sum"
       - "**.go"
+      - ".release-please-manifest.json"
+      - "CHANGELOG_DEVMEMO.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

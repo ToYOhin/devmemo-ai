@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths:
       - "web/**"
+      - ".release-please-manifest.json"
+      - "CHANGELOG_DEVMEMO.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
