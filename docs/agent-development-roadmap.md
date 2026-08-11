@@ -9,8 +9,8 @@
 > default-disabled single-host scope. R6 implementation, evaluation, canary
 > fixes, exact-head and post-merge clean-checkout CI, and release publication
 > are complete. `origin/main` and the peeled `v0.2.0` tag point to
-> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. R7-I0 is the next definition
-> gate; it does not authorize an AgentRun runtime.
+> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0 definition
+> gate is recorded; it does not implement or authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -63,7 +63,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun semantics are not yet defined | No provider-neutral run model, bounded state machine, approval lifecycle, or restart contract is accepted | Complete the bilingual R7-I0 definition gate before any runtime implementation |
+| P1 | R7 AgentRun is definition-only | The provider-neutral model, bounded state machine, approval lifecycle, recovery contract, and fixtures are defined, but no executable contract or runtime exists | If separately authorized, add contract-only models and deterministic fixtures before runtime wiring |
 
 ## Delivery rules
 
@@ -538,13 +538,16 @@ review, and explicit authorization.
 ## Next stage
 
 R6 release closure is complete at
-`eddaa602537cda1adc27c0cd1d8c58b40c8e503b` and `v0.2.0`. The next formal gate
-is the bilingual R7-I0 AgentRun definition. Before implementation, define
-`AgentRun`, `AgentStep`, `RunEvent`, `ApprovalRequest`, and `Artifact`; fix the
-initial tools to `search_memos`, `get_memo_evidence`, and
-`create_report_artifact`; keep future Memo write tools approval-gated; and
-review bounded planning, budgets, recovery, a redacted timeline, acceptance,
-rollback, data flow, and authorization boundaries.
+`eddaa602537cda1adc27c0cd1d8c58b40c8e503b` and `v0.2.0`. The bilingual
+[R7-I0 AgentRun definition](r7-agent-run-definition.md) now fixes the models,
+state machine, first three tools, budgets, recovery, redacted timeline,
+approval/authority failures, acceptance fixtures, and rollback. It is
+definition-only and adds no executable contract, migration, route, or runtime.
+
+If separately authorized, the next Agent slice should be R7-I1 contract-only
+models and deterministic fixtures. It must remain default-disabled and must not
+add a worker, database migration, runtime wiring, Memo write tool, or external
+Provider.
 
 Legacy insight/template/summary panel compatibility remains an independent
 product-hardening slice. It must either migrate to the Memos BFF or be hidden in
