@@ -6,8 +6,8 @@
 >
 > 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、canary
 > 修复、精确 head 与合并后 clean-checkout CI，以及 release publication 均已完成。`origin/main` 与 peeled
-> `v0.2.0` tag 均指向 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`。下一正式门禁为 R7-I0
-> definition；它不授权 AgentRun runtime。
+> `v0.2.0` tag 均指向 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`。双语 R7-I0 definition gate
+> 已记录；它不实现或授权 AgentRun runtime。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -46,7 +46,7 @@ Agent，而不是通用自治助手：
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
-| P1 | R7 AgentRun 语义尚未定义 | 尚无已接受的 provider-neutral run model、bounded state machine、approval lifecycle 或 restart contract | 任何 runtime 实现前先完成双语 R7-I0 definition gate |
+| P1 | R7 AgentRun 仅完成定义 | provider-neutral model、bounded state machine、approval lifecycle、recovery contract 与 fixture 已定义，但没有 executable contract 或 runtime | 如获单独授权，先增加 contract-only model 与 deterministic fixture，再考虑 runtime wiring |
 
 ## 交付规则
 
@@ -362,11 +362,13 @@ cited answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdra
 
 ## 下一阶段
 
-R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成收口。下一正式门禁是
-双语 R7-I0 AgentRun definition。实现前必须定义 `AgentRun`、`AgentStep`、`RunEvent`、`ApprovalRequest` 与
-`Artifact`；固定首阶段工具为 `search_memos`、`get_memo_evidence` 与 `create_report_artifact`；未来 Memo 写工具
-继续保持 approval-gated；同时评审 bounded planning、budget、recovery、脱敏 timeline、acceptance、rollback、
-data flow 与 authorization boundary。
+R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成收口。双语
+[R7-I0 AgentRun 定义](r7-agent-run-definition.zh-CN.md)现已固定 model、状态机、首批三个工具、budget、
+recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback。它仅包含定义，未新增
+executable contract、migration、route 或 runtime。
+
+如获单独授权，下一 Agent 切片应是 R7-I1 contract-only model 与 deterministic fixture。它必须保持默认关闭，
+不得新增 worker、database migration、runtime wiring、Memo write tool 或 external Provider。
 
 legacy insight/template/summary panel 兼容仍是独立 product-hardening 切片。它必须迁移到 Memos BFF，或在
 Agent-overlay 模式下隐藏，且不得重新打开 browser-to-AI 直连路径。
