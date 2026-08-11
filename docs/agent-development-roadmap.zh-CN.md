@@ -4,10 +4,10 @@
 >
 > 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
 >
-> 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、Python
-> engineering gate、disposable 认证浏览器验收、review 与 default-branch CI 已在 `main` 的 `b8012ba`
-> 完成。随后针对 BFF 投影、refusal 同义表达与 Compose readiness 的三项 canary 修复已在本地验证，但尚未
-> 发布；R6 仍无 tag 或 release artifact。
+> 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、canary
+> 修复、精确 head 与合并后 clean-checkout CI，以及 release publication 均已完成。`origin/main` 与 peeled
+> `v0.2.0` tag 均指向 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`。下一正式门禁为 R7-I0
+> definition；它不授权 AgentRun runtime。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -46,7 +46,7 @@ Agent，而不是通用自治助手：
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
-| P1 | 默认分支缺少三项 canary 修复，且没有 R6 release | main 已有评审后的 R6 基线，但缺少安全投影、refusal 同义覆盖和 readiness 修复，也没有 tag artifact | 发布修复分支、通过精确 head CI、评审合并，再单独授权 tag/release 与可复现演示 |
+| P1 | R7 AgentRun 语义尚未定义 | 尚无已接受的 provider-neutral run model、bounded state machine、approval lifecycle 或 restart contract | 任何 runtime 实现前先完成双语 R7-I0 definition gate |
 
 ## 交付规则
 
@@ -309,13 +309,14 @@ retry/quarantine sample 已具备；outbox lag 仍缺权威 oldest-pending query
 state model。R6-I5C offline product-core baseline 实际执行 64 个 sanitized case，无 failed case，七项 threshold 全部
 通过。fixed refusal contract 已在 Python/Go/Web 同步，并位于 retrieval/Provider 前。
 hash-locked Python engineering gate 已在 Windows 本地通过：Ruff 检查明确 AI source/test 范围，mypy 检查 64 个
-production source file；合并基线的 764 个测试全部通过，branch coverage 为 88.6%，fail-under 为 88.0%。PR #3
-已通过 GitHub rebase 合并到 `main` 的 `b8012ba`，该精确提交的 AI Service、Backend、Frontend、Proto Linter
-与 CodeQL post-merge runs 全部通过。后续本地候选在相同覆盖率基线上通过 767 个测试，并修复 browser-safe BFF
-projection、protected-prompt/private-secret refusal 同义覆盖与 Compose readiness。低资源 Windows
-Docker/Qdrant/认证浏览器验收只使用 synthetic data 与 deterministic Provider，证明安全真实 BFF body、普通 cited
-answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdrant 零 host port 与精确 cleanup。该候选尚未发布，
-没有 clean-checkout Linux CI；R6 也没有 tag 或 release。
+production source file；最终 canary 候选通过 767 个测试，branch coverage 为 88.6%，fail-under 为 88.0%。PR #3
+在 `b8012ba` 建立 R6 基线。PR #6 随后通过精确 head 的 AI Service、Backend、Frontend、Proto Linter 与 CodeQL
+clean-checkout checks，合并为 `0f6a1ecf32068a3ef3a429c25d6c0e7c7b5eff41`，对应合并后 required checks
+也通过。PR #7 把 release preparation 合并为 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`；该提交通过
+release workflow，同时是 `origin/main` 与 peeled `v0.2.0` tag 的目标。此前低资源 Windows
+Docker/Qdrant/认证浏览器 canary 只使用 synthetic data 与 deterministic Provider，证明安全真实 BFF body、普通
+cited answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdrant 零 host port 与精确 cleanup。它仍只是
+发布前 synthetic acceptance，不是真实数据、外部 Provider、published image 或发布后浏览器证据。
 
 范围：
 
@@ -361,16 +362,14 @@ answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdrant 零
 
 ## 下一阶段
 
-按三个独立授权步骤收口 R6：
+R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成收口。下一正式门禁是
+双语 R7-I0 AgentRun definition。实现前必须定义 `AgentRun`、`AgentStep`、`RunEvent`、`ApprovalRequest` 与
+`Artifact`；固定首阶段工具为 `search_memos`、`get_memo_evidence` 与 `create_report_artifact`；未来 Memo 写工具
+继续保持 approval-gated；同时评审 bounded planning、budget、recovery、脱敏 timeline、acceptance、rollback、
+data flow 与 authorization boundary。
 
-1. 发布本地 canary-fix 分支，并在精确远端 head 上验证 required clean-checkout CI。
-2. 评审并把修复合并到 `main`，随后验证 post-merge required CI。
-3. 单独授权 R6 tag、release note、image/artifact 与 release publication。
-
-R6 release 真正关闭后，先执行双语 R7-I0 definition gate，再进入实现。定义 `AgentRun`、`AgentStep`、
-`RunEvent`、`ApprovalRequest` 与 `Artifact`；至少明确 `search_memos`、`get_memo_evidence` 与
-`create_report_artifact`；未来 Memo 写工具必须审批；评审 bounded planning、step/time budget、idempotency、
-checkpoint/retry/resume、完整但脱敏的 timeline、固定多工具任务集、acceptance、rollback、隐私/数据流与授权边界。
+legacy insight/template/summary panel 兼容仍是独立 product-hardening 切片。它必须迁移到 Memos BFF，或在
+Agent-overlay 模式下隐藏，且不得重新打开 browser-to-AI 直连路径。
 
 R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport
 与 shared atomic replay/capability storage。

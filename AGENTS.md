@@ -45,9 +45,11 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 - The Evidence Answer Agent is disabled by default. Preserve the Memos-owned
   visibility scope, the `search_memos`-only tool boundary, complete-Memo
   `memo-v1` filtering, server-owned citations, and redacted trace projection.
-- A4 lifecycle outbox/ledger code is dormant. Do not connect it to Memo CRUD,
-  a dispatcher, worker, timer, automatic indexing, Qdrant, or runtime defaults
-  without an explicitly reviewed implementation slice.
+- The single-host lifecycle path is default-disabled and requires explicit
+  opt-in. Memos owns source mutations, the durable outbox, source sequencing,
+  and current-authority rehydration; AI Service stores only rebuildable derived
+  ledger/vector state. Do not enable it by default or extend it to background,
+  cross-host, or multi-instance operation without a separately reviewed slice.
 
 ## Change discipline
 
