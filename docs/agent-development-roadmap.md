@@ -6,11 +6,11 @@
 > memory.
 >
 > Current delivery state: A0-A4 and R1-R5 are complete for the documented,
-> default-disabled single-host scope. R6 implementation, evaluation, Python
-> engineering gates, disposable authenticated-browser acceptance, review, and
-> default-branch CI are complete on `main` at `b8012ba`. Three subsequent
-> canary fixes for BFF projection, refusal synonyms, and Compose readiness are
-> locally verified but remain unpublished. R6 has no tag or release artifact.
+> default-disabled single-host scope. R6 implementation, evaluation, canary
+> fixes, exact-head and post-merge clean-checkout CI, and release publication
+> are complete. `origin/main` and the peeled `v0.2.0` tag point to
+> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. R7-I0 is the next definition
+> gate; it does not authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -63,7 +63,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | The default branch lacks the three canary fixes and no R6 release exists | Main has the reviewed R6 baseline, but not the safe-projection, refusal-synonym, and readiness corrections or a tagged artifact | Publish the fix branch, pass exact-head CI, review/merge it, then separately authorize a tagged release and reproducible demo |
+| P1 | R7 AgentRun semantics are not yet defined | No provider-neutral run model, bounded state machine, approval lifecycle, or restart contract is accepted | Complete the bilingual R7-I0 definition gate before any runtime implementation |
 
 ## Delivery rules
 
@@ -451,17 +451,19 @@ failed case and all seven thresholds passing. The fixed refusal contract is
 synchronized across Python, Go, and Web and runs before retrieval or Provider.
 The hash-locked Python engineering gate passes locally on Windows: Ruff checks
 the explicit AI source/test scope, mypy checks 64 production source files, and
-the merged baseline passes 764 tests with 88.6% branch coverage against an
-88.0% fail-under baseline. PR #3 was reviewed and merged by GitHub rebase to
-`main` at `b8012ba`; AI Service, Backend, Frontend, Proto Linter, and CodeQL
-post-merge runs pass on that exact commit. A later local candidate passes 767
-tests at the same coverage baseline and fixes browser-safe BFF projection,
-protected-prompt/private-secret refusal synonyms, and Compose readiness. Its
-resource-bounded Windows Docker/Qdrant/authenticated-browser acceptance proves
-the safe real BFF body, normal cited answer, both refusal forms before
-retrieval, disablement, zero AI/Qdrant host ports, and exact cleanup using only
-synthetic data and the deterministic Provider. The candidate remains
-unpublished and has no clean-checkout Linux CI. R6 also has no tag or release.
+the final canary candidate passes 767 tests with 88.6% branch coverage against
+an 88.0% fail-under baseline. PR #3 established the R6 baseline at `b8012ba`.
+PR #6 then passed exact-head AI Service, Backend, Frontend, Proto Linter, and
+CodeQL clean-checkout checks, merged as `0f6a1ecf32068a3ef3a429c25d6c0e7c7b5eff41`,
+and passed the corresponding post-merge required checks. PR #7 merged the
+release preparation as `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`; that
+commit passed the release workflow and is both `origin/main` and the peeled
+`v0.2.0` tag target. The earlier resource-bounded Windows
+Docker/Qdrant/authenticated-browser canary proves the safe real BFF body,
+normal cited answer, both refusal forms before retrieval, disablement, zero
+AI/Qdrant host ports, and exact cleanup using only synthetic data and the
+deterministic Provider. It remains pre-release synthetic acceptance, not real-
+data, external-Provider, published-image, or post-release browser evidence.
 
 Scope:
 
@@ -535,21 +537,18 @@ review, and explicit authorization.
 
 ## Next stage
 
-Close R6 in three separately authorized steps:
+R6 release closure is complete at
+`eddaa602537cda1adc27c0cd1d8c58b40c8e503b` and `v0.2.0`. The next formal gate
+is the bilingual R7-I0 AgentRun definition. Before implementation, define
+`AgentRun`, `AgentStep`, `RunEvent`, `ApprovalRequest`, and `Artifact`; fix the
+initial tools to `search_memos`, `get_memo_evidence`, and
+`create_report_artifact`; keep future Memo write tools approval-gated; and
+review bounded planning, budgets, recovery, a redacted timeline, acceptance,
+rollback, data flow, and authorization boundaries.
 
-1. Publish the local canary-fix branch and verify required clean-checkout CI on
-   its exact remote head.
-2. Review and merge the fixes to `main`, then verify post-merge required CI.
-3. Separately authorize the R6 tag, release notes, image/artifact, and release
-   publication.
-
-Only after R6 release closure, perform the bilingual R7-I0 definition gate
-before implementation. Define `AgentRun`, `AgentStep`, `RunEvent`,
-`ApprovalRequest`, and `Artifact`; specify at least `search_memos`,
-`get_memo_evidence`, and `create_report_artifact`; keep future Memo write tools
-approval-gated; and review bounded planning, step/time budgets, idempotency,
-checkpoint/retry/resume, a complete redacted timeline, a fixed multi-tool task
-set, acceptance, rollback, privacy/data flow, and authorization boundaries.
+Legacy insight/template/summary panel compatibility remains an independent
+product-hardening slice. It must either migrate to the Memos BFF or be hidden in
+Agent-overlay mode without reopening a direct browser-to-AI path.
 
 R6 does not authorize real user data, an external Provider, public AI ports, or
 multi-instance deployment. Encrypted transport and shared atomic

@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-08-03
+更新时间：2026-08-11
 
 ## 顶层目录
 
@@ -25,8 +25,12 @@ repository-root/
 └── graphify-out/                # 本地忽略的结构图产物，不属于运行时源码
 ```
 
-本地 Agent 状态、交接和下一阶段 Prompt 位于 Git 忽略的仓库本地目录或操作系统临时目录，
+本地 Agent 状态、交接和下一阶段操作说明位于 Git 忽略的仓库本地目录或操作系统临时目录，
 不属于公开仓库结构，也不得随代码提交或推送。公开文档只记录可复现的产品、架构和验证事实。
+
+DevMemo AI `v0.2.0` 已从默认分支精确提交 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`
+发布。该 release 固化当前默认关闭、显式 opt-in 的单机 Agent/lifecycle 边界，不构成真实数据、
+外部 Provider、公开 AI 端口或多实例生产部署证明。
 
 ## Memos 核心边界
 
@@ -247,8 +251,8 @@ legacy template/summary/insight feature 仍使用可选 AI Service client；Agen
    评审 outcome、scope、acceptance、rollback 与新授权闸门。
 3. **保持未解决问题显式：** lifecycle lag、rebuild、reconciliation 缺权威 state owner；legacy AI panels 的浏览器访问
    模式尚未统一；多实例仍缺加密 transport 与 shared atomic replay/capability storage。
-4. **保持本地 AI 协作材料隔离：** `.devmemo-local/`、本地状态、接管 Prompt、临时交接和结构图均被 Git 忽略，
-   不得暂存、提交或推送；公共文档只保留可复现的产品事实。
+4. **保持本地协作材料隔离：** 本地状态、临时交接和生成的结构产物必须保持排除，公共文档只保留可复现的
+   产品事实。
 
 ## Compose 与持久化
 
