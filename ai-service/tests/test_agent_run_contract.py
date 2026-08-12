@@ -391,6 +391,31 @@ def test_duplicate_or_consumed_approval_is_rejected() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "status",
+    [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED],
+)
+def test_persisted_approval_decision_requires_valid_chronology(
+    status: ApprovalStatus,
+) -> None:
+    decision_fields = {
+        "status": status,
+        "decision_id": "decision-001",
+        "decided_by": "subject-001",
+    }
+
+    with pytest.raises(AgentRunContractError, match="precedes the request"):
+        _approval(
+            **decision_fields,
+            decided_at=NOW - timedelta(seconds=1),
+        )
+    with pytest.raises(AgentRunContractError, match="outside the approval window"):
+        _approval(
+            **decision_fields,
+            decided_at=NOW + timedelta(minutes=5),
+        )
+
+
 def test_artifact_is_revision_bound_bounded_and_contains_no_body() -> None:
     artifact = Artifact(
         artifact_id="artifact-001",

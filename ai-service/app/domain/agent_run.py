@@ -439,6 +439,13 @@ class ApprovalRequest:
             object.__setattr__(self, "decided_by", _require_opaque("decided_by", self.decided_by))
         if self.decided_at is not None:
             _require_utc("decided_at", self.decided_at)
+            if self.decided_at < self.requested_at:
+                raise AgentRunContractError("approval decision precedes the request")
+            if (
+                self.status in {ApprovalStatus.APPROVED, ApprovalStatus.REJECTED}
+                and self.decided_at >= self.expires_at
+            ):
+                raise AgentRunContractError("approval decision is outside the approval window")
 
     def validate_decision(
         self,
