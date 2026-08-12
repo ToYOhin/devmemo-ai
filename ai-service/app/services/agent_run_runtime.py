@@ -343,10 +343,20 @@ class BoundedAgentRunRuntime:
             tool_call.input_digest,
             tool_name=tool_call.tool_name,
         )
-        guard = await self._guard(snapshot, reserved_ms=carried_ms)
-        pending_ms = carried_ms + guard.duration_ms
+        unknown_attempt_ms = (
+            snapshot.run.budget.max_tool_attempt_seconds * 1000
+            if existing is not None and self._has_unknown_delivery(snapshot, step)
+            else 0
+        )
+        reserved_ms = carried_ms + unknown_attempt_ms
+        guard = await self._guard(snapshot, reserved_ms=reserved_ms)
+        pending_ms = reserved_ms + guard.duration_ms
         if guard.reason_code is not None:
             return self._terminal_checkpoint(snapshot, step, guard.reason_code, pending_ms)
+        if self._tool_delivery_count(snapshot) >= snapshot.run.budget.max_tool_calls:
+            return self._terminal_checkpoint(
+                snapshot, step, "budget_exhausted", pending_ms
+            )
         if existing is None:
             snapshot = self._checkpoint(
                 snapshot,
@@ -760,6 +770,30 @@ class BoundedAgentRunRuntime:
     @staticmethod
     def _find_step(snapshot: AgentRunSnapshotView, step_id: str) -> AgentStep | None:
         return next((item for item in snapshot.steps if item.step_id == step_id), None)
+
+    @staticmethod
+    def _has_unknown_delivery(
+        snapshot: AgentRunSnapshotView, step: AgentStep
+    ) -> bool:
+        latest = next(
+            (
+                item
+                for item in reversed(snapshot.events)
+                if item.step_id == step.step_id
+            ),
+            None,
+        )
+        return latest is not None and latest.event_type in {
+            "tool_started",
+            "tool_resumed",
+        }
+
+    @staticmethod
+    def _tool_delivery_count(snapshot: AgentRunSnapshotView) -> int:
+        return sum(
+            item.event_type in {"tool_started", "tool_resumed"}
+            for item in snapshot.events
+        )
 
     @staticmethod
     def _step(

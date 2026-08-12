@@ -224,6 +224,26 @@ class SQLiteAgentRunStore:
                     or prior_tool_calls + step.attempt + 1 > run.budget.max_tool_calls
                 ):
                     raise AgentRunPersistenceError("AgentRun tool-call budget is exhausted")
+            if event.event_type in {"tool_started", "tool_resumed"}:
+                if step.kind is not StepKind.TOOL or step.status is not StepStatus.RUNNING:
+                    raise AgentRunPersistenceError("tool delivery event binding is invalid")
+                delivery_count = connection.execute(
+                    """
+                    SELECT COUNT(*) FROM (
+                        SELECT 1 FROM agent_run_events
+                        WHERE run_id = ? AND event_type IN ('tool_started', 'tool_resumed')
+                        LIMIT ?
+                    )
+                    """,
+                    (run.run_id, run.budget.max_tool_calls + 1),
+                ).fetchone()[0]
+                if (
+                    type(delivery_count) is not int
+                    or delivery_count >= run.budget.max_tool_calls
+                ):
+                    raise AgentRunPersistenceError(
+                        "AgentRun tool delivery budget is exhausted"
+                    )
             if artifact is not None:
                 artifact_count = connection.execute(
                     """

@@ -559,10 +559,11 @@ digest binds the accepted request to the complete step/tool sequence; it also
 checkpoints stable attempt keys, retry state, active-time accounting, and safe
 outcomes.
 Restart rechecks current authority before any attempt, and post-tool authority
-or cancellation failure discards uncommitted output. A truncated recovery
-timeline fails closed before another tool call. It remains unwired: there
-is no route, background worker, UI, configuration/default change, Memo write
-tool, external Provider, real data, or multi-instance behavior.
+or cancellation failure discards uncommitted output. Persisted start/resume
+events count every actual tool delivery against the call budget; an interrupted
+attempt consumes its full attempt-time ceiling before replay. It remains
+unwired: there is no route, background worker, UI, configuration/default
+change, Memo write tool, external Provider, real data, or multi-instance behavior.
 
 The ordered delivery route is:
 

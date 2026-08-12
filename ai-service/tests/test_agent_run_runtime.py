@@ -61,6 +61,9 @@ class MonotonicClock:
         self._value += 0.001
         return self._value
 
+    def advance(self, seconds: float) -> None:
+        self._value += seconds
+
 
 @dataclass
 class StaticAuthority:
@@ -165,6 +168,19 @@ class AlwaysCrashToolExecutor(RecordingToolExecutor):
     async def execute(self, invocation: ToolInvocation) -> ToolResult:
         self.invocations.append(invocation)
         await asyncio.sleep(0)
+        raise SimulatedProcessExit
+
+
+class DelayedCrashToolExecutor(RecordingToolExecutor):
+    def __init__(self, monotonic: MonotonicClock, delay_seconds: float) -> None:
+        super().__init__()
+        self._monotonic = monotonic
+        self._delay_seconds = delay_seconds
+
+    async def execute(self, invocation: ToolInvocation) -> ToolResult:
+        self.invocations.append(invocation)
+        await asyncio.sleep(0)
+        self._monotonic.advance(self._delay_seconds)
         raise SimulatedProcessExit
 
 
@@ -479,7 +495,7 @@ def test_runtime_restart_rejects_changed_uncommitted_plan_suffix(
     assert len(executor.invocations) == 1
 
 
-def test_runtime_fails_closed_when_recovery_timeline_is_truncated(
+def test_runtime_restart_does_not_redeliver_after_actual_call_budget(
     tmp_path: Path,
 ) -> None:
     database = tmp_path / "agent-runs.db"
@@ -489,18 +505,66 @@ def test_runtime_fails_closed_when_recovery_timeline_is_truncated(
     runtime = _runtime(store, StaticAuthority(), executor)
     plan = _plan(RuntimeToolCall("step-search-001", "search_memos", DIGEST_B))
 
-    for _ in range(126):
-        with pytest.raises(SimulatedProcessExit):
-            asyncio.run(runtime.run("run-001", plan))
-
-    invocation_count = len(executor.invocations)
+    with pytest.raises(SimulatedProcessExit):
+        asyncio.run(runtime.run("run-001", plan))
     result = asyncio.run(runtime.run("run-001", plan))
 
     assert result.run.status is RunStatus.FAILED
+    assert result.run.terminal_reason == "budget_exhausted"
+    assert len(executor.invocations) == 1
+    assert [
+        event.event_type
+        for event in result.events
+        if event.event_type in {"tool_started", "tool_resumed"}
+    ] == ["tool_started"]
+
+
+def test_interrupted_attempt_conservatively_consumes_active_time_before_replay(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "agent-runs.db"
+    store = SQLiteAgentRunStore(database)
+    store.create_run(
+        _queued_run(
+            budget=_budget(
+                max_steps=3,
+                max_tool_calls=2,
+                max_active_seconds=5,
+                max_tool_attempt_seconds=5,
+            )
+        )
+    )
+    monotonic = MonotonicClock()
+    executor = DelayedCrashToolExecutor(monotonic, delay_seconds=2.0)
+    plan = _plan(RuntimeToolCall("step-search-001", "search_memos", DIGEST_B))
+    first_runtime = BoundedAgentRunRuntime(
+        store=store,
+        authority=StaticAuthority(),
+        tool_executor=executor,
+        cancellation=NeverCancelled(),
+        utc_now=UtcClock(),
+        monotonic=monotonic,
+    )
+
+    with pytest.raises(SimulatedProcessExit):
+        asyncio.run(first_runtime.run("run-001", plan))
+
+    restarted = BoundedAgentRunRuntime(
+        store=SQLiteAgentRunStore(database),
+        authority=StaticAuthority(),
+        tool_executor=executor,
+        cancellation=NeverCancelled(),
+        utc_now=UtcClock(STARTED_AT + timedelta(seconds=2)),
+        monotonic=monotonic,
+    )
+    result = asyncio.run(restarted.run("run-001", plan))
+
+    assert result.run.status is RunStatus.FAILED
     assert result.run.terminal_reason == "active_time_exhausted"
-    assert result.run.last_event_seq == 130
-    assert len(result.events) == 128
-    assert len(executor.invocations) == invocation_count
+    assert len(executor.invocations) == 1
+    assert sum(
+        event.safe_details.get("duration_ms", 0) for event in result.events
+    ) >= 5000
 
 
 def test_runtime_rechecks_authority_before_restart_execution(tmp_path: Path) -> None:

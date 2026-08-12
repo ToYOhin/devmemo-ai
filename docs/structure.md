@@ -40,8 +40,9 @@ single-host、derived-only 的 SQLite AgentRun persistence adapter 与临时数�
 已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在独立分支新增
 dormant bounded runner/runtime：只消费 content-free plan，通过注入的 current-authority、cancellation 与
 tool port 执行，并使用既有 persistence 原子 checkpoint；canonical plan digest 绑定 accepted request 与完整
-step/tool 序列，恢复 timeline 若已截断则在下一次 tool 前 fail closed。它仍不新增 route、worker、
-background job、UI、环境变量、默认开关或产品 artifact 下载路径。
+step/tool 序列；`tool_started`/`tool_resumed` 持久记录实际 delivery 并共同消耗 tool-call budget，未知中断
+attempt 在 replay 前按完整 attempt timeout 保守计入 active-time。它仍不新增 route、worker、background job、
+UI、环境变量、默认开关或产品 artifact 下载路径。
 
 ## Memos 核心边界
 
