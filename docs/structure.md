@@ -32,11 +32,12 @@ DevMemo AI `v0.2.0` 已从默认分支精确提交 `eddaa602537cda1adc27c0cd1d8c
 发布。该 release 固化当前默认关闭、显式 opt-in 的单机 Agent/lifecycle 边界，不构成真实数据、
 外部 Provider、公开 AI 端口或多实例生产部署证明。
 
-R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并于
-`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。R7-I1 随后实现 provider-neutral frozen AgentRun
-contract、脱敏 fixture 与定向测试，但保持不接 database、route、worker、runtime 或 UI。R7-I0 的后置
-Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service 检查，不能据此宣称该提交
-具备完整 Python clean-checkout context。
+R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并；R7-I1 的 provider-neutral frozen AgentRun
+contract、脱敏 fixture 与定向测试已通过 PR #9 合并于
+`0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 随后通过 PR #10 把 legacy 浏览器 AI 路径统一到
+same-origin Memos BFF，并合并于 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 新增独立、
+single-host、derived-only 的 SQLite AgentRun persistence adapter 与临时数据库恢复/事务测试；该 adapter
+仍 dormant/unwired，不新增 route、worker、runner、runtime、UI 或产品 artifact 路径。
 
 ## Memos 核心边界
 
@@ -141,6 +142,7 @@ ai-service/
 │       ├── qdrant_vector_store.py   # 可选 Qdrant adapter
 │       ├── chunk_state.py            # InMemory/SQLite chunk 状态 adapter
 │       ├── agent_lifecycle_ledger.py # dormant AI SQLite lifecycle ledger
+│       ├── agent_run_store.py        # dormant derived-only AgentRun SQLite persistence
 │       └── disposable_sqlite_authorized_retrieval.py # R5 仅测试的临时 SQLite parity adapter
 ├── scripts/public_chunk_gateway_contract_smoke.py # local trusted-gateway contract evidence only
 ├── scripts/smoke_qdrant.py          # 显式真实 Qdrant smoke
@@ -162,8 +164,10 @@ AiSettings.from_env
 ```
 
 `app/domain/` 和 provider-neutral service 不依赖 FastAPI、FastEmbed、qdrant-client、httpx 或
-sqlite3 类型。第三方 SDK 只在 adapter；SQLite 只在根数据库层、`chunk_state.py` 和 dormant
-`agent_lifecycle_ledger.py` adapter。
+sqlite3 类型。第三方 SDK 只在 adapter；SQLite 只在根数据库层、`chunk_state.py`、dormant
+`agent_lifecycle_ledger.py` 与 dormant `agent_run_store.py` adapter。AgentRun store 只保存无正文的派生
+run/step/event/approval/artifact metadata 与 `storage_ref`，不保存 Provider prompt、Memo 正文或 secret，
+也不成为 Memo/source authority。
 
 ## Evidence Answer Agent 与 lifecycle 边界
 
@@ -252,12 +256,13 @@ Evidence Answer 与 legacy template/summary/insight 面板都只访问 same-orig
 
 ## 当前推进路线与问题
 
-1. **保持 R7-I1 contract/fixture 边界：** 已具备 provider-neutral contract model、合法状态转换、
-   budget/timeline 校验与 deterministic sanitized fixture；继续保持不接 database、route、worker、runtime
-   或 UI。contract gate 的发布与 CI 证据不能当作 runtime 或产品验收证据。
-2. **下一步实现 run persistence：** 浏览器 AI 路径已统一到 Memos BFF；继续保持 AI Service 不发布宿主端口，
-   并为 AgentRun 建立独立、可回滚、单机持久化切片。
-3. **再拆分 runtime 与体验：** persistence 稳定后，依次独立评审 runtime composition 与 run UI，
+1. **保持 R7 contract 与 persistence 边界：** 已具备 provider-neutral contract、deterministic sanitized
+   fixture，以及 dormant single-host SQLite persistence；恢复对象必须重新经过 frozen domain validator，
+   每个 checkpoint 单事务提交，timeline append-only，approval 首次有效 decision 原子消费。
+2. **下一步实现 bounded runner/runtime：** 浏览器 AI 路径已统一到 Memos BFF；继续保持 AI Service 不发布
+   宿主端口，在独立切片中组合有界执行、恢复与 fail-closed authority recheck，不在 persistence adapter
+   中隐式启动 worker 或 background job。
+3. **再拆分 BFF 与体验：** bounded runtime 稳定后，依次独立评审 AgentRun BFF、run/approval/timeline UI，
    每一步都保留默认关闭、fail-closed 与可回滚边界。
 4. **最后讨论真实环境：** 真实 Provider、真实用户数据与多实例需分别完成隐私、备份恢复、加密 transport、
    shared atomic replay/capability storage 证明后才能进入。
