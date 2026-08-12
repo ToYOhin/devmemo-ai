@@ -93,9 +93,11 @@ AI_AGENT_ENABLED=false
 - Qdrant 与 Ollama 只能通过显式 Compose profile 启动。
 - 公共 chunk retrieval 保持关闭；它需要真实的 trusted gateway、Memos visibility
   mapping 以及可验证的关闭与回滚路径。
-- Evidence Answer Agent 仍是显式启用的实验能力；R6 评审基线、canary 修复、clean-checkout CI 与
-  release publication 已在 `v0.2.0` 完成。R7-I1 只增加 AgentRun contract model 与脱敏 fixture，
-  不包含 persistence、runtime 或 UI。
+- Evidence Answer Agent 仍是显式启用的实验能力；R6 评审基线已发布于 `v0.2.0`。后续 R7
+  切片已增加 frozen AgentRun contract、single-host derived-only SQLite persistence 与 bounded
+  runtime，但 persistence/runtime 仍为 dormant，尚未接入 route、worker、产品 BFF 或 UI。
+- DeepSeek adapter 只能通过显式配置启用，默认 Provider 仍为 deterministic。真实外部 endpoint
+  smoke 只使用 synthetic evidence，不构成真实 Memo 或生产部署就绪证明。
 
 如果在受控的本地 Docker 开发拓扑中，确实需要 Memos Webhook 指向 `ai-service`，请使用
 [README_AI.md](README_AI.md) 中记录的 `docker-compose.local-webhook.yml` override。不要

@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-08-12
+更新时间：2026-08-13
 
 ## 顶层目录
 
@@ -37,12 +37,19 @@ contract、脱敏 fixture 与定向测试已通过 PR #9 合并于
 `0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 随后通过 PR #10 把 legacy 浏览器 AI 路径统一到
 same-origin Memos BFF，并合并于 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 新增独立、
 single-host、derived-only 的 SQLite AgentRun persistence adapter 与临时数据库恢复/事务测试；该 adapter
-已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在独立分支新增
+已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 的
 dormant bounded runner/runtime：只消费 content-free plan，通过注入的 current-authority、cancellation 与
 tool port 执行，并使用既有 persistence 原子 checkpoint；canonical plan digest 绑定 accepted request 与完整
 step/tool 序列；`tool_started`/`tool_resumed` 持久记录实际 delivery 并共同消耗 tool-call budget，未知中断
 attempt 在 replay 前按完整 attempt timeout 保守计入 active-time。它仍不新增 route、worker、background job、
-UI、环境变量、默认开关或产品 artifact 下载路径。
+UI、环境变量、默认开关或产品 artifact 下载路径，并已通过 PR #13 squash merge 于
+`9d7e508259e4b07d416751e9da0514d588a4424f`。Evidence Answer 演示 UI 与一键本地演示包装随后分别
+通过 PR #14、PR #15 合并于 `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7`、
+`79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`。
+
+AI Service 另有显式 opt-in 的 bounded DeepSeek adapter：固定 non-thinking JSON mode、1,200 token
+上限，并只对 transport、408/429 与 5xx 最多安全重试一次。它已使用 synthetic evidence 完成真实 endpoint
+smoke，但默认 Provider 仍为 deterministic；该证明不包含真实 Memo、真实用户数据或生产部署。
 
 ## Memos 核心边界
 
@@ -94,7 +101,7 @@ ai-service/
 ├── database.py                     # AI 自有 SQLite：ai_notes、templates、outbox、chunk state
 ├── embedding.py                    # 旧 list-based embedding 兼容入口
 ├── rag.py                          # 旧 RAG 兼容入口
-├── llm.py                          # deterministic/OpenAI/Ollama LLM adapter 入口
+├── llm.py                          # deterministic/OpenAI/DeepSeek/Ollama LLM adapter 入口
 ├── lifecycle_report.py              # 本地只读 AI SQLite 生命周期聚合
 ├── app/
 │   ├── domain/
@@ -160,6 +167,12 @@ ai-service/
 
 ```text
 AiSettings.from_env
+  -> build_llm
+  -> LLMProvider
+       ├── deterministic (default)
+       ├── OpenAI (optional)
+       ├── DeepSeek (optional, bounded JSON response)
+       └── Ollama (optional)
   -> build_embedding_service
   -> EmbeddingProvider
        ├── deterministic (default, 8 dimensions)

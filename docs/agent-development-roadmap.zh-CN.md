@@ -1,6 +1,6 @@
 # DevMemo Agent 开发路线
 
-> 状态日期：2026-08-12
+> 状态日期：2026-08-13
 >
 > 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
 >
@@ -11,8 +11,12 @@
 > `0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 通过 PR #10 在
 > `39068613b387d1154b7f7e4bf9d32fc230b3ed39` 将 legacy 浏览器 AI 路径统一到同源 Memos BFF。
 > R7-I3 的 dormant single-host SQLite AgentRun persistence 已通过 PR #12 squash merge 于
-> `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 新增 dormant bounded runner/runtime，
-> 但不包含 route、worker、UI、配置或默认值变更。
+> `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 的 dormant bounded runner/runtime
+> 已通过 PR #13 squash merge 于 `9d7e508259e4b07d416751e9da0514d588a4424f`。Evidence Answer
+> 演示 UI 与一键本地演示包装随后分别通过 PR #14、PR #15 合并于
+> `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7`、`79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`。
+> 当前显式 opt-in 的 DeepSeek 切片增加 bounded
+> non-thinking JSON adapter 与 synthetic real-endpoint smoke，默认 Provider 仍为 deterministic，且不使用真实 Memo。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -372,23 +376,31 @@ R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成
 recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback。R7-I1 frozen contract
 与 fixture 已合并于 `0358fb120fd539a97d67b04c47787df0fa72c9ff`，R7-I2 legacy BFF 收口已合并于
 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 的 dormant、single-host、derived-only SQLite
-adapter 已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在其上新增
-dormant bounded runner/runtime：只消费调用方提供的 content-free plan，通过注入的 authority、cancellation
+adapter 已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 的
+dormant bounded runner/runtime 已通过 PR #13 squash merge 于
+`9d7e508259e4b07d416751e9da0514d588a4424f`：它只消费调用方提供的
+content-free plan，通过注入的 authority、cancellation
 与 tool port 执行；canonical plan digest 把 accepted request 与完整 step/tool 序列绑定，并 checkpoint 稳定
 attempt key、retry state、active-time accounting 与安全 outcome。restart 会在任何 attempt 前重新检查 current
 authority；tool 返回后若 authority 或 cancellation 失效，则丢弃未提交输出。持久化的 start/resume event
 会把每次实际 tool delivery 计入 call budget；未知中断 attempt 在 replay 前按完整 attempt timeout 保守扣除
-active-time。它仍未接 route、background worker、UI、配置/默认值、Memo write tool、external Provider、
-真实数据或多实例。
+active-time。它仍未接 route、background worker、UI、配置/默认值、Memo write tool、真实数据或多实例。
+
+PR #14 与 PR #15 在 deterministic 路径上增加 Evidence Answer 演示 UI 和一键本地 launcher。当前
+DeepSeek 切片增加显式 opt-in provider adapter，固定 non-thinking JSON、1,200 token 上限、一次有限 transient
+retry，以及不落盘凭据的 synthetic smoke。该 smoke 已访问真实外部 endpoint，但不使用真实 Memo 或用户数据，
+也不构成生产 Provider、隐私或部署验收。
 
 后续按以下顺序推进：
 
-1. 保持已完成的 legacy insight/template/summary 与 Evidence Answer 同源 BFF 边界，不得恢复
+1. 发布并收口 bounded DeepSeek 切片，同时保持 deterministic 默认值、仅环境变量凭据与 synthetic-only smoke。
+2. 保持已完成的 legacy insight/template/summary 与 Evidence Answer 同源 BFF 边界，不得恢复
    browser-to-AI 直连。
-2. 下一独立切片评审认证同源 AgentRun BFF；可以选择 dormant runtime，但必须保持 Memos-owned identity、
+3. 下一独立切片评审认证同源 AgentRun BFF；可以选择 dormant runtime，但必须保持 Memos-owned identity、
    visibility、source authority、有限投影和默认关闭，不得增加 background job。
-3. BFF contract 与 runtime recovery 边界稳定后，再独立评审 run/approval/timeline UI。
-4. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
+4. BFF contract 与 runtime recovery 边界稳定后，再独立评审 run/approval/timeline UI。
+5. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实用户数据 Provider rollout 与多实例。
 
-R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport
-与 shared atomic replay/capability storage。
+R6 release 本身不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；后续 bounded DeepSeek
+切片只证明显式启用的 synthetic smoke。任何多实例主张前仍必须具备加密 transport 与 shared atomic
+replay/capability storage。

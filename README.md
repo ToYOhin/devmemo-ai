@@ -109,9 +109,13 @@ AI_AGENT_ENABLED=false
 - Public chunk retrieval remains disabled. It requires a real trusted gateway,
   Memos visibility mapping, and a verified disable-and-rollback path.
 - The Evidence Answer Agent remains an opt-in experiment. The reviewed R6
-  baseline, canary fixes, clean-checkout CI, and release publication are
-  complete at `v0.2.0`. R7-I1 adds contract-only AgentRun models and sanitized
-  fixtures; it does not add persistence, runtime, or UI.
+  baseline is published at `v0.2.0`; later R7 slices add frozen AgentRun
+  contracts, single-host derived-only SQLite persistence, and a bounded runtime.
+  The persistence/runtime remain dormant and are not wired to a route, worker,
+  product BFF, or UI.
+- A bounded DeepSeek adapter is available only through explicit configuration.
+  Deterministic remains the default; the external endpoint smoke uses synthetic
+  evidence and does not establish real-Memo or production deployment readiness.
 
 For a controlled local Docker development topology where a Memos Webhook must
 target `ai-service`, use the `docker-compose.local-webhook.yml` override
