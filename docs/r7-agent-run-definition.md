@@ -1,8 +1,10 @@
 # R7-I0 AgentRun Definition Gate
 
-Status: accepted design target for R7; definition only. This document does not
-add an AgentRun runtime, route, database, migration, worker, or feature default.
-It refines the next gate in the [Agent development roadmap](agent-development-roadmap.md).
+Status: merged R7-I0 definition gate on `origin/main` at
+`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`; definition only. This document
+does not add an AgentRun runtime, route, database, migration, worker, or feature
+default. It refines the next gate in the
+[Agent development roadmap](agent-development-roadmap.md).
 
 ## Outcome
 

@@ -1,6 +1,6 @@
 # DevMemo AI 项目结构与边界
 
-更新时间：2026-08-11
+更新时间：2026-08-12
 
 ## 顶层目录
 
@@ -31,6 +31,11 @@ repository-root/
 DevMemo AI `v0.2.0` 已从默认分支精确提交 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`
 发布。该 release 固化当前默认关闭、显式 opt-in 的单机 Agent/lifecycle 边界，不构成真实数据、
 外部 Provider、公开 AI 端口或多实例生产部署证明。
+
+R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并；当前 `origin/main` 为
+`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。该提交未接入 executable contract、database、route、
+runtime 或 UI。其后置 Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service
+检查，不能据此宣称该提交具备完整 Python clean-checkout context。
 
 ## Memos 核心边界
 
@@ -244,15 +249,18 @@ legacy template/summary/insight feature 仍使用可选 AI Service client；Agen
 
 ## 当前推进路线与问题
 
-1. **先关闭 R6 工程闸门：** 固定 Python lint/type/coverage 工具并建立本地 baseline；再运行 disposable
-   authenticated-browser refusal/cited-answer/disablement/cleanup 证明；随后发布 feature branch 并验证 clean-checkout CI；
-   merge/tag/release 必须最后单独评审授权。
-2. **再定义 R7：** R6 的工具链、浏览器、CI 与发布证据关闭前，不预设 R7 implementation。R7 必须先在双语 roadmap
-   评审 outcome、scope、acceptance、rollback 与新授权闸门。
-3. **保持未解决问题显式：** lifecycle lag、rebuild、reconciliation 缺权威 state owner；legacy AI panels 的浏览器访问
-   模式尚未统一；多实例仍缺加密 transport 与 shared atomic replay/capability storage。
-4. **保持本地协作材料隔离：** 本地状态、临时交接和生成的结构产物必须保持排除，公共文档只保留可复现的
-   产品事实。
+1. **R7-I1 contract/fixture：** 只实现 provider-neutral contract model、合法状态转换、budget/timeline
+   校验与 deterministic sanitized fixture；不接 database、route、worker、runtime 或 UI。
+2. **统一浏览器边界：** legacy insight/template/summary 读路径迁移到 Memos BFF，或在 Agent-overlay 模式
+   隐藏；不能用暴露 AI Service 宿主端口规避权限边界。
+3. **再拆分持久化与体验：** contract 稳定后，依次独立评审 run persistence、runtime composition 与 run UI，
+   每一步都保留默认关闭、fail-closed 与可回滚边界。
+4. **最后讨论真实环境：** 真实 Provider、真实用户数据与多实例需分别完成隐私、备份恢复、加密 transport、
+   shared atomic replay/capability storage 证明后才能进入。
+5. **保持未解决问题显式：** refusal 展示仍偏通用；lifecycle lag、跨进程 rebuild authority 与 dedicated
+   reconciliation owner 尚不完整；Docker build-context 传输效率仍是独立工程问题。
+6. **隔离本地协作材料：** 本地状态、临时交接、报告、截图与生成的结构产物必须保持 Git 忽略；公共文档
+   只保留可复现的产品事实。
 
 ## Compose 与持久化
 

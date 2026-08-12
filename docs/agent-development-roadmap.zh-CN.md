@@ -1,13 +1,15 @@
 # DevMemo Agent 开发路线
 
-> 状态日期：2026-08-09
+> 状态日期：2026-08-12
 >
 > 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
 >
 > 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、canary
-> 修复、精确 head 与合并后 clean-checkout CI，以及 release publication 均已完成。`origin/main` 与 peeled
-> `v0.2.0` tag 均指向 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`。双语 R7-I0 definition gate
-> 已记录；它不实现或授权 AgentRun runtime。
+> 修复、clean-checkout CI 与 release publication 已在 peeled `v0.2.0` tag
+> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 完成。双语 R7-I0 definition gate 已通过 PR #8
+> 合并；当前 `origin/main` 为 `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。该精确提交的 Backend、
+> Frontend、Proto 与 CodeQL 后置检查成功；文档路径过滤未触发 AI Service 检查。R7-I0 仍不实现或授权
+> AgentRun runtime。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -363,15 +365,19 @@ cited answer、两类 refusal 均发生在 retrieval 前、disablement、AI/Qdra
 ## 下一阶段
 
 R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成收口。双语
-[R7-I0 AgentRun 定义](r7-agent-run-definition.zh-CN.md)现已固定 model、状态机、首批三个工具、budget、
-recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback。它仅包含定义，未新增
+[R7-I0 AgentRun 定义](r7-agent-run-definition.zh-CN.md)已合并到
+`origin/main@3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。它固定 model、状态机、首批三个工具、
+budget、recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback，但未新增
 executable contract、migration、route 或 runtime。
 
-如获单独授权，下一 Agent 切片应是 R7-I1 contract-only model 与 deterministic fixture。它必须保持默认关闭，
-不得新增 worker、database migration、runtime wiring、Memo write tool 或 external Provider。
+后续按以下顺序推进：
 
-legacy insight/template/summary panel 兼容仍是独立 product-hardening 切片。它必须迁移到 Memos BFF，或在
-Agent-overlay 模式下隐藏，且不得重新打开 browser-to-AI 直连路径。
+1. 先增加 R7-I1 contract-only model 与 deterministic sanitized fixture；保持默认关闭，不新增 worker、
+   migration、runtime wiring、Memo write tool 或 external Provider。
+2. 再处理 legacy insight/template/summary 兼容：支持的读路径统一到 Memos BFF，或在 Agent-overlay 模式
+   隐藏不支持的面板，不得恢复 browser-to-AI 直连。
+3. contract 稳定后，分别评审 run persistence、runtime composition 与 run UI，不把三者混成一个大切片。
+4. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
 
 R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport
 与 shared atomic replay/capability storage。

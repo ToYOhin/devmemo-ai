@@ -1,7 +1,9 @@
 # R7-I0 AgentRun 定义门禁
 
-状态：R7 已接受的设计目标，仅包含定义。本文不新增 AgentRun runtime、route、database、migration、
-worker 或 feature default，并细化 [Agent 开发路线图](agent-development-roadmap.zh-CN.md)中的下一门禁。
+状态：R7-I0 definition gate 已合并到
+`origin/main@3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`，仅包含定义。本文不新增 AgentRun
+runtime、route、database、migration、worker 或 feature default，并细化
+[Agent 开发路线图](agent-development-roadmap.zh-CN.md)中的下一门禁。
 
 ## 结果
 

@@ -1,16 +1,19 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-09
+> Status date: 2026-08-12
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
 >
 > Current delivery state: A0-A4 and R1-R5 are complete for the documented,
 > default-disabled single-host scope. R6 implementation, evaluation, canary
-> fixes, exact-head and post-merge clean-checkout CI, and release publication
-> are complete. `origin/main` and the peeled `v0.2.0` tag point to
-> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0 definition
-> gate is recorded; it does not implement or authorize an AgentRun runtime.
+> fixes, clean-checkout CI, and release publication are complete at the peeled
+> `v0.2.0` tag `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0
+> definition gate was merged through PR #8; `origin/main` is now
+> `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. Backend, Frontend, Proto, and
+> CodeQL post-merge checks succeeded at that exact commit. The path-filtered AI
+> Service check did not run for the documentation-only merge. R7-I0 still does
+> not implement or authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -539,19 +542,25 @@ review, and explicit authorization.
 
 R6 release closure is complete at
 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` and `v0.2.0`. The bilingual
-[R7-I0 AgentRun definition](r7-agent-run-definition.md) now fixes the models,
+[R7-I0 AgentRun definition](r7-agent-run-definition.md) is merged on
+`origin/main` at `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. It fixes the models,
 state machine, first three tools, budgets, recovery, redacted timeline,
-approval/authority failures, acceptance fixtures, and rollback. It is
-definition-only and adds no executable contract, migration, route, or runtime.
+approval/authority failures, acceptance fixtures, and rollback, but adds no
+executable contract, migration, route, or runtime.
 
-If separately authorized, the next Agent slice should be R7-I1 contract-only
-models and deterministic fixtures. It must remain default-disabled and must not
-add a worker, database migration, runtime wiring, Memo write tool, or external
-Provider.
+The ordered delivery route is:
 
-Legacy insight/template/summary panel compatibility remains an independent
-product-hardening slice. It must either migrate to the Memos BFF or be hidden in
-Agent-overlay mode without reopening a direct browser-to-AI path.
+1. Add R7-I1 contract-only models and deterministic sanitized fixtures. Keep
+   the slice default-disabled and exclude workers, migrations, runtime wiring,
+   Memo write tools, and external Providers.
+2. Resolve legacy insight/template/summary compatibility by routing supported
+   reads through the Memos BFF or hiding unsupported panels in Agent-overlay
+   mode. Do not reopen direct browser-to-AI access.
+3. Gate run persistence, runtime composition, and the run UI as separate,
+   reviewable slices after the contracts are stable.
+4. Discuss real Providers, real user data, and multi-instance operation only
+   after the earlier gates have their own privacy, recovery, and security
+   evidence.
 
 R6 does not authorize real user data, an external Provider, public AI ports, or
 multi-instance deployment. Encrypted transport and shared atomic
