@@ -9,12 +9,12 @@
 > default-disabled single-host scope. R6 implementation, evaluation, canary
 > fixes, clean-checkout CI, and release publication are complete at the peeled
 > `v0.2.0` tag `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0
-> definition gate was merged through PR #8; `origin/main` is now
+> definition gate was merged through PR #8 at
 > `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. Backend, Frontend, Proto, and
 > CodeQL post-merge checks succeeded at that exact commit. The path-filtered AI
 > Service check did not run for the documentation-only merge. R7-I1 now has a
-> local contract-only Python implementation and deterministic sanitized
-> fixtures; it does not implement or authorize an AgentRun runtime.
+> contract-only Python implementation and deterministic sanitized fixtures; it
+> does not implement or authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -67,7 +67,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun is contract-only | The provider-neutral frozen models, bounded state machine, approval/authority checks, safe timeline projection, and deterministic sanitized fixtures are implemented and targeted-test verified locally, but no persistence or runtime exists | Review the local contract/fixture gate before separately authorizing persistence or runtime wiring |
+| P1 | R7 AgentRun is contract-only | The provider-neutral frozen models, bounded state machine, approval/authority checks, safe timeline projection, and deterministic sanitized fixtures are implemented and targeted-test verified, but no persistence or runtime exists | Preserve the contract/fixture gate before separately authorizing persistence or runtime wiring |
 
 ## Delivery rules
 
@@ -547,20 +547,18 @@ R6 release closure is complete at
 `origin/main` at `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. It fixes the models,
 state machine, first three tools, budgets, recovery, redacted timeline,
 approval/authority failures, acceptance fixtures, and rollback. R7-I1 now has a
-local contract-only implementation and fixture-driven targeted tests, but adds
-no persistence, migration, route, worker, runtime, UI, Memo write tool, external
+contract-only implementation and fixture-driven targeted tests, but adds no
+persistence, migration, route, worker, runtime, UI, Memo write tool, external
 Provider, real data, or multi-instance behavior.
 
 The ordered delivery route is:
 
-1. Review and publish R7-I1 separately if authorized; the contract-only models
-   and deterministic sanitized fixtures are local and unwired.
-2. Resolve legacy insight/template/summary compatibility by routing supported
+1. Resolve legacy insight/template/summary compatibility by routing supported
    reads through the Memos BFF or hiding unsupported panels in Agent-overlay
    mode. Do not reopen direct browser-to-AI access.
-3. Gate run persistence, runtime composition, and the run UI as separate,
+2. Gate run persistence, runtime composition, and the run UI as separate,
    reviewable slices after the contracts are stable.
-4. Discuss real Providers, real user data, and multi-instance operation only
+3. Discuss real Providers, real user data, and multi-instance operation only
    after the earlier gates have their own privacy, recovery, and security
    evidence.
 

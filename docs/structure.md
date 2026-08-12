@@ -32,12 +32,11 @@ DevMemo AI `v0.2.0` 已从默认分支精确提交 `eddaa602537cda1adc27c0cd1d8c
 发布。该 release 固化当前默认关闭、显式 opt-in 的单机 Agent/lifecycle 边界，不构成真实数据、
 外部 Provider、公开 AI 端口或多实例生产部署证明。
 
-R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并；当前 `origin/main` 为
-`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。本地
-`codex/r7-i1-contract-fixtures` 分支随后实现 provider-neutral frozen AgentRun contract、脱敏 fixture 与
-定向测试，但尚未 push 或进入默认分支，也未接入 database、route、worker、runtime 或 UI。R7-I0 的
-后置 Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service 检查，不能据此
-宣称该提交具备完整 Python clean-checkout context。
+R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并于
+`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。R7-I1 随后实现 provider-neutral frozen AgentRun
+contract、脱敏 fixture 与定向测试，但保持不接 database、route、worker、runtime 或 UI。R7-I0 的后置
+Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service 检查，不能据此宣称该提交
+具备完整 Python clean-checkout context。
 
 ## Memos 核心边界
 
@@ -252,9 +251,9 @@ legacy template/summary/insight feature 仍使用可选 AI Service client；Agen
 
 ## 当前推进路线与问题
 
-1. **评审 R7-I1 contract/fixture：** 本地实现已具备 provider-neutral contract model、合法状态转换、
-   budget/timeline 校验与 deterministic sanitized fixture；保持不接 database、route、worker、runtime 或
-   UI。push、CI、PR 与 merge 必须分别获得授权。
+1. **保持 R7-I1 contract/fixture 边界：** 已具备 provider-neutral contract model、合法状态转换、
+   budget/timeline 校验与 deterministic sanitized fixture；继续保持不接 database、route、worker、runtime
+   或 UI。contract gate 的发布与 CI 证据不能当作 runtime 或产品验收证据。
 2. **统一浏览器边界：** legacy insight/template/summary 读路径迁移到 Memos BFF，或在 Agent-overlay 模式
    隐藏；不能用暴露 AI Service 宿主端口规避权限边界。
 3. **再拆分持久化与体验：** contract 稳定后，依次独立评审 run persistence、runtime composition 与 run UI，

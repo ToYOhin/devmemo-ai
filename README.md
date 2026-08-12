@@ -110,8 +110,8 @@ AI_AGENT_ENABLED=false
   Memos visibility mapping, and a verified disable-and-rollback path.
 - The Evidence Answer Agent remains an opt-in experiment. The reviewed R6
   baseline, canary fixes, clean-checkout CI, and release publication are
-  complete at `v0.2.0`. The local R7-I1 branch adds contract-only AgentRun
-  models and sanitized fixtures; it does not add persistence, runtime, or UI.
+  complete at `v0.2.0`. R7-I1 adds contract-only AgentRun models and sanitized
+  fixtures; it does not add persistence, runtime, or UI.
 
 For a controlled local Docker development topology where a Memos Webhook must
 target `ai-service`, use the `docker-compose.local-webhook.yml` override

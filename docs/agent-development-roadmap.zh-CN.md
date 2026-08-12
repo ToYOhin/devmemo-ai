@@ -7,8 +7,8 @@
 > 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、canary
 > 修复、clean-checkout CI 与 release publication 已在 peeled `v0.2.0` tag
 > `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 完成。双语 R7-I0 definition gate 已通过 PR #8
-> 合并；当前 `origin/main` 为 `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。该精确提交的 Backend、
-> Frontend、Proto 与 CodeQL 后置检查成功；文档路径过滤未触发 AI Service 检查。R7-I1 现已有本地
+> 合并于 `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。该精确提交的 Backend、
+> Frontend、Proto 与 CodeQL 后置检查成功；文档路径过滤未触发 AI Service 检查。R7-I1 现已有
 > contract-only Python 实现与 deterministic sanitized fixture，但仍不实现或授权 AgentRun runtime。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
@@ -48,7 +48,7 @@ Agent，而不是通用自治助手：
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
-| P1 | R7 AgentRun 仅有 contract | provider-neutral frozen model、bounded state machine、approval/authority check、安全 timeline projection 与 deterministic sanitized fixture 已在本地实现并通过定向测试，但没有 persistence 或 runtime | 先评审本地 contract/fixture gate，再另行授权 persistence 或 runtime wiring |
+| P1 | R7 AgentRun 仅有 contract | provider-neutral frozen model、bounded state machine、approval/authority check、安全 timeline projection 与 deterministic sanitized fixture 已实现并通过定向测试，但没有 persistence 或 runtime | 保持 contract/fixture gate，再另行授权 persistence 或 runtime wiring |
 
 ## 交付规则
 
@@ -368,17 +368,15 @@ R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成
 [R7-I0 AgentRun 定义](r7-agent-run-definition.zh-CN.md)已合并到
 `origin/main@3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。它固定 model、状态机、首批三个工具、
 budget、recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback。R7-I1 现已有
-本地 contract-only 实现与 fixture-driven 定向测试，但未新增 persistence、migration、route、worker、runtime、
+contract-only 实现与 fixture-driven 定向测试，但未新增 persistence、migration、route、worker、runtime、
 UI、Memo write tool、external Provider、真实数据或多实例行为。
 
 后续按以下顺序推进：
 
-1. 如获授权，单独评审与发布 R7-I1；contract-only model 与 deterministic sanitized fixture 当前仅在本地，
-   且未接线。
-2. 再处理 legacy insight/template/summary 兼容：支持的读路径统一到 Memos BFF，或在 Agent-overlay 模式
+1. 处理 legacy insight/template/summary 兼容：支持的读路径统一到 Memos BFF，或在 Agent-overlay 模式
    隐藏不支持的面板，不得恢复 browser-to-AI 直连。
-3. contract 稳定后，分别评审 run persistence、runtime composition 与 run UI，不把三者混成一个大切片。
-4. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
+2. contract 稳定后，分别评审 run persistence、runtime composition 与 run UI，不把三者混成一个大切片。
+3. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
 
 R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport
 与 shared atomic replay/capability storage。

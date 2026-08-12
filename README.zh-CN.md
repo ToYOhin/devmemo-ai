@@ -94,8 +94,8 @@ AI_AGENT_ENABLED=false
 - 公共 chunk retrieval 保持关闭；它需要真实的 trusted gateway、Memos visibility
   mapping 以及可验证的关闭与回滚路径。
 - Evidence Answer Agent 仍是显式启用的实验能力；R6 评审基线、canary 修复、clean-checkout CI 与
-  release publication 已在 `v0.2.0` 完成。本地 R7-I1 分支只增加 AgentRun contract model 与脱敏
-  fixture，不包含 persistence、runtime 或 UI。
+  release publication 已在 `v0.2.0` 完成。R7-I1 只增加 AgentRun contract model 与脱敏 fixture，
+  不包含 persistence、runtime 或 UI。
 
 如果在受控的本地 Docker 开发拓扑中，确实需要 Memos Webhook 指向 `ai-service`，请使用
 [README_AI.md](README_AI.md) 中记录的 `docker-compose.local-webhook.yml` override。不要
