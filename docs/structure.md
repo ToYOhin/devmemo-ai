@@ -33,9 +33,11 @@ DevMemo AI `v0.2.0` 已从默认分支精确提交 `eddaa602537cda1adc27c0cd1d8c
 外部 Provider、公开 AI 端口或多实例生产部署证明。
 
 R7-I0 双语 AgentRun definition gate 已通过 PR #8 合并；当前 `origin/main` 为
-`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。该提交未接入 executable contract、database、route、
-runtime 或 UI。其后置 Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service
-检查，不能据此宣称该提交具备完整 Python clean-checkout context。
+`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。本地
+`codex/r7-i1-contract-fixtures` 分支随后实现 provider-neutral frozen AgentRun contract、脱敏 fixture 与
+定向测试，但尚未 push 或进入默认分支，也未接入 database、route、worker、runtime 或 UI。R7-I0 的
+后置 Backend、Frontend、Proto 与 CodeQL 检查成功；文档路径过滤未触发 AI Service 检查，不能据此
+宣称该提交具备完整 Python clean-checkout context。
 
 ## Memos 核心边界
 
@@ -99,6 +101,7 @@ ai-service/
 │   │   ├── memo_insight.py          # AI Inbox/Decision Ledger contract
 │   │   ├── context_pack.py          # context-pack-v1 contract 与 JSON 输出
 │   │   ├── agent.py                 # search_memos-only Agent 请求/结果契约
+│   │   ├── agent_run.py             # R7 contract-only run/step/event/approval/artifact 校验
 │   │   ├── agent_evaluation.py      # R6 sanitized case/corpus/threshold/result contract
 │   │   ├── agent_evaluation_report.py # content-free benchmark report contract
 │   │   ├── agent_lifecycle.py       # A4 lifecycle event/ack/state machine
@@ -249,8 +252,9 @@ legacy template/summary/insight feature 仍使用可选 AI Service client；Agen
 
 ## 当前推进路线与问题
 
-1. **R7-I1 contract/fixture：** 只实现 provider-neutral contract model、合法状态转换、budget/timeline
-   校验与 deterministic sanitized fixture；不接 database、route、worker、runtime 或 UI。
+1. **评审 R7-I1 contract/fixture：** 本地实现已具备 provider-neutral contract model、合法状态转换、
+   budget/timeline 校验与 deterministic sanitized fixture；保持不接 database、route、worker、runtime 或
+   UI。push、CI、PR 与 merge 必须分别获得授权。
 2. **统一浏览器边界：** legacy insight/template/summary 读路径迁移到 Memos BFF，或在 Agent-overlay 模式
    隐藏；不能用暴露 AI Service 宿主端口规避权限边界。
 3. **再拆分持久化与体验：** contract 稳定后，依次独立评审 run persistence、runtime composition 与 run UI，
