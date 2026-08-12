@@ -8,6 +8,7 @@ services:
       args:
         VERSION: ${DEVMEMO_AGENT_VERSION:-local-agent}
         COMMIT: ${DEVMEMO_AGENT_COMMIT:-local}
+        GOPROXY: ${DEVMEMO_GOPROXY:-https://proxy.golang.org,direct}
     image: devmemo-ai-memos-agent:local
     profiles: ["agent"]
     depends_on:
