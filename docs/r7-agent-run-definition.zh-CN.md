@@ -1,8 +1,9 @@
 # R7-I0 AgentRun 定义门禁
 
 状态：R7-I0 definition gate 已合并到
-`origin/main@3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`，仅包含定义。本文不新增 AgentRun
-runtime、route、database、migration、worker 或 feature default，并细化
+`origin/main@3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`。R7-I1 现已有本地 contract-only
+Python 实现及 deterministic sanitized contract/acceptance fixture；仍未接线，不新增 AgentRun
+persistence、route、database migration、worker、runtime、UI 或 feature default，并细化
 [Agent 开发路线图](agent-development-roadmap.zh-CN.md)中的下一门禁。
 
 ## 结果
@@ -11,7 +12,8 @@ runtime、route、database、migration、worker 或 feature default，并细化
 authority，产出带证据引用的 report artifact，并在证据或 authority 变化时 fail closed。
 
 R7-I0 的完成标准是中英文对模型、状态机、budget、ownership、recovery、approval boundary、脱敏
-timeline、acceptance fixture 与 rollback 作出无歧义定义。本阶段不包含可执行实现。
+timeline、acceptance fixture 与 rollback 作出无歧义定义。R7-I0 本身不包含可执行实现。
+R7-I1 已在本地实现这些 domain validator 与 fixture，但不实现 orchestration 或 side effect。
 
 ## 范围
 
@@ -24,7 +26,7 @@ timeline、acceptance fixture 与 rollback 作出无歧义定义。本阶段不�
 
 ## 非目标
 
-R7-I0 不实现 Python、Go、TypeScript、Proto、migration、Compose、环境变量、runtime wiring、
+R7-I1 不实现 Go、TypeScript、Proto、migration、Compose、环境变量、persistence、runtime wiring、
 background job、model routing、Memo write、external write tool 或浏览器体验。它不改变 default、认证、
 visibility、存储、端口或当前 R6 行为。
 
@@ -205,8 +207,12 @@ allowlist；错误文本映射为固定 safe code。
 
 ## Acceptance Fixtures
 
-后续 contract 切片必须增加以下最小集合的脱敏 deterministic fixture。每个 fixture 定义 input、有序 safe
-event、terminal state、tool-call count、evidence revision 与 artifact/approval outcome。
+R7-I1 已在本地实现 deterministic、sanitized 的 `agent-run-contract-v1.json` 与
+`agent-run-acceptance-v1.json` fixture；定向 Python 测试会加载它们并驱动 domain validator。它们不是
+runtime、persistence、UI、CI、external Provider、真实数据或多实例证据。
+
+本地 R7-I1 fixture 已覆盖以下最小集合。每个 fixture 定义 input、有序 safe event、terminal state、
+tool-call count、evidence revision 与 artifact/approval outcome。
 
 | Fixture | 必须得到的结果 |
 | --- | --- |
@@ -222,9 +228,8 @@ event、terminal state、tool-call count、evidence revision 与 artifact/approv
 
 ## 回滚
 
-R7 默认关闭。R7-I0 不新增 route、runtime selection、worker、database migration、环境变量或 source-data
-mutation。回滚只需删除双语定义和任何后续 definition-only fixture asset，再移除 roadmap 链接。既有 R6
-行为与数据不变。
+R7 默认关闭。R7-I1 不新增 route、runtime selection、worker、database migration、环境变量、persistence
+或 source-data mutation。回滚只需撤销本地 contract/fixture commits；既有 R6 行为与数据不变。
 
 ## 未验证且需单独授权的范围
 

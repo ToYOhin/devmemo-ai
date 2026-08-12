@@ -12,8 +12,9 @@
 > definition gate was merged through PR #8; `origin/main` is now
 > `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. Backend, Frontend, Proto, and
 > CodeQL post-merge checks succeeded at that exact commit. The path-filtered AI
-> Service check did not run for the documentation-only merge. R7-I0 still does
-> not implement or authorize an AgentRun runtime.
+> Service check did not run for the documentation-only merge. R7-I1 now has a
+> local contract-only Python implementation and deterministic sanitized
+> fixtures; it does not implement or authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -66,7 +67,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun is definition-only | The provider-neutral model, bounded state machine, approval lifecycle, recovery contract, and fixtures are defined, but no executable contract or runtime exists | If separately authorized, add contract-only models and deterministic fixtures before runtime wiring |
+| P1 | R7 AgentRun is contract-only | The provider-neutral frozen models, bounded state machine, approval/authority checks, safe timeline projection, and deterministic sanitized fixtures are implemented and targeted-test verified locally, but no persistence or runtime exists | Review the local contract/fixture gate before separately authorizing persistence or runtime wiring |
 
 ## Delivery rules
 
@@ -545,14 +546,15 @@ R6 release closure is complete at
 [R7-I0 AgentRun definition](r7-agent-run-definition.md) is merged on
 `origin/main` at `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. It fixes the models,
 state machine, first three tools, budgets, recovery, redacted timeline,
-approval/authority failures, acceptance fixtures, and rollback, but adds no
-executable contract, migration, route, or runtime.
+approval/authority failures, acceptance fixtures, and rollback. R7-I1 now has a
+local contract-only implementation and fixture-driven targeted tests, but adds
+no persistence, migration, route, worker, runtime, UI, Memo write tool, external
+Provider, real data, or multi-instance behavior.
 
 The ordered delivery route is:
 
-1. Add R7-I1 contract-only models and deterministic sanitized fixtures. Keep
-   the slice default-disabled and exclude workers, migrations, runtime wiring,
-   Memo write tools, and external Providers.
+1. Review and publish R7-I1 separately if authorized; the contract-only models
+   and deterministic sanitized fixtures are local and unwired.
 2. Resolve legacy insight/template/summary compatibility by routing supported
    reads through the Memos BFF or hiding unsupported panels in Agent-overlay
    mode. Do not reopen direct browser-to-AI access.

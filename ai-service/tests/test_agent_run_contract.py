@@ -1,5 +1,7 @@
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timedelta, timezone
+import json
+from pathlib import Path
 
 import pytest
 
@@ -35,6 +37,25 @@ NOW = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 DIGEST_A = "a" * 64
 DIGEST_B = "b" * 64
 SNAPSHOT = (SourceRevision("memo-001", "rev-001"),)
+CONTRACTS_DIR = Path(__file__).resolve().parents[2] / "contracts"
+
+
+def _load_fixture(name: str) -> dict[str, object]:
+    return json.loads((CONTRACTS_DIR / name).read_text(encoding="utf-8"))
+
+
+def _source_snapshot(payload: object) -> tuple[SourceRevision, ...]:
+    assert isinstance(payload, list)
+    return tuple(
+        SourceRevision(source_id=item["source_id"], revision=item["revision"])
+        for item in payload
+        if isinstance(item, dict)
+    )
+
+
+def _parse_utc(value: object) -> datetime:
+    assert isinstance(value, str)
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def _budget(**overrides: int) -> ExecutionBudget:
@@ -131,6 +152,7 @@ def test_state_machine_allows_exactly_the_documented_transitions() -> None:
         ("max_tool_calls", 0),
         ("max_tool_calls", MAX_TOOL_CALLS + 1),
         ("max_tool_retries", -1),
+        ("max_tool_retries", 0),
         ("max_tool_retries", MAX_TOOL_RETRIES + 1),
         ("max_active_seconds", 0),
         ("max_active_seconds", MAX_ACTIVE_SECONDS + 1),
@@ -398,3 +420,199 @@ def test_artifact_is_revision_bound_bounded_and_contains_no_body() -> None:
             expires_at=NOW + timedelta(days=1),
             status=ArtifactStatus.AVAILABLE,
         )
+
+
+def test_contract_fixture_drives_the_executable_contract() -> None:
+    fixture = _load_fixture("agent-run-contract-v1.json")
+    assert fixture["version"] == AGENT_RUN_CONTRACT_VERSION
+    assert fixture["models"] == [
+        "AgentRun",
+        "AgentStep",
+        "RunEvent",
+        "ApprovalRequest",
+        "Artifact",
+    ]
+    assert fixture["run_states"] == [status.value for status in RunStatus]
+    assert set(fixture["tools"]) == ALLOWED_TOOLS
+    assert fixture["budget"] == _budget().to_dict()
+
+    legal = {
+        (RunStatus(current), RunStatus(target))
+        for current, target in fixture["legal_transitions"]  # type: ignore[union-attr]
+    }
+    assert legal == LEGAL_RUN_TRANSITIONS
+    for current, target in legal:
+        validate_run_transition(current, target)
+    for current, target in fixture["illegal_transitions"]:  # type: ignore[union-attr]
+        with pytest.raises(AgentRunContractError, match="not permitted"):
+            validate_run_transition(RunStatus(current), RunStatus(target))
+
+    event_payload = fixture["safe_event_example"]
+    assert isinstance(event_payload, dict)
+    event = RunEvent(
+        event_id=event_payload["event_id"],
+        run_id=event_payload["run_id"],
+        seq=event_payload["seq"],
+        event_type=event_payload["event_type"],
+        step_id=event_payload["step_id"],
+        safe_details=event_payload["safe_details"],
+        occurred_at=_parse_utc(event_payload["occurred_at"]),
+    )
+    assert event.to_dict() == event_payload
+
+
+def test_acceptance_fixture_cases_execute_contract_validators() -> None:
+    fixture = _load_fixture("agent-run-acceptance-v1.json")
+    assert fixture["contract_version"] == AGENT_RUN_CONTRACT_VERSION
+    cases = fixture["cases"]
+    assert isinstance(cases, list)
+    assert {case["name"] for case in cases} == {
+        "readonly_multistep_success",
+        "no_evidence_termination",
+        "safe_refusal",
+        "stale_revision",
+        "visibility_change",
+        "waiting_approval_resume",
+        "duplicate_retry",
+        "cancel",
+        "restart_recovery",
+    }
+
+    for case in cases:
+        assert isinstance(case, dict)
+        snapshot = _source_snapshot(case["source_snapshot"])
+        for current, target in case["transitions"]:
+            validate_run_transition(RunStatus(current), RunStatus(target))
+
+        tools = case["tools"]
+        assert isinstance(tools, list)
+        assert case["tool_call_count"] == len(tools)
+        assert len(tools) <= _budget().max_tool_calls
+        attempts = case.get("retry_attempts", [0] * len(tools))
+        assert isinstance(attempts, list)
+        for ordinal, (tool_name, attempt) in enumerate(zip(tools, attempts, strict=False), 1):
+            AgentStep(
+                step_id=f"step-fixture-{ordinal:03d}",
+                run_id="run-fixture-001",
+                ordinal=ordinal,
+                kind=StepKind.TOOL,
+                status=StepStatus.SUCCEEDED,
+                attempt=attempt,
+                input_digest=DIGEST_A,
+                checkpoint_ref=f"checkpoint-fixture-{ordinal:03d}",
+                tool_name=tool_name,
+                outcome_code="fixture_validated",
+            )
+
+        events = case["events"]
+        assert isinstance(events, list)
+        assert [event["seq"] for event in events] == list(range(1, len(events) + 1))
+        for event_payload in events:
+            event = RunEvent(
+                event_id=event_payload["event_id"],
+                run_id="run-fixture-001",
+                seq=event_payload["seq"],
+                event_type=event_payload["event_type"],
+                step_id=event_payload.get("step_id"),
+                safe_details=event_payload["safe_details"],
+                occurred_at=NOW,
+            )
+            assert event.to_dict()["safe_details"] == event_payload["safe_details"]
+
+        terminal = AgentRun(
+            run_id="run-fixture-001",
+            subject_id="subject-fixture-001",
+            scope_ref="scope-fixture-001",
+            request_key="request-fixture-001",
+            request_digest=DIGEST_A,
+            status=RunStatus(case["terminal_state"]),
+            budget=_budget(),
+            source_snapshot=snapshot,
+            created_at=NOW,
+            updated_at=NOW,
+            last_event_seq=len(events),
+            checkpoint_ref=case.get("checkpoint_ref"),
+            terminal_reason=case["terminal_reason"],
+        )
+        assert terminal.status.value == case["terminal_state"]
+
+        artifact_outcome = case["artifact_outcome"]
+        if artifact_outcome != "none":
+            artifact = Artifact(
+                artifact_id="artifact-fixture-001",
+                run_id="run-fixture-001",
+                step_id="step-fixture-001",
+                kind="report",
+                media_type="application/json",
+                storage_ref="object-fixture-001",
+                digest=DIGEST_A,
+                size_bytes=1024,
+                evidence_refs=snapshot,
+                created_at=NOW,
+                expires_at=NOW + timedelta(days=1),
+                status=ArtifactStatus(artifact_outcome),
+            )
+            assert artifact.status.value == artifact_outcome
+
+        if case["name"] == "stale_revision":
+            active = _run(source_snapshot=snapshot)
+            with pytest.raises(AgentRunContractError, match="stale"):
+                active.validate_resume(
+                    "checkpoint-001", _source_snapshot(case["current_snapshot"])
+                )
+        elif case["name"] == "visibility_change":
+            approval = _approval(source_snapshot=snapshot)
+            with pytest.raises(AgentRunContractError, match="visibility"):
+                approval.validate_decision(
+                    decision_id="decision-fixture-001",
+                    subject_id="subject-001",
+                    action_digest=DIGEST_A,
+                    source_snapshot=snapshot,
+                    decided_at=NOW + timedelta(minutes=1),
+                    visibility_current=case["visibility_current"],
+                )
+        elif case["name"] == "waiting_approval_resume":
+            approval_payload = case["approval"]
+            assert isinstance(approval_payload, dict)
+            approval = ApprovalRequest(
+                approval_id=approval_payload["approval_id"],
+                run_id="run-fixture-001",
+                step_id=approval_payload["step_id"],
+                subject_id=approval_payload["subject_id"],
+                action_type=approval_payload["action_type"],
+                action_digest=approval_payload["action_digest"],
+                source_snapshot=snapshot,
+                requested_at=_parse_utc(approval_payload["requested_at"]),
+                expires_at=_parse_utc(approval_payload["expires_at"]),
+                status=ApprovalStatus.PENDING,
+            )
+            approval.validate_decision(
+                decision_id=approval_payload["decision_id"],
+                subject_id=approval_payload["subject_id"],
+                action_digest=approval_payload["action_digest"],
+                source_snapshot=snapshot,
+                decided_at=_parse_utc(approval_payload["decided_at"]),
+                visibility_current=True,
+            )
+        elif case["name"] == "duplicate_retry":
+            assert case["retry_attempts"] == [0, MAX_TOOL_RETRIES]
+            active = _run(source_snapshot=snapshot)
+            active.validate_duplicate_request(
+                subject_id="subject-001",
+                request_key="request-001",
+                request_digest=DIGEST_A,
+            )
+        elif case["name"] == "cancel":
+            assert events[-1]["event_type"] == "run_cancelled"
+            assert not any(
+                event["event_type"] == "artifact_created" for event in events
+            )
+        elif case["name"] == "restart_recovery":
+            active = _run(
+                source_snapshot=snapshot,
+                checkpoint_ref=case["checkpoint_ref"],
+            )
+            active.validate_resume(case["checkpoint_ref"], snapshot)
+            assert sum(
+                event["event_type"] == "artifact_created" for event in events
+            ) == 1

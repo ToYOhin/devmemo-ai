@@ -1,0 +1,140 @@
+{
+  "version": "agent-run-acceptance-v1",
+  "contract_version": "agent-run-contract-v1",
+  "cases": [
+    {
+      "name": "readonly_multistep_success",
+      "transitions": [["queued", "running"], ["running", "succeeded"]],
+      "tools": ["search_memos", "get_memo_evidence", "create_report_artifact"],
+      "tool_call_count": 3,
+      "source_snapshot": [{"source_id": "memo-synthetic-001", "revision": "rev-synthetic-001"}],
+      "events": [
+        {"event_id": "event-readonly-001", "seq": 1, "event_type": "run_started", "safe_details": {"status": "running"}},
+        {"event_id": "event-readonly-002", "seq": 2, "event_type": "tool_succeeded", "step_id": "step-readonly-001", "safe_details": {"tool_name": "search_memos", "count": 1}},
+        {"event_id": "event-readonly-003", "seq": 3, "event_type": "tool_succeeded", "step_id": "step-readonly-002", "safe_details": {"tool_name": "get_memo_evidence", "evidence_ref": "memo-synthetic-001", "revision": "rev-synthetic-001"}},
+        {"event_id": "event-readonly-004", "seq": 4, "event_type": "artifact_created", "step_id": "step-readonly-003", "safe_details": {"tool_name": "create_report_artifact", "artifact_id": "artifact-readonly-001"}},
+        {"event_id": "event-readonly-005", "seq": 5, "event_type": "run_succeeded", "safe_details": {"status": "succeeded", "reason_code": "completed"}}
+      ],
+      "terminal_state": "succeeded",
+      "terminal_reason": "completed",
+      "artifact_outcome": "available",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "no_evidence_termination",
+      "transitions": [["queued", "running"], ["running", "succeeded"]],
+      "tools": ["search_memos"],
+      "tool_call_count": 1,
+      "source_snapshot": [{"source_id": "memo-synthetic-002", "revision": "rev-synthetic-001"}],
+      "events": [
+        {"event_id": "event-empty-001", "seq": 1, "event_type": "tool_succeeded", "step_id": "step-empty-001", "safe_details": {"tool_name": "search_memos", "count": 0}},
+        {"event_id": "event-empty-002", "seq": 2, "event_type": "run_succeeded", "safe_details": {"status": "succeeded", "reason_code": "no_evidence"}}
+      ],
+      "terminal_state": "succeeded",
+      "terminal_reason": "no_evidence",
+      "artifact_outcome": "none",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "safe_refusal",
+      "transitions": [["queued", "running"], ["running", "failed"]],
+      "tools": [],
+      "tool_call_count": 0,
+      "source_snapshot": [{"source_id": "memo-synthetic-003", "revision": "rev-synthetic-001"}],
+      "events": [{"event_id": "event-refusal-001", "seq": 1, "event_type": "run_failed", "safe_details": {"status": "failed", "reason_code": "unsafe_request"}}],
+      "terminal_state": "failed",
+      "terminal_reason": "unsafe_request",
+      "artifact_outcome": "none",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "stale_revision",
+      "transitions": [["queued", "running"], ["running", "failed"]],
+      "tools": ["search_memos", "get_memo_evidence"],
+      "tool_call_count": 2,
+      "source_snapshot": [{"source_id": "memo-synthetic-004", "revision": "rev-synthetic-001"}],
+      "current_snapshot": [{"source_id": "memo-synthetic-004", "revision": "rev-synthetic-002"}],
+      "events": [{"event_id": "event-stale-001", "seq": 1, "event_type": "run_failed", "safe_details": {"status": "failed", "reason_code": "stale_revision", "evidence_ref": "memo-synthetic-004", "revision": "rev-synthetic-002"}}],
+      "terminal_state": "failed",
+      "terminal_reason": "stale_revision",
+      "artifact_outcome": "none",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "visibility_change",
+      "transitions": [["queued", "running"], ["running", "failed"]],
+      "tools": ["search_memos", "get_memo_evidence"],
+      "tool_call_count": 2,
+      "source_snapshot": [{"source_id": "memo-synthetic-005", "revision": "rev-synthetic-001"}],
+      "visibility_current": false,
+      "events": [{"event_id": "event-visibility-001", "seq": 1, "event_type": "run_failed", "safe_details": {"status": "failed", "reason_code": "visibility_changed", "evidence_ref": "memo-synthetic-005"}}],
+      "terminal_state": "failed",
+      "terminal_reason": "visibility_changed",
+      "artifact_outcome": "revoked",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "waiting_approval_resume",
+      "transitions": [["queued", "running"], ["running", "waiting_approval"], ["waiting_approval", "running"], ["running", "succeeded"]],
+      "tools": ["search_memos", "get_memo_evidence", "create_report_artifact"],
+      "tool_call_count": 3,
+      "source_snapshot": [{"source_id": "memo-synthetic-006", "revision": "rev-synthetic-001"}],
+      "approval": {"approval_id": "approval-resume-001", "step_id": "step-resume-002", "subject_id": "subject-resume-001", "action_type": "future_action_v1", "action_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "requested_at": "2026-01-02T03:04:05Z", "expires_at": "2026-01-02T03:09:05Z", "decision_id": "decision-resume-001", "decided_at": "2026-01-02T03:05:05Z"},
+      "events": [
+        {"event_id": "event-resume-001", "seq": 1, "event_type": "approval_requested", "step_id": "step-resume-002", "safe_details": {"approval_id": "approval-resume-001", "status": "pending"}},
+        {"event_id": "event-resume-002", "seq": 2, "event_type": "approval_consumed", "step_id": "step-resume-002", "safe_details": {"approval_id": "approval-resume-001", "status": "approved"}},
+        {"event_id": "event-resume-003", "seq": 3, "event_type": "run_succeeded", "safe_details": {"status": "succeeded", "reason_code": "completed"}}
+      ],
+      "terminal_state": "succeeded",
+      "terminal_reason": "completed",
+      "artifact_outcome": "available",
+      "approval_outcome": "approved"
+    },
+    {
+      "name": "duplicate_retry",
+      "transitions": [["queued", "running"], ["running", "succeeded"]],
+      "tools": ["search_memos", "search_memos"],
+      "tool_call_count": 2,
+      "retry_attempts": [0, 1],
+      "source_snapshot": [{"source_id": "memo-synthetic-007", "revision": "rev-synthetic-001"}],
+      "events": [
+        {"event_id": "event-retry-001", "seq": 1, "event_type": "tool_failed", "step_id": "step-retry-001", "safe_details": {"tool_name": "search_memos", "attempt": 0, "reason_code": "transient_failure"}},
+        {"event_id": "event-retry-002", "seq": 2, "event_type": "tool_succeeded", "step_id": "step-retry-001", "safe_details": {"tool_name": "search_memos", "attempt": 1, "count": 1}},
+        {"event_id": "event-retry-003", "seq": 3, "event_type": "run_succeeded", "safe_details": {"status": "succeeded", "reason_code": "completed"}}
+      ],
+      "terminal_state": "succeeded",
+      "terminal_reason": "completed",
+      "artifact_outcome": "none",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "cancel",
+      "transitions": [["queued", "running"], ["running", "cancelled"]],
+      "tools": ["search_memos"],
+      "tool_call_count": 1,
+      "source_snapshot": [{"source_id": "memo-synthetic-008", "revision": "rev-synthetic-001"}],
+      "events": [{"event_id": "event-cancel-001", "seq": 1, "event_type": "run_cancelled", "safe_details": {"status": "cancelled", "reason_code": "authorized_cancel"}}],
+      "terminal_state": "cancelled",
+      "terminal_reason": "authorized_cancel",
+      "artifact_outcome": "none",
+      "approval_outcome": "none"
+    },
+    {
+      "name": "restart_recovery",
+      "transitions": [["queued", "running"], ["running", "succeeded"]],
+      "tools": ["search_memos", "get_memo_evidence", "create_report_artifact"],
+      "tool_call_count": 3,
+      "source_snapshot": [{"source_id": "memo-synthetic-009", "revision": "rev-synthetic-001"}],
+      "checkpoint_ref": "checkpoint-restart-001",
+      "events": [
+        {"event_id": "event-restart-001", "seq": 1, "event_type": "checkpoint_committed", "step_id": "step-restart-002", "safe_details": {"outcome_code": "evidence_validated"}},
+        {"event_id": "event-restart-002", "seq": 2, "event_type": "artifact_created", "step_id": "step-restart-003", "safe_details": {"tool_name": "create_report_artifact", "artifact_id": "artifact-restart-001"}},
+        {"event_id": "event-restart-003", "seq": 3, "event_type": "run_succeeded", "safe_details": {"status": "succeeded", "reason_code": "completed"}}
+      ],
+      "terminal_state": "succeeded",
+      "terminal_reason": "completed",
+      "artifact_outcome": "available",
+      "approval_outcome": "none"
+    }
+  ]
+}
