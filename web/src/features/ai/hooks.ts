@@ -55,11 +55,11 @@ export function useAiMemoInsightsForMemos(memoIds: string[]) {
   });
 }
 
-export function useUpdateAiMemoInsightStatus() {
+export function useUpdateAiMemoInsightStatus(memoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ insightId, status, version }: { insightId: string; status: "accepted" | "rejected"; version: number }) =>
-      updateAiMemoInsightStatus(insightId, status, version),
+      updateAiMemoInsightStatus(memoId, insightId, status, version),
     onSuccess: (insight) => {
       queryClient.invalidateQueries({ queryKey: aiInsightKeys.detail(insight.memo_id) });
     },

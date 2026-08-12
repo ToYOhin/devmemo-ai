@@ -24,7 +24,7 @@ describe("AI summary client", () => {
 
     await expect(getAiMemoNote("memo/42")).resolves.toEqual(noteResponse);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/ai/notes/memo%2F42",
+      "/api/ai/notes/memo%2F42",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
     );
   });
@@ -36,7 +36,7 @@ describe("AI summary client", () => {
     await expect(getAiMemoNote("missing")).resolves.toBeNull();
   });
 
-  it("posts the current memo fields to generate a summary", async () => {
+  it("posts only the Memo identity through the same-origin BFF", async () => {
     vi.stubEnv("VITE_AI_SERVICE_URL", "http://localhost:8000");
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(noteResponse), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -44,11 +44,11 @@ describe("AI summary client", () => {
 
     await expect(summarizeAiMemo(request)).resolves.toEqual(noteResponse);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/ai/summarize",
+      "/api/ai/summarize",
       expect.objectContaining({
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify(request),
+        body: JSON.stringify({ memo_id: request.memo_id }),
       }),
     );
   });

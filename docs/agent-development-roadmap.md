@@ -63,7 +63,7 @@ answers, measurable quality, and reproducible recovery**.
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
 | P0 | R5 evidence is intentionally single-host and disposable | Runtime acceptance now covers SQLite Memos, local Qdrant, deterministic Provider, authenticated visibility, lifecycle convergence, restart, rollback, and cleanup, but not real data or multi-instance deployment | Preserve the R5 boundary; require backup/restore proof for real data and shared atomic state plus encrypted transport before multi-instance use |
-| P1 | AI browser paths are split | Evidence Answer uses the BFF, while legacy Insights and Context Pack still expect direct AI Service access and fail in Agent-overlay mode | Move supported reads through authenticated Memos BFF projections or hide unsupported legacy panels; never publish port 8000 as the fix |
+| Closed | AI browser paths are unified | Evidence Answer and legacy summary/template/insight requests use authenticated same-origin Memos BFF projections; summary content is loaded from Memos authority | Preserve the BFF-only browser boundary and keep the AI Service host port unpublished in Agent mode |
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
@@ -553,9 +553,9 @@ Provider, real data, or multi-instance behavior.
 
 The ordered delivery route is:
 
-1. Resolve legacy insight/template/summary compatibility by routing supported
-   reads through the Memos BFF or hiding unsupported panels in Agent-overlay
-   mode. Do not reopen direct browser-to-AI access.
+1. Preserve the completed same-origin BFF boundary for legacy
+   insight/template/summary and Evidence Answer paths. Do not reopen direct
+   browser-to-AI access.
 2. Gate run persistence, runtime composition, and the run UI as separate,
    reviewable slices after the contracts are stable.
 3. Discuss real Providers, real user data, and multi-instance operation only

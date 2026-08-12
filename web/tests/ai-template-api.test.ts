@@ -22,14 +22,14 @@ afterEach(() => {
 });
 
 describe("AI template client", () => {
-  it("reads a template from the explicitly configured AI Service", async () => {
+  it("reads a template through the same-origin BFF", async () => {
     vi.stubEnv("VITE_AI_SERVICE_URL", "http://localhost:8000/");
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(templateResponse), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(getAiMemoTemplate("memo/code 42")).resolves.toEqual(templateResponse);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/ai/templates/memo%2Fcode%2042",
+      "/api/ai/templates/memo%2Fcode%2042",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
     );
   });

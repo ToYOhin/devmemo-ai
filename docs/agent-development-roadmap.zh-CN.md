@@ -44,7 +44,7 @@ Agent，而不是通用自治助手：
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
 | P0 | R5 证据有意限定为 single-host disposable | 运行时验收已覆盖 SQLite Memos、本地 Qdrant、deterministic Provider、认证 visibility、lifecycle 收敛、restart、rollback 与 cleanup，但不覆盖真实数据或多实例 | 保持 R5 边界；真实数据需 backup/restore 证明，多实例需 shared atomic state 与加密 transport |
-| P1 | 浏览器 AI 路径分裂 | Evidence Answer 走 BFF，旧 Insights / Context Pack 仍依赖浏览器直连 AI，在 Agent 覆盖层中失败 | 将支持的读路径迁移到认证后的 Memos BFF 安全投影，或隐藏不支持的旧面板；不能通过暴露 8000 修复 |
+| 已关闭 | 浏览器 AI 路径已统一 | Evidence Answer 与旧 summary/template/insight 请求均使用认证后的同源 Memos BFF 投影；summary 正文由 Memos 权威读取 | 保持浏览器只访问 BFF，Agent 模式不发布 AI Service 宿主端口 |
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
@@ -373,8 +373,8 @@ UI、Memo write tool、external Provider、真实数据或多实例行为。
 
 后续按以下顺序推进：
 
-1. 处理 legacy insight/template/summary 兼容：支持的读路径统一到 Memos BFF，或在 Agent-overlay 模式
-   隐藏不支持的面板，不得恢复 browser-to-AI 直连。
+1. 保持已完成的 legacy insight/template/summary 与 Evidence Answer 同源 BFF 边界，不得恢复
+   browser-to-AI 直连。
 2. contract 稳定后，分别评审 run persistence、runtime composition 与 run UI，不把三者混成一个大切片。
 3. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
 

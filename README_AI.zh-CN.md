@@ -73,6 +73,11 @@ Memos visibility mapping、受控灰度和已验证回滚路径时，才可设�
 `POST /api/ai/agent/answer`；Memos 计算当前调用者可见 Memo 范围，再用短时、purpose
 隔离的 HMAC 请求委托给 AI Service。浏览器不会获得委托 secret，也不能自行提交可见范围。
 
+旧 summary、template 与 insight 面板在保留既有 UI opt-in 时也只访问同源 Memos BFF。
+`VITE_AI_SERVICE_URL` 的值只作为 build-time UI 门禁保留，不再作为浏览器请求目标。Memos 会认证
+调用者、验证 Memo visibility、从自身 store 读取 summary 所需正文，并只投影 allowlist 内的 AI
+响应；未显式启用本地 Agent overlay 时，这些路由仍不可用。
+
 Agent 只有 `search_memos` 一个工具，并且只接受已授权的完整 Memo `memo-v1` 证据。
 非 deterministic Provider 输出必须先通过严格的 `grounded-answer-result-v1` 契约，citation
 再由服务端映射。公开结果只包含受限 answer、服务端 citation 字段和脱敏 trace，不包含原始

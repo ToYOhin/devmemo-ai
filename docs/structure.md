@@ -239,14 +239,15 @@ raw request
 
 ```text
 web/src/features/ai/
-├── api.ts             # AI Service HTTP client
+├── api.ts             # same-origin Memos AI BFF client
 ├── hooks.ts           # React Query hooks
 ├── AiMemoTemplate.tsx # Code Snippet/Bug Report 展示与复制
 └── AiMemoSummary.tsx  # 摘要读取、生成与反馈
 ```
 
-Evidence Answer 只访问 same-origin Memos BFF，不把身份、可见 UID、delegation secret 或 AI Service 地址交给浏览器。
-legacy template/summary/insight feature 仍使用可选 AI Service client；Agent-overlay 模式下这些旧面板尚未统一迁移或隐藏。
+Evidence Answer 与 legacy template/summary/insight 面板都只访问 same-origin Memos BFF，不把身份、
+可见 UID、delegation secret 或 AI Service 地址交给浏览器。legacy BFF 仅在显式 Agent opt-in 下注册，
+逐 Memo 复用 Memos visibility；summary 正文由服务端 store 读取，响应按固定字段投影。
 前端不访问 SQLite，AI 功能不可用时 Memo Markdown、标签、搜索和编辑流程继续正常运行。
 
 ## 当前推进路线与问题
@@ -254,9 +255,9 @@ legacy template/summary/insight feature 仍使用可选 AI Service client；Agen
 1. **保持 R7-I1 contract/fixture 边界：** 已具备 provider-neutral contract model、合法状态转换、
    budget/timeline 校验与 deterministic sanitized fixture；继续保持不接 database、route、worker、runtime
    或 UI。contract gate 的发布与 CI 证据不能当作 runtime 或产品验收证据。
-2. **统一浏览器边界：** legacy insight/template/summary 读路径迁移到 Memos BFF，或在 Agent-overlay 模式
-   隐藏；不能用暴露 AI Service 宿主端口规避权限边界。
-3. **再拆分持久化与体验：** contract 稳定后，依次独立评审 run persistence、runtime composition 与 run UI，
+2. **下一步实现 run persistence：** 浏览器 AI 路径已统一到 Memos BFF；继续保持 AI Service 不发布宿主端口，
+   并为 AgentRun 建立独立、可回滚、单机持久化切片。
+3. **再拆分 runtime 与体验：** persistence 稳定后，依次独立评审 runtime composition 与 run UI，
    每一步都保留默认关闭、fail-closed 与可回滚边界。
 4. **最后讨论真实环境：** 真实 Provider、真实用户数据与多实例需分别完成隐私、备份恢复、加密 transport、
    shared atomic replay/capability storage 证明后才能进入。

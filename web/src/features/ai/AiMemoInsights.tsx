@@ -13,7 +13,7 @@ interface AiMemoInsightsProps {
 const AiMemoInsights = ({ memoId }: AiMemoInsightsProps) => {
   const t = useTranslate();
   const { data: insights = [], isError } = useAiMemoInsights(memoId);
-  const updateStatus = useUpdateAiMemoInsightStatus();
+  const updateStatus = useUpdateAiMemoInsightStatus(memoId);
 
   if (!isAiServiceConfigured() || (!isError && insights.length === 0)) return null;
 
