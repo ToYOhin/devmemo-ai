@@ -14,15 +14,6 @@ on:
       - ".github/workflows/ai-service-tests.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "ai-service/**"
-      - "contracts/**"
-      - "docker-compose.yml"
-      - "docker-compose.local-webhook.yml"
-      - "docker-compose.agent.yml"
-      - ".release-please-manifest.json"
-      - "CHANGELOG_DEVMEMO.md"
-      - ".github/workflows/ai-service-tests.yml"
   workflow_dispatch:
 
 permissions:
