@@ -85,6 +85,14 @@ configured, the browser calls only the authenticated Memos BFF at
 delegates a short-lived, purpose-separated HMAC request to AI Service. The
 browser never receives the delegation secret or sends its own visibility list.
 
+Legacy summary, template, and insight panels also use same-origin Memos BFF
+routes when their existing UI opt-in is present. The configured
+`VITE_AI_SERVICE_URL` value is retained only as that build-time UI gate; it is
+never used as a browser destination. Memos authenticates the caller, verifies
+Memo visibility, reads summary source content from its own store, and projects
+allowlisted AI responses. These routes remain unavailable unless the local
+Agent overlay is explicitly enabled.
+
 The Agent has one tool, `search_memos`, and accepts only authorized complete-Memo
 `memo-v1` evidence. Non-deterministic Provider output must satisfy the strict
 `grounded-answer-result-v1` contract before the server maps citations. Public

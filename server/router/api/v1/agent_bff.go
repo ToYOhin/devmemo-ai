@@ -48,6 +48,7 @@ type agentBrowserAnswerStep struct {
 }
 
 type agentRouteRegistrar interface {
+	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) echo.RouteInfo
 	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) echo.RouteInfo
 }
 
@@ -133,13 +134,19 @@ func (s *APIV1Service) registerConfiguredAgentRoutes(router agentRouteRegistrar)
 		return err
 	}
 	var executor aiagent.AnswerExecutor
+	var legacyExecutor legacyAIExecutor
 	if config.Enabled {
 		executor, err = aiagent.NewClient(config)
 		if err != nil {
 			return err
 		}
+		legacyExecutor, err = newLegacyAIHTTPExecutor(config)
+		if err != nil {
+			return err
+		}
 	}
 	s.registerAgentRoutes(router, config, executor)
+	s.registerLegacyAIRoutes(router, config, legacyExecutor)
 	return nil
 }
 

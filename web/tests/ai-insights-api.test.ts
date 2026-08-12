@@ -28,7 +28,7 @@ describe("AI insight client", () => {
 
     await expect(getAiMemoInsights("memo/42")).resolves.toEqual([insightResponse]);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/ai/insights/memo%2F42",
+      "/api/ai/insights/memo%2F42",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
     );
   });
@@ -39,12 +39,12 @@ describe("AI insight client", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(accepted), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(updateAiMemoInsightStatus("insight-1", "accepted", 1)).resolves.toEqual(accepted);
+    await expect(updateAiMemoInsightStatus("memo-42", "insight-1", "accepted", 1)).resolves.toEqual(accepted);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/ai/insights/insight-1/status",
+      "/api/ai/insights/insight-1/status",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ status: "accepted", version: 1 }),
+        body: JSON.stringify({ memo_id: "memo-42", status: "accepted", version: 1 }),
       }),
     );
   });
@@ -53,6 +53,6 @@ describe("AI insight client", () => {
     vi.stubEnv("VITE_AI_SERVICE_URL", "http://localhost:8000");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 409 })));
 
-    await expect(updateAiMemoInsightStatus("insight-1", "rejected", 1)).rejects.toThrow("stale");
+    await expect(updateAiMemoInsightStatus("memo-42", "insight-1", "rejected", 1)).rejects.toThrow("stale");
   });
 });
