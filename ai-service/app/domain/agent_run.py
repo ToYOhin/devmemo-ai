@@ -132,6 +132,12 @@ def _require_utc(name: str, value: datetime) -> datetime:
     return value
 
 
+def _require_int(name: str, value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise AgentRunContractError(f"{name} must be an integer")
+    return value
+
+
 def _timestamp(value: datetime) -> str:
     return value.isoformat().replace("+00:00", "Z")
 
@@ -231,6 +237,7 @@ class AgentRun:
             raise AgentRunContractError("status must use RunStatus")
         if not isinstance(self.budget, ExecutionBudget):
             raise AgentRunContractError("budget must use ExecutionBudget")
+        object.__setattr__(self, "source_snapshot", tuple(self.source_snapshot))
         if not self.source_snapshot or any(
             not isinstance(item, SourceRevision) for item in self.source_snapshot
         ):
@@ -241,6 +248,7 @@ class AgentRun:
         _require_utc("updated_at", self.updated_at)
         if self.updated_at < self.created_at:
             raise AgentRunContractError("updated_at must not precede created_at")
+        _require_int("last_event_seq", self.last_event_seq)
         if self.last_event_seq < 0:
             raise AgentRunContractError("last_event_seq must not be negative")
         if self.checkpoint_ref is not None:
@@ -300,10 +308,12 @@ class AgentStep:
     def __post_init__(self) -> None:
         object.__setattr__(self, "step_id", _require_opaque("step_id", self.step_id))
         object.__setattr__(self, "run_id", _require_opaque("run_id", self.run_id))
+        _require_int("ordinal", self.ordinal)
         if not 1 <= self.ordinal <= MAX_STEPS:
             raise AgentRunContractError(f"ordinal must be between 1 and {MAX_STEPS}")
         if not isinstance(self.kind, StepKind) or not isinstance(self.status, StepStatus):
             raise AgentRunContractError("step kind and status must use contract enums")
+        _require_int("attempt", self.attempt)
         if not 0 <= self.attempt <= MAX_TOOL_RETRIES:
             raise AgentRunContractError(
                 f"attempt must be between 0 and {MAX_TOOL_RETRIES}"
@@ -345,6 +355,7 @@ class RunEvent:
     def __post_init__(self) -> None:
         object.__setattr__(self, "event_id", _require_opaque("event_id", self.event_id))
         object.__setattr__(self, "run_id", _require_opaque("run_id", self.run_id))
+        _require_int("seq", self.seq)
         if self.seq < 1:
             raise AgentRunContractError("event seq must be positive")
         object.__setattr__(self, "event_type", _require_code("event_type", self.event_type))
@@ -417,6 +428,7 @@ class ApprovalRequest:
             object.__setattr__(self, name, _require_opaque(name, getattr(self, name)))
         object.__setattr__(self, "action_type", _require_code("action_type", self.action_type))
         object.__setattr__(self, "action_digest", _require_digest("action_digest", self.action_digest))
+        object.__setattr__(self, "source_snapshot", tuple(self.source_snapshot))
         if not self.source_snapshot or any(
             not isinstance(item, SourceRevision) for item in self.source_snapshot
         ):
@@ -439,7 +451,7 @@ class ApprovalRequest:
             object.__setattr__(self, "decided_by", _require_opaque("decided_by", self.decided_by))
         if self.decided_at is not None:
             _require_utc("decided_at", self.decided_at)
-            if self.decided_at < self.requested_at:
+            if self.decided_at <= self.requested_at:
                 raise AgentRunContractError("approval decision precedes the request")
             if (
                 self.status in {ApprovalStatus.APPROVED, ApprovalStatus.REJECTED}
@@ -463,7 +475,7 @@ class ApprovalRequest:
             raise AgentRunContractError("duplicate or already-consumed approval decision")
         _require_opaque("decision_id", decision_id)
         _require_utc("decided_at", decided_at)
-        if decided_at < self.requested_at:
+        if decided_at <= self.requested_at:
             raise AgentRunContractError("approval decision precedes the request")
         if decided_at >= self.expires_at:
             raise AgentRunContractError("approval has expired")
@@ -499,10 +511,12 @@ class Artifact:
         object.__setattr__(self, "digest", _require_digest("digest", self.digest))
         if self.kind != "report" or self.media_type != "application/json":
             raise AgentRunContractError("artifact format is not allowlisted")
+        _require_int("size_bytes", self.size_bytes)
         if not 1 <= self.size_bytes <= MAX_ARTIFACT_BYTES:
             raise AgentRunContractError(
                 f"size_bytes must be between 1 and {MAX_ARTIFACT_BYTES}"
             )
+        object.__setattr__(self, "evidence_refs", tuple(self.evidence_refs))
         if not self.evidence_refs or any(
             not isinstance(item, SourceRevision) for item in self.evidence_refs
         ):

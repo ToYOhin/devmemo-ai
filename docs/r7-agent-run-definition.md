@@ -1,11 +1,10 @@
 # R7-I0 AgentRun Definition Gate
 
 Status: R7-I0 is merged on `origin/main` at
-`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. R7-I1 now has a local
-contract-only Python implementation plus deterministic sanitized contract and
-acceptance fixtures. This remains unwired: it adds no AgentRun persistence,
-route, database migration, worker, runtime, UI, or feature default. It refines
-the next gate in the
+`3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. R7-I1 adds a contract-only
+Python implementation plus deterministic sanitized contract and acceptance
+fixtures. It remains unwired: it adds no AgentRun persistence, route, database
+migration, worker, runtime, UI, or feature default. It refines the next gate in
 [Agent development roadmap](agent-development-roadmap.md).
 
 ## Outcome
@@ -16,7 +15,7 @@ artifacts, and fails closed when evidence or authority changes.
 
 R7-I0 succeeds when the models, state machine, budgets, ownership, recovery,
 approval boundaries, redacted timeline, acceptance fixtures, and rollback are
-unambiguous in English and Chinese. R7-I1 locally implements those domain
+unambiguous in English and Chinese. R7-I1 implements those domain
 validators and fixtures without implementing orchestration or side effects.
 
 ## Scope
@@ -242,13 +241,13 @@ server audit storage. Error text is mapped to fixed safe codes.
 
 ## Acceptance fixtures
 
-R7-I1 locally implements the deterministic, sanitized
+R7-I1 implements the deterministic, sanitized
 `agent-run-contract-v1.json` and `agent-run-acceptance-v1.json` fixtures. The
 targeted Python tests load them and drive the domain validators; they are not
 runtime, persistence, UI, CI, external-Provider, real-data, or multi-instance
 evidence.
 
-The local R7-I1 fixtures cover these minimum cases. They define inputs, ordered
+The R7-I1 fixtures cover these minimum cases. They define inputs, ordered
 safe events, terminal state, tool-call count, evidence revisions, and
 artifact/approval outcome.
 
@@ -268,7 +267,7 @@ artifact/approval outcome.
 
 R7 remains disabled by default. R7-I1 adds no route, runtime selection, worker,
 database migration, environment variable, persistence, or source-data mutation.
-Rollback is reverting the local contract/fixture commits; existing R6 behavior
+Rollback is reverting the R7-I1 contract/fixture changes; existing R6 behavior
 and data are unchanged.
 
 ## Unverified and separately authorized scope

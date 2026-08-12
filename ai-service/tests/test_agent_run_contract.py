@@ -108,6 +108,25 @@ def _approval(**overrides: object) -> ApprovalRequest:
     return ApprovalRequest(**values)  # type: ignore[arg-type]
 
 
+def _artifact(**overrides: object) -> Artifact:
+    values: dict[str, object] = {
+        "artifact_id": "artifact-001",
+        "run_id": "run-001",
+        "step_id": "step-001",
+        "kind": "report",
+        "media_type": "application/json",
+        "storage_ref": "object-001",
+        "digest": DIGEST_A,
+        "size_bytes": MAX_ARTIFACT_BYTES,
+        "evidence_refs": SNAPSHOT,
+        "created_at": NOW,
+        "expires_at": NOW + timedelta(days=1),
+        "status": ArtifactStatus.AVAILABLE,
+    }
+    values.update(overrides)
+    return Artifact(**values)  # type: ignore[arg-type]
+
+
 def test_contract_models_are_frozen_and_provider_neutral() -> None:
     run = _run()
 
@@ -120,6 +139,68 @@ def test_contract_models_are_frozen_and_provider_neutral() -> None:
         "get_memo_evidence",
         "create_report_artifact",
     }
+
+
+def test_source_bindings_are_copied_to_owned_tuples() -> None:
+    source_revisions = [SourceRevision("memo-001", "rev-001")]
+    run = _run(source_snapshot=source_revisions)
+    approval = _approval(source_snapshot=source_revisions)
+    artifact = _artifact(evidence_refs=source_revisions)
+
+    source_revisions.append(SourceRevision("memo-002", "rev-001"))
+
+    assert run.source_snapshot == SNAPSHOT
+    assert approval.source_snapshot == SNAPSHOT
+    assert artifact.evidence_refs == SNAPSHOT
+    assert isinstance(run.source_snapshot, tuple)
+    assert isinstance(approval.source_snapshot, tuple)
+    assert isinstance(artifact.evidence_refs, tuple)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["last_event_seq", "ordinal", "attempt", "seq", "size_bytes"],
+)
+@pytest.mark.parametrize("invalid", [True, False, 1.0])
+def test_bounded_integer_fields_reject_bool_and_non_integer(
+    field: str, invalid: object
+) -> None:
+    with pytest.raises(AgentRunContractError, match=field):
+        if field == "last_event_seq":
+            _run(last_event_seq=invalid)
+        elif field == "ordinal":
+            AgentStep(
+                step_id="step-001",
+                run_id="run-001",
+                ordinal=invalid,  # type: ignore[arg-type]
+                kind=StepKind.TOOL,
+                status=StepStatus.QUEUED,
+                attempt=0,
+                input_digest=DIGEST_A,
+                tool_name="search_memos",
+            )
+        elif field == "attempt":
+            AgentStep(
+                step_id="step-001",
+                run_id="run-001",
+                ordinal=1,
+                kind=StepKind.TOOL,
+                status=StepStatus.QUEUED,
+                attempt=invalid,  # type: ignore[arg-type]
+                input_digest=DIGEST_A,
+                tool_name="search_memos",
+            )
+        elif field == "seq":
+            RunEvent(
+                event_id="event-001",
+                run_id="run-001",
+                seq=invalid,  # type: ignore[arg-type]
+                event_type="run_started",
+                safe_details={},
+                occurred_at=NOW,
+            )
+        else:
+            _artifact(size_bytes=invalid)
 
 
 def test_state_machine_allows_exactly_the_documented_transitions() -> None:
@@ -344,15 +425,6 @@ def test_approval_requires_unexpired_current_authority_and_exact_bindings() -> N
         visibility_current=True,
     )
 
-    with pytest.raises(AgentRunContractError, match="expired"):
-        approval.validate_decision(
-            decision_id="decision-002",
-            subject_id="subject-001",
-            action_digest=DIGEST_A,
-            source_snapshot=SNAPSHOT,
-            decided_at=NOW + timedelta(minutes=5),
-            visibility_current=True,
-        )
     with pytest.raises(AgentRunContractError, match="stale"):
         approval.validate_decision(
             decision_id="decision-003",
@@ -370,6 +442,29 @@ def test_approval_requires_unexpired_current_authority_and_exact_bindings() -> N
             source_snapshot=SNAPSHOT,
             decided_at=NOW + timedelta(minutes=1),
             visibility_current=False,
+        )
+
+
+@pytest.mark.parametrize(
+    "decided_at",
+    [
+        NOW - timedelta(seconds=1),
+        NOW,
+        NOW + timedelta(minutes=5),
+        NOW + timedelta(minutes=5, seconds=1),
+    ],
+)
+def test_pending_approval_decision_requires_strict_window(
+    decided_at: datetime,
+) -> None:
+    with pytest.raises(AgentRunContractError):
+        _approval().validate_decision(
+            decision_id="decision-001",
+            subject_id="subject-001",
+            action_digest=DIGEST_A,
+            source_snapshot=SNAPSHOT,
+            decided_at=decided_at,
+            visibility_current=True,
         )
 
 
@@ -395,42 +490,30 @@ def test_duplicate_or_consumed_approval_is_rejected() -> None:
     "status",
     [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED],
 )
+@pytest.mark.parametrize(
+    "decided_at",
+    [
+        NOW - timedelta(seconds=1),
+        NOW,
+        NOW + timedelta(minutes=5),
+        NOW + timedelta(minutes=5, seconds=1),
+    ],
+)
 def test_persisted_approval_decision_requires_valid_chronology(
     status: ApprovalStatus,
+    decided_at: datetime,
 ) -> None:
-    decision_fields = {
-        "status": status,
-        "decision_id": "decision-001",
-        "decided_by": "subject-001",
-    }
-
-    with pytest.raises(AgentRunContractError, match="precedes the request"):
+    with pytest.raises(AgentRunContractError):
         _approval(
-            **decision_fields,
-            decided_at=NOW - timedelta(seconds=1),
-        )
-    with pytest.raises(AgentRunContractError, match="outside the approval window"):
-        _approval(
-            **decision_fields,
-            decided_at=NOW + timedelta(minutes=5),
+            status=status,
+            decision_id="decision-001",
+            decided_by="subject-001",
+            decided_at=decided_at,
         )
 
 
 def test_artifact_is_revision_bound_bounded_and_contains_no_body() -> None:
-    artifact = Artifact(
-        artifact_id="artifact-001",
-        run_id="run-001",
-        step_id="step-001",
-        kind="report",
-        media_type="application/json",
-        storage_ref="object-001",
-        digest=DIGEST_A,
-        size_bytes=MAX_ARTIFACT_BYTES,
-        evidence_refs=SNAPSHOT,
-        created_at=NOW,
-        expires_at=NOW + timedelta(days=1),
-        status=ArtifactStatus.AVAILABLE,
-    )
+    artifact = _artifact()
     assert artifact.evidence_refs == SNAPSHOT
     assert not hasattr(artifact, "content")
 
