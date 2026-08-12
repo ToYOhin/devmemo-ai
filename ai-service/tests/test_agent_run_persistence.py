@@ -97,12 +97,13 @@ def _event(
     event_id: str | None = None,
     step_id: str = "step-001",
     occurred_at: datetime | None = None,
+    event_type: str = "checkpoint_committed",
 ) -> RunEvent:
     return RunEvent(
         event_id=event_id or f"event-{seq:03d}",
         run_id="run-001",
         seq=seq,
-        event_type="checkpoint_committed",
+        event_type=event_type,
         safe_details={"status": "running", "count": seq},
         occurred_at=occurred_at or NOW + timedelta(seconds=seq),
         step_id=step_id,
@@ -561,6 +562,35 @@ def test_checkpoint_rejects_invalid_state_and_cross_object_bindings(
                 approval=approval,
                 artifact=artifact,
             )
+
+
+def test_tool_delivery_events_atomically_enforce_actual_call_budget(
+    tmp_path: Path,
+) -> None:
+    store = SQLiteAgentRunStore(tmp_path / "agent-runs.db")
+    budget = replace(_budget(), max_tool_calls=1)
+    queued = store.create_run(_queued_run(budget=budget))
+    running = _checkpointed_run(queued, 1)
+    tool_step = _step(kind=StepKind.TOOL)
+    store.commit_checkpoint(
+        run=running,
+        step=tool_step,
+        event=_event(1, event_type="tool_started"),
+    )
+
+    resumed = _checkpointed_run(running, 2, checkpoint_ref="checkpoint-002")
+    resumed_step = replace(tool_step, checkpoint_ref="checkpoint-002")
+    with pytest.raises(AgentRunPersistenceError, match="delivery budget"):
+        store.commit_checkpoint(
+            run=resumed,
+            step=resumed_step,
+            event=_event(2, event_type="tool_resumed"),
+        )
+
+    snapshot = store.load_snapshot(queued.run_id)
+    assert snapshot is not None
+    assert snapshot.run.last_event_seq == 1
+    assert [event.event_type for event in snapshot.events] == ["tool_started"]
 
 
 def test_tool_checkpoint_and_approval_delivery_guards_are_persisted(

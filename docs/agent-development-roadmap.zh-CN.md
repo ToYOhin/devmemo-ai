@@ -10,7 +10,9 @@
 > 合并。R7-I1 的 contract-only Python 实现与 deterministic sanitized fixture 已通过 PR #9 合并于
 > `0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 通过 PR #10 在
 > `39068613b387d1154b7f7e4bf9d32fc230b3ed39` 将 legacy 浏览器 AI 路径统一到同源 Memos BFF。
-> R7-I3 新增 dormant single-host SQLite AgentRun persistence，但不包含 runner、runtime、route 或 UI。
+> R7-I3 的 dormant single-host SQLite AgentRun persistence 已通过 PR #12 squash merge 于
+> `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 新增 dormant bounded runner/runtime，
+> 但不包含 route、worker、UI、配置或默认值变更。
 
 本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
 整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
@@ -49,7 +51,7 @@ Agent，而不是通用自治助手：
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
-| P1 | R7 AgentRun 只有 dormant persistence | frozen contract 与 sanitized fixture 现已有 single-host、derived-only SQLite adapter，覆盖原子 checkpoint、append-only event、decision 消费与重开恢复；尚未接 runner、route 或 UI | 保持 persistence 边界，先独立评审 bounded runner/runtime，再评审 BFF 与 UI composition |
+| P1 | R7 AgentRun 仍未接产品路径 | frozen contract、single-host derived-only SQLite adapter 与 dormant bounded runtime 已覆盖原子 checkpoint、稳定 attempt key、restart recovery、current-authority recheck、cancellation 及有限 step/call/time budget；尚无 route、worker、BFF 或 UI 选择它们 | 保持 runtime 边界，先独立评审认证同源 AgentRun BFF，再评审 UI composition |
 
 ## 交付规则
 
@@ -369,19 +371,23 @@ R6 release 已在 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 与 `v0.2.0` 完成
 [R7-I0 AgentRun 定义](r7-agent-run-definition.zh-CN.md)固定 model、状态机、首批三个工具、budget、
 recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与 rollback。R7-I1 frozen contract
 与 fixture 已合并于 `0358fb120fd539a97d67b04c47787df0fa72c9ff`，R7-I2 legacy BFF 收口已合并于
-`39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 新增 dormant、single-host、derived-only SQLite
-adapter，持久化 AgentRun、AgentStep、append-only RunEvent、approval decision 与 artifact metadata；
-重开恢复会重新构造既有 domain object 并再次执行 invariant。它不保存 Provider prompt、Memo 正文、原始
-secret 或 artifact bytes，仍未接 runner、route、background worker、UI、Memo write tool、external
-Provider、真实数据或多实例。
+`39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 的 dormant、single-host、derived-only SQLite
+adapter 已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在其上新增
+dormant bounded runner/runtime：只消费调用方提供的 content-free plan，通过注入的 authority、cancellation
+与 tool port 执行；canonical plan digest 把 accepted request 与完整 step/tool 序列绑定，并 checkpoint 稳定
+attempt key、retry state、active-time accounting 与安全 outcome。restart 会在任何 attempt 前重新检查 current
+authority；tool 返回后若 authority 或 cancellation 失效，则丢弃未提交输出。持久化的 start/resume event
+会把每次实际 tool delivery 计入 call budget；未知中断 attempt 在 replay 前按完整 attempt timeout 保守扣除
+active-time。它仍未接 route、background worker、UI、配置/默认值、Memo write tool、external Provider、
+真实数据或多实例。
 
 后续按以下顺序推进：
 
 1. 保持已完成的 legacy insight/template/summary 与 Evidence Answer 同源 BFF 边界，不得恢复
    browser-to-AI 直连。
-2. 下一独立切片评审 bounded runner/runtime；可以使用 dormant persistence adapter，但不得静默增加 route、
-   background job 或 source-data authority。
-3. bounded runtime recovery 稳定后，再分别评审 AgentRun BFF 与 run/approval/timeline UI。
+2. 下一独立切片评审认证同源 AgentRun BFF；可以选择 dormant runtime，但必须保持 Memos-owned identity、
+   visibility、source authority、有限投影和默认关闭，不得增加 background job。
+3. BFF contract 与 runtime recovery 边界稳定后，再独立评审 run/approval/timeline UI。
 4. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实 Provider、真实用户数据与多实例。
 
 R6 不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；任何多实例主张前仍必须具备加密 transport

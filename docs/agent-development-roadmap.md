@@ -13,8 +13,10 @@
 > implementation and deterministic sanitized fixtures were merged through PR
 > #9 at `0358fb120fd539a97d67b04c47787df0fa72c9ff`. R7-I2 unified the legacy
 > browser AI paths behind the same-origin Memos BFF through PR #10 at
-> `39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3 adds dormant single-host
-> SQLite AgentRun persistence, but no runner, runtime, route, or UI.
+> `39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3's dormant single-host
+> SQLite AgentRun persistence was squash-merged through PR #12 at
+> `571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4 adds a dormant bounded
+> runner/runtime, but no route, worker, UI, configuration, or default change.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -67,7 +69,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun has dormant persistence only | The frozen contracts and sanitized fixtures now have a single-host, derived-only SQLite adapter with atomic checkpoints, append-only events, decision consumption, and reopen recovery; it is not wired to a runner, route, or UI | Preserve the persistence boundary and separately review a bounded runner/runtime before any BFF or UI composition |
+| P1 | R7 AgentRun remains unwired | The frozen contracts, single-host derived-only SQLite adapter, and dormant bounded runtime now cover atomic checkpoints, stable attempt keys, restart recovery, current-authority rechecks, cancellation, and finite step/call/time budgets; no route, worker, BFF, or UI selects them | Preserve the runtime boundary and separately review an authenticated same-origin AgentRun BFF before any UI composition |
 
 ## Delivery rules
 
@@ -548,24 +550,32 @@ machine, first three tools, budgets, recovery, redacted timeline,
 approval/authority failures, acceptance fixtures, and rollback. R7-I1's frozen
 contract and fixtures are merged at `0358fb120fd539a97d67b04c47787df0fa72c9ff`,
 and R7-I2's same-origin legacy BFF closure is merged at
-`39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3 adds a dormant,
-single-host, derived-only SQLite adapter for AgentRun, AgentStep, append-only
-RunEvent, approval decisions, and artifact metadata. Reopen recovery rebuilds
-the existing domain objects and therefore re-runs their invariants. It stores
-no Provider prompt, Memo body, raw secret, or artifact bytes and remains
-unwired: there is no runner, route, background worker, UI, Memo write tool,
-external Provider, real data, or multi-instance behavior.
+`39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3's dormant, single-host,
+derived-only SQLite adapter was squash-merged through PR #12 at
+`571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4 adds a dormant bounded
+runner/runtime over that adapter. It uses only caller-supplied content-free
+plans and injected authority, cancellation, and tool ports. A canonical plan
+digest binds the accepted request to the complete step/tool sequence; it also
+checkpoints stable attempt keys, retry state, active-time accounting, and safe
+outcomes.
+Restart rechecks current authority before any attempt, and post-tool authority
+or cancellation failure discards uncommitted output. Persisted start/resume
+events count every actual tool delivery against the call budget; an interrupted
+attempt consumes its full attempt-time ceiling before replay. It remains
+unwired: there is no route, background worker, UI, configuration/default
+change, Memo write tool, external Provider, real data, or multi-instance behavior.
 
 The ordered delivery route is:
 
 1. Preserve the completed same-origin BFF boundary for legacy
    insight/template/summary and Evidence Answer paths. Do not reopen direct
    browser-to-AI access.
-2. Review a bounded runner/runtime as the next independent slice. It may use
-   the dormant persistence adapter but must not silently add a route,
-   background job, or source-data authority.
-3. Gate the AgentRun BFF and run/approval/timeline UI as later independent
-   slices after bounded runtime recovery is stable.
+2. Review an authenticated same-origin AgentRun BFF as the next independent
+   slice. It may select the dormant runtime but must preserve Memos-owned
+   identity, visibility, source authority, bounded projections, and disabled
+   defaults without adding a background job.
+3. Gate run/approval/timeline UI as a later independent slice after the BFF
+   contract and runtime recovery boundary are stable.
 4. Discuss real Providers, real user data, and multi-instance operation only
    after the earlier gates have their own privacy, recovery, and security
    evidence.
