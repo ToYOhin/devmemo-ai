@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 import re
+from types import MappingProxyType
 from typing import Literal, Mapping
 
 
@@ -365,7 +366,7 @@ class RunEvent:
                 else:
                     _require_opaque(key, value)
             normalized[key] = value
-        object.__setattr__(self, "safe_details", normalized)
+        object.__setattr__(self, "safe_details", MappingProxyType(normalized))
         _require_utc("occurred_at", self.occurred_at)
         if self.step_id is not None:
             object.__setattr__(self, "step_id", _require_opaque("step_id", self.step_id))

@@ -310,6 +310,10 @@ def test_run_event_serializes_only_allowlisted_content_free_details() -> None:
         "event_digest": DIGEST_B,
     }
 
+    with pytest.raises(TypeError):
+        event.safe_details["prompt"] = "secret-value"  # type: ignore[index]
+    assert "prompt" not in event.to_dict()["safe_details"]
+
     for forbidden in (
         "prompt",
         "memo_content",
