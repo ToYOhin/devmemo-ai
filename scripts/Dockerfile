@@ -6,8 +6,9 @@ RUN apk add --no-cache git ca-certificates
 
 # Copy go mod files and download dependencies (cached layer)
 COPY go.mod go.sum ./
+ARG GOPROXY=https://proxy.golang.org,direct
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+    GOPROXY="$GOPROXY" go mod download
 
 # Copy source code (use .dockerignore to exclude unnecessary files)
 COPY . .
@@ -17,7 +18,7 @@ COPY . .
 ARG TARGETOS TARGETARCH VERSION=dev COMMIT=unknown
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    GOPROXY="$GOPROXY" GOMAXPROCS=1 CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build \
       -trimpath \
       -ldflags="-s -w -X github.com/usememos/memos/internal/version.Version=${VERSION} -X github.com/usememos/memos/internal/version.Commit=${COMMIT} -extldflags '-static'" \
