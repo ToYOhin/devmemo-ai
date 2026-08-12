@@ -5,6 +5,7 @@ import { useTranslate } from "@/utils/i18n";
 import { type AiEvidenceAnswer, AiEvidenceAnswerRequestError, requestAiEvidenceAnswer } from "./api";
 
 const MAX_LIMIT = 10;
+const DEMO_PROMPTS = ["project-overview", "recent-decisions", "open-actions"] as const;
 
 const AiMemoEvidenceAnswer = () => {
   const t = useTranslate();
@@ -79,6 +80,19 @@ const AiMemoEvidenceAnswer = () => {
               className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm font-normal outline-none focus:ring-2 focus:ring-ring"
             />
           </label>
+          <fieldset className="grid gap-2">
+            <legend className="text-xs font-medium text-muted-foreground">{t("ai-evidence-answer.try-example")}</legend>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_PROMPTS.map((prompt) => {
+                const value = t(`ai-evidence-answer.example-${prompt}`);
+                return (
+                  <Button key={prompt} type="button" size="sm" variant="outline" onClick={() => setQuestion(value)}>
+                    {value}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
           <label className="grid max-w-48 gap-1 text-xs font-medium">
             {t("ai-evidence-answer.limit")}
             <input
@@ -130,13 +144,24 @@ const AiMemoEvidenceAnswer = () => {
             )}
           </div>
           <div>
-            <h3 className="text-xs font-semibold">{t("ai-evidence-answer.trace")}</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xs font-semibold">{t("ai-evidence-answer.trace")}</h3>
+              <span
+                data-testid="ai-evidence-answer-terminal-state"
+                className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+              >
+                {t(`ai-evidence-answer.trace-terminal-${answer.trace.terminal_state}`)}
+              </span>
+            </div>
             <ol className="mt-2 grid gap-1 text-xs text-muted-foreground">
               {answer.trace.steps.map((step) => (
-                <li key={step.index}>
-                  {step.index}. {t(`ai-evidence-answer.trace-${step.name}`)}
-                  {step.result_count !== undefined &&
-                    ` · ${t(step.result_count === 1 ? "ai-evidence-answer.trace-results_one" : "ai-evidence-answer.trace-results_other", { count: step.result_count })}`}
+                <li key={step.index} className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-2 py-1.5">
+                  <span>
+                    {step.index}. {t(`ai-evidence-answer.trace-${step.name}`)}
+                    {step.result_count !== undefined &&
+                      ` · ${t(step.result_count === 1 ? "ai-evidence-answer.trace-results_one" : "ai-evidence-answer.trace-results_other", { count: step.result_count })}`}
+                  </span>
+                  <span className="font-medium text-foreground">{t(`ai-evidence-answer.trace-status-${step.status}`)}</span>
                 </li>
               ))}
             </ol>

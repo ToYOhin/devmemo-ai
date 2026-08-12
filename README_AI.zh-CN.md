@@ -83,6 +83,10 @@ Agent 只有 `search_memos` 一个工具，并且只接受已授权的完整 Mem
 再由服务端映射。公开结果只包含受限 answer、服务端 citation 字段和脱敏 trace，不包含原始
 Memo、prompt/context、embedding、身份、可见性数据或 secret。
 
+快速本地演示时，可以打开 Evidence Answer 面板并选择一个示例问题；点击示例只会填入表单，
+仍需用户显式提交。结果区域会显示终态、每个已完成 Agent step 和受限引用，因此无需外部
+Provider 也能直观展示 deterministic 只读 Agent 流程。
+
 生命周期 event/outbox/ledger 当前仍是 dormant 契约和集成证明，尚未接入 Memo CRUD、
 dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 rollout 前应先阅读
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和

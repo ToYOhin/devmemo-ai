@@ -100,6 +100,12 @@ results contain a bounded answer, server-owned citation fields, and a redacted
 trace—never raw Memo content, prompt/context, embeddings, identities,
 visibility data, or secrets.
 
+For a quick local demo, open the Evidence Answer panel and choose one of the
+example questions. The question is only filled into the form until you submit
+it. The result view shows the terminal state and each completed Agent step next
+to its bounded citations, which makes the deterministic read-only flow easy to
+demonstrate without an external Provider.
+
 The lifecycle event/outbox/ledger work is currently a dormant contract and
 integration proof. It is not wired to Memo CRUD, a dispatcher, a worker,
 automatic indexing, Qdrant, or default Compose. Read
