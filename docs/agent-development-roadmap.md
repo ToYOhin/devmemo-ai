@@ -1,16 +1,20 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-09
+> Status date: 2026-08-12
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
 >
 > Current delivery state: A0-A4 and R1-R5 are complete for the documented,
 > default-disabled single-host scope. R6 implementation, evaluation, canary
-> fixes, exact-head and post-merge clean-checkout CI, and release publication
-> are complete. `origin/main` and the peeled `v0.2.0` tag point to
-> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0 definition
-> gate is recorded; it does not implement or authorize an AgentRun runtime.
+> fixes, clean-checkout CI, and release publication are complete at the peeled
+> `v0.2.0` tag `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0
+> definition gate was merged through PR #8 at
+> `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. Backend, Frontend, Proto, and
+> CodeQL post-merge checks succeeded at that exact commit. The path-filtered AI
+> Service check did not run for the documentation-only merge. R7-I1 now has a
+> contract-only Python implementation and deterministic sanitized fixtures; it
+> does not implement or authorize an AgentRun runtime.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -63,7 +67,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun is definition-only | The provider-neutral model, bounded state machine, approval lifecycle, recovery contract, and fixtures are defined, but no executable contract or runtime exists | If separately authorized, add contract-only models and deterministic fixtures before runtime wiring |
+| P1 | R7 AgentRun is contract-only | The provider-neutral frozen models, bounded state machine, approval/authority checks, safe timeline projection, and deterministic sanitized fixtures are implemented and targeted-test verified, but no persistence or runtime exists | Preserve the contract/fixture gate before separately authorizing persistence or runtime wiring |
 
 ## Delivery rules
 
@@ -539,19 +543,24 @@ review, and explicit authorization.
 
 R6 release closure is complete at
 `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` and `v0.2.0`. The bilingual
-[R7-I0 AgentRun definition](r7-agent-run-definition.md) now fixes the models,
+[R7-I0 AgentRun definition](r7-agent-run-definition.md) is merged on
+`origin/main` at `3dbddc3a6e8c17aeb90d35100137e436f2b7a4f7`. It fixes the models,
 state machine, first three tools, budgets, recovery, redacted timeline,
-approval/authority failures, acceptance fixtures, and rollback. It is
-definition-only and adds no executable contract, migration, route, or runtime.
+approval/authority failures, acceptance fixtures, and rollback. R7-I1 now has a
+contract-only implementation and fixture-driven targeted tests, but adds no
+persistence, migration, route, worker, runtime, UI, Memo write tool, external
+Provider, real data, or multi-instance behavior.
 
-If separately authorized, the next Agent slice should be R7-I1 contract-only
-models and deterministic fixtures. It must remain default-disabled and must not
-add a worker, database migration, runtime wiring, Memo write tool, or external
-Provider.
+The ordered delivery route is:
 
-Legacy insight/template/summary panel compatibility remains an independent
-product-hardening slice. It must either migrate to the Memos BFF or be hidden in
-Agent-overlay mode without reopening a direct browser-to-AI path.
+1. Resolve legacy insight/template/summary compatibility by routing supported
+   reads through the Memos BFF or hiding unsupported panels in Agent-overlay
+   mode. Do not reopen direct browser-to-AI access.
+2. Gate run persistence, runtime composition, and the run UI as separate,
+   reviewable slices after the contracts are stable.
+3. Discuss real Providers, real user data, and multi-instance operation only
+   after the earlier gates have their own privacy, recovery, and security
+   evidence.
 
 R6 does not authorize real user data, an external Provider, public AI ports, or
 multi-instance deployment. Encrypted transport and shared atomic
