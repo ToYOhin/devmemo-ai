@@ -374,10 +374,11 @@ recovery、脱敏 timeline、approval/authority failure、acceptance fixture 与
 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 的 dormant、single-host、derived-only SQLite
 adapter 已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在其上新增
 dormant bounded runner/runtime：只消费调用方提供的 content-free plan，通过注入的 authority、cancellation
-与 tool port 执行，checkpoint 稳定 attempt key、retry state、active-time accounting 与安全 outcome。restart
-会在任何 attempt 前重新检查 current authority；tool 返回后若 authority 或 cancellation 失效，则丢弃未提交
-输出。它仍未接 route、background worker、UI、配置/默认值、Memo write tool、external Provider、真实数据或
-多实例。
+与 tool port 执行；canonical plan digest 把 accepted request 与完整 step/tool 序列绑定，并 checkpoint 稳定
+attempt key、retry state、active-time accounting 与安全 outcome。restart 会在任何 attempt 前重新检查 current
+authority；tool 返回后若 authority 或 cancellation 失效，则丢弃未提交输出；恢复 timeline 已截断时会在下一次
+tool 前 fail closed。它仍未接 route、background worker、UI、配置/默认值、Memo write tool、external
+Provider、真实数据或多实例。
 
 后续按以下顺序推进：
 

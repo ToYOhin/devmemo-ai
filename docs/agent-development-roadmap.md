@@ -554,10 +554,13 @@ and R7-I2's same-origin legacy BFF closure is merged at
 derived-only SQLite adapter was squash-merged through PR #12 at
 `571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4 adds a dormant bounded
 runner/runtime over that adapter. It uses only caller-supplied content-free
-plans and injected authority, cancellation, and tool ports; it checkpoints
-stable attempt keys, retry state, active-time accounting, and safe outcomes.
+plans and injected authority, cancellation, and tool ports. A canonical plan
+digest binds the accepted request to the complete step/tool sequence; it also
+checkpoints stable attempt keys, retry state, active-time accounting, and safe
+outcomes.
 Restart rechecks current authority before any attempt, and post-tool authority
-or cancellation failure discards uncommitted output. It remains unwired: there
+or cancellation failure discards uncommitted output. A truncated recovery
+timeline fails closed before another tool call. It remains unwired: there
 is no route, background worker, UI, configuration/default change, Memo write
 tool, external Provider, real data, or multi-instance behavior.
 

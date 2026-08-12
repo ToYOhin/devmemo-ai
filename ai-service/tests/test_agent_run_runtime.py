@@ -161,6 +161,13 @@ class CrashOnceToolExecutor(RecordingToolExecutor):
         return ToolResult(ToolResultStatus.SUCCEEDED, "completed")
 
 
+class AlwaysCrashToolExecutor(RecordingToolExecutor):
+    async def execute(self, invocation: ToolInvocation) -> ToolResult:
+        self.invocations.append(invocation)
+        await asyncio.sleep(0)
+        raise SimulatedProcessExit
+
+
 class TransientOnceToolExecutor(RecordingToolExecutor):
     async def execute(self, invocation: ToolInvocation) -> ToolResult:
         self.invocations.append(invocation)
@@ -245,8 +252,8 @@ def _queued_run(*, budget: ExecutionBudget | None = None) -> AgentRun:
 
 def _plan(*tools: RuntimeToolCall) -> BoundedAgentRunPlan:
     return BoundedAgentRunPlan(
+        request_digest=DIGEST_A,
         plan_step_id="step-plan-001",
-        plan_digest=DIGEST_A,
         tool_calls=tools,
         finalize_step_id="step-finalize-001",
         finalize_digest=DIGEST_E,
@@ -283,6 +290,7 @@ def _event(run_id: str, step_id: str, seq: int, occurred_at: datetime) -> RunEve
 def _waiting_approval_store(database: Path) -> SQLiteAgentRunStore:
     store = SQLiteAgentRunStore(database)
     queued = store.create_run(_queued_run(budget=_budget(max_steps=3, max_tool_calls=1)))
+    plan = _plan()
     first_time = STARTED_AT + timedelta(milliseconds=10)
     first_checkpoint = "checkpoint-run-001-001"
     running = replace(
@@ -299,7 +307,7 @@ def _waiting_approval_store(database: Path) -> SQLiteAgentRunStore:
         kind=StepKind.PLAN,
         status=StepStatus.SUCCEEDED,
         attempt=0,
-        input_digest=DIGEST_A,
+        input_digest=plan.plan_digest,
         checkpoint_ref=first_checkpoint,
         outcome_code="plan_valid",
     )
@@ -442,6 +450,57 @@ def test_runtime_restart_reuses_inflight_attempt_idempotency_key(tmp_path: Path)
     assert executor.invocations[0].idempotency_key == executor.invocations[1].idempotency_key
     assert executor.invocations[0].attempt == executor.invocations[1].attempt == 0
     assert "tool_resumed" in [event.event_type for event in result.events]
+
+
+def test_runtime_restart_rejects_changed_uncommitted_plan_suffix(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "agent-runs.db"
+    store = SQLiteAgentRunStore(database)
+    store.create_run(_queued_run(budget=_budget(max_steps=4, max_tool_calls=2)))
+    executor = CrashOnceToolExecutor()
+    original = _plan(
+        RuntimeToolCall("step-search-001", "search_memos", DIGEST_B),
+        RuntimeToolCall("step-evidence-001", "get_memo_evidence", DIGEST_C),
+    )
+    runtime = _runtime(store, StaticAuthority(), executor)
+
+    with pytest.raises(SimulatedProcessExit):
+        asyncio.run(runtime.run("run-001", original))
+
+    changed = _plan(
+        RuntimeToolCall("step-search-001", "search_memos", DIGEST_B),
+        RuntimeToolCall(
+            "step-evidence-001", "create_report_artifact", DIGEST_C
+        ),
+    )
+    with pytest.raises(AgentRunRuntimeError, match="plan binding conflicts"):
+        asyncio.run(runtime.run("run-001", changed))
+    assert len(executor.invocations) == 1
+
+
+def test_runtime_fails_closed_when_recovery_timeline_is_truncated(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "agent-runs.db"
+    store = SQLiteAgentRunStore(database)
+    store.create_run(_queued_run(budget=_budget(max_steps=3, max_tool_calls=1)))
+    executor = AlwaysCrashToolExecutor()
+    runtime = _runtime(store, StaticAuthority(), executor)
+    plan = _plan(RuntimeToolCall("step-search-001", "search_memos", DIGEST_B))
+
+    for _ in range(126):
+        with pytest.raises(SimulatedProcessExit):
+            asyncio.run(runtime.run("run-001", plan))
+
+    invocation_count = len(executor.invocations)
+    result = asyncio.run(runtime.run("run-001", plan))
+
+    assert result.run.status is RunStatus.FAILED
+    assert result.run.terminal_reason == "active_time_exhausted"
+    assert result.run.last_event_seq == 130
+    assert len(result.events) == 128
+    assert len(executor.invocations) == invocation_count
 
 
 def test_runtime_rechecks_authority_before_restart_execution(tmp_path: Path) -> None:
@@ -689,11 +748,21 @@ def test_terminal_run_is_idempotent_and_request_plan_mismatch_fails_closed(
     assert len(replay.events) == event_count
     assert authority.calls == authority_calls
 
+    changed_terminal_plan = BoundedAgentRunPlan(
+        request_digest=DIGEST_A,
+        plan_step_id="step-plan-001",
+        tool_calls=(),
+        finalize_step_id="step-finalize-001",
+        finalize_digest=DIGEST_D,
+    )
+    with pytest.raises(AgentRunRuntimeError, match="plan binding conflicts"):
+        asyncio.run(runtime.run("run-001", changed_terminal_plan))
+
     other_store = SQLiteAgentRunStore(tmp_path / "other-agent-runs.db")
     other_store.create_run(_queued_run())
     mismatched = BoundedAgentRunPlan(
+        request_digest=DIGEST_B,
         plan_step_id="step-plan-001",
-        plan_digest=DIGEST_B,
         tool_calls=(),
         finalize_step_id="step-finalize-001",
         finalize_digest=DIGEST_E,

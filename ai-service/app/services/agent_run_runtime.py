@@ -8,10 +8,11 @@ cancellation, and tool boundaries, then atomically checkpoints safe metadata.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 import hashlib
+import json
 import time
 from typing import Callable, Protocol
 
@@ -114,11 +115,12 @@ class RuntimeToolCall:
 
 @dataclass(frozen=True)
 class BoundedAgentRunPlan:
+    request_digest: str
     plan_step_id: str
-    plan_digest: str
     tool_calls: tuple[RuntimeToolCall, ...]
     finalize_step_id: str
     finalize_digest: str
+    plan_digest: str = field(init=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tool_calls", tuple(self.tool_calls))
@@ -129,7 +131,7 @@ class BoundedAgentRunPlan:
             kind=StepKind.PLAN,
             status=StepStatus.QUEUED,
             attempt=0,
-            input_digest=self.plan_digest,
+            input_digest=self.request_digest,
         )
         AgentStep(
             step_id=self.finalize_step_id,
@@ -145,6 +147,7 @@ class BoundedAgentRunPlan:
             raise AgentRunContractError("runtime plan step identifiers must be unique")
         if len(step_ids) > MAX_STEPS or len(self.tool_calls) > MAX_TOOL_CALLS:
             raise AgentRunContractError("runtime plan exceeds the contract ceiling")
+        object.__setattr__(self, "plan_digest", _plan_digest(self))
 
 
 @dataclass(frozen=True)
@@ -211,10 +214,12 @@ class BoundedAgentRunRuntime:
 
         snapshot = self._load(run_id)
         resume_duration_ms = 0
+        if plan.request_digest != snapshot.run.request_digest:
+            raise AgentRunRuntimeError("runtime plan does not match the accepted request")
+        if snapshot.run.status is not RunStatus.QUEUED:
+            self._validate_plan_binding(snapshot, plan)
         if snapshot.run.status in {RunStatus.SUCCEEDED, RunStatus.FAILED, RunStatus.CANCELLED}:
             return snapshot
-        if plan.plan_digest != snapshot.run.request_digest:
-            raise AgentRunRuntimeError("runtime plan does not match the accepted request")
         if snapshot.run.status is RunStatus.QUEUED:
             guard = await self._guard(snapshot)
             initial_plan_step = self._step(
@@ -685,6 +690,22 @@ class BoundedAgentRunRuntime:
             raise AgentRunRuntimeError("AgentRun resume binding is invalid") from exc
 
     @staticmethod
+    def _validate_plan_binding(
+        snapshot: AgentRunSnapshotView, plan: BoundedAgentRunPlan
+    ) -> None:
+        plan_step = BoundedAgentRunRuntime._find_step(
+            snapshot, plan.plan_step_id
+        )
+        if (
+            plan_step is None
+            or plan_step.kind is not StepKind.PLAN
+            or plan_step.ordinal != 1
+            or plan_step.input_digest != plan.plan_digest
+            or plan_step.tool_name is not None
+        ):
+            raise AgentRunRuntimeError("persisted runtime plan binding conflicts")
+
+    @staticmethod
     def _validate_persisted_plan(
         snapshot: AgentRunSnapshotView, plan: BoundedAgentRunPlan
     ) -> None:
@@ -771,6 +792,10 @@ class BoundedAgentRunRuntime:
 
     @staticmethod
     def _active_ms(snapshot: AgentRunSnapshotView) -> int:
+        if snapshot.run.last_event_seq != len(snapshot.events):
+            raise AgentRunRuntimeError(
+                "AgentRun active-time timeline is truncated"
+            )
         total = 0
         for event in snapshot.events:
             value = event.safe_details.get("duration_ms", 0)
@@ -794,6 +819,23 @@ def _tool_idempotency_key(run: AgentRun, step: AgentStep) -> str:
         (run.run_id, step.step_id, str(step.attempt), step.tool_name or "", step.input_digest)
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _plan_digest(plan: BoundedAgentRunPlan) -> str:
+    payload = {
+        "finalize": [plan.finalize_step_id, plan.finalize_digest],
+        "plan_step_id": plan.plan_step_id,
+        "request_digest": plan.request_digest,
+        "schema": "bounded-agent-run-plan-v1",
+        "tools": [
+            [item.step_id, item.tool_name, item.input_digest]
+            for item in plan.tool_calls
+        ],
+    }
+    encoded = json.dumps(
+        payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _validate_safe_code(name: str, value: str) -> None:
