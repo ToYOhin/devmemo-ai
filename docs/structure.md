@@ -37,7 +37,10 @@ contract、脱敏 fixture 与定向测试已通过 PR #9 合并于
 `0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 随后通过 PR #10 把 legacy 浏览器 AI 路径统一到
 same-origin Memos BFF，并合并于 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`。R7-I3 新增独立、
 single-host、derived-only 的 SQLite AgentRun persistence adapter 与临时数据库恢复/事务测试；该 adapter
-仍 dormant/unwired，不新增 route、worker、runner、runtime、UI 或产品 artifact 路径。
+已通过 PR #12 squash merge 于 `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 在独立分支新增
+dormant bounded runner/runtime：只消费 content-free plan，通过注入的 current-authority、cancellation 与
+tool port 执行，并使用既有 persistence 原子 checkpoint；仍不新增 route、worker、background job、UI、
+环境变量、默认开关或产品 artifact 下载路径。
 
 ## Memos 核心边界
 
@@ -124,6 +127,7 @@ ai-service/
 │   │   ├── evidence_answer_agent.py # 授权检索、Provider 校验与安全回答编排
 │   │   ├── agent_refusal_policy.py  # retrieval 前的固定拒绝策略
 │   │   ├── agent_evaluation_runner.py # deterministic content-free metrics runner
+│   │   ├── agent_run_runtime.py       # dormant bounded AgentRun runner/runtime
 │   │   ├── agent_evaluation_harness.py # 64-case product-core offline harness
 │   │   ├── agent_observability_runtime.py # 可选进程内 recorder 与固定 sample helper
 │   │   ├── agent_lifecycle_processor.py # dormant ledger/vector lifecycle processor
@@ -256,13 +260,12 @@ Evidence Answer 与 legacy template/summary/insight 面板都只访问 same-orig
 
 ## 当前推进路线与问题
 
-1. **保持 R7 contract 与 persistence 边界：** 已具备 provider-neutral contract、deterministic sanitized
-   fixture，以及 dormant single-host SQLite persistence；恢复对象必须重新经过 frozen domain validator，
-   每个 checkpoint 单事务提交，timeline append-only，approval 首次有效 decision 原子消费。
-2. **下一步实现 bounded runner/runtime：** 浏览器 AI 路径已统一到 Memos BFF；继续保持 AI Service 不发布
-   宿主端口，在独立切片中组合有界执行、恢复与 fail-closed authority recheck，不在 persistence adapter
-   中隐式启动 worker 或 background job。
-3. **再拆分 BFF 与体验：** bounded runtime 稳定后，依次独立评审 AgentRun BFF、run/approval/timeline UI，
+1. **保持 R7 contract、persistence 与 runtime 边界：** 已具备 provider-neutral contract、deterministic
+   sanitized fixture、dormant single-host SQLite persistence，以及仅通过注入端口运行的 bounded runtime；
+   每次恢复和 tool commit 前重新检查 current authority，checkpoint 保持单事务与 fail-closed。
+2. **下一步独立评审 AgentRun BFF：** 浏览器继续只访问 same-origin Memos BFF；为 create/status/timeline/
+   approval metadata 设计认证、visibility 与严格响应投影，不发布 AI Service 宿主端口，也不启动 worker。
+3. **再拆分产品体验：** BFF contract 稳定后，独立评审 run/approval/timeline UI，
    每一步都保留默认关闭、fail-closed 与可回滚边界。
 4. **最后讨论真实环境：** 真实 Provider、真实用户数据与多实例需分别完成隐私、备份恢复、加密 transport、
    shared atomic replay/capability storage 证明后才能进入。
