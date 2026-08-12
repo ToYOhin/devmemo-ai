@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
 import main
@@ -121,3 +122,61 @@ def test_chat_api_returns_non_deterministic_llm_text(monkeypatch):
     assert response.status_code == 200
     assert response.json()["answer"] == "答案 [1]：请参考 FastAPI Memo。"
     assert response.json()["provider"] == "ollama"
+
+
+def test_chat_api_parses_exact_deepseek_json_answer(monkeypatch):
+    service = _configured_service()
+    service.embed_memo("memo-deepseek", "DeepSeek JSON answer", {"title": "DeepSeek"})
+
+    class FakeDeepSeekProvider:
+        name = "deepseek"
+
+        async def generate(self, prompt):
+            assert "Return exactly one JSON object with only the field answer" in prompt
+            assert '{"answer":"grounded answer with citations"}' in prompt
+            return LLMResult(text='{"answer":"Grounded result [1]."}', provider=self.name)
+
+    monkeypatch.setattr(main, "embedding_service", service)
+    monkeypatch.setattr(main, "provider", FakeDeepSeekProvider())
+
+    response = client.post("/api/ai/chat", json={"question": "DeepSeek"})
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Grounded result [1]."
+    assert response.json()["provider"] == "deepseek"
+
+
+@pytest.mark.parametrize(
+    "provider_text",
+    [
+        "",
+        "not json",
+        "{}",
+        '{"answer":""}',
+        '{"answer":42}',
+        '{"answer":"ok","extra":true}',
+        '{"answer":"first","answer":"second"}',
+        '[{"answer":"ok"}]',
+    ],
+)
+def test_chat_api_rejects_invalid_deepseek_json_answer(monkeypatch, provider_text):
+    service = _configured_service()
+    service.embed_memo(
+        "memo-deepseek-invalid",
+        "DeepSeek JSON",
+        {"title": "DeepSeek"},
+    )
+
+    class InvalidDeepSeekProvider:
+        name = "deepseek"
+
+        async def generate(self, prompt):
+            return LLMResult(text=provider_text, provider=self.name)
+
+    monkeypatch.setattr(main, "embedding_service", service)
+    monkeypatch.setattr(main, "provider", InvalidDeepSeekProvider())
+
+    response = client.post("/api/ai/chat", json={"question": "DeepSeek"})
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "LLM provider returned an invalid answer"}

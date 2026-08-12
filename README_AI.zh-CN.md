@@ -25,7 +25,7 @@ AI_AGENT_ENABLED=false
 ## 使用 Docker Compose 启动
 
 ```powershell
-docker compose config
+docker compose config --quiet
 docker compose up -d --build
 ```
 
@@ -52,11 +52,18 @@ docker compose --profile ollama up -d ollama
 
 provider 配置应通过环境变量注入，不能提交到仓库：
 
-- `AI_PROVIDER=deterministic|openai|ollama`
+- `AI_PROVIDER=deterministic|openai|deepseek|ollama`
 - `OPENAI_API_KEY`、`OPENAI_MODEL`、`OPENAI_BASE_URL`
+- `DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL`、`DEEPSEEK_BASE_URL`
 - `OLLAMA_BASE_URL`、`OLLAMA_MODEL`
 - `AI_EMBEDDING_PROVIDER=deterministic|fastembed`
 - `AI_VECTOR_STORE=memory|qdrant`
+
+DeepSeek adapter 仅在显式选择时启用。它通过 OpenAI-compatible chat endpoint 使用固定的
+非思考 JSON 模式、1,200 token 输出上限，并且只对 transport error、HTTP 408/429 或
+服务端错误最多重试一次。默认模型为 `deepseek-v4-pro`；默认 Provider 仍是 deterministic。
+在 Agent 路径使用外部 Provider 前，请先执行
+[DeepSeek Provider 合成 smoke](docs/deepseek-provider-smoke.zh-CN.md) 中不会持久化凭据的步骤。
 
 ## Webhook 与公开检索边界
 
