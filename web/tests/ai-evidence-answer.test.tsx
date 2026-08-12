@@ -11,6 +11,10 @@ vi.mock("@/utils/i18n", () => ({
       "ai-evidence-answer.start": "Ask Evidence Agent",
       "ai-evidence-answer.question": "Question",
       "ai-evidence-answer.question-placeholder": "Ask a question",
+      "ai-evidence-answer.try-example": "Try an example",
+      "ai-evidence-answer.example-project-overview": "Summarize this project from my Memos",
+      "ai-evidence-answer.example-recent-decisions": "What recent decisions are documented?",
+      "ai-evidence-answer.example-open-actions": "What open action items remain?",
       "ai-evidence-answer.limit": "Maximum citations",
       "ai-evidence-answer.submit": "Answer from evidence",
       "ai-evidence-answer.submitting": "Searching Memos...",
@@ -22,6 +26,10 @@ vi.mock("@/utils/i18n", () => ({
       "ai-evidence-answer.trace-search_memos": "Search Memos",
       "ai-evidence-answer.trace-answer_from_evidence": "Answer from evidence",
       "ai-evidence-answer.trace-refuse_unsafe_request": "Refuse unsafe request",
+      "ai-evidence-answer.trace-terminal-answered": "Answered",
+      "ai-evidence-answer.trace-terminal-no_context": "No context",
+      "ai-evidence-answer.trace-terminal-refused": "Refused",
+      "ai-evidence-answer.trace-status-completed": "Completed",
       "ai-evidence-answer.trace-results_one": `${values?.count} result`,
       "ai-evidence-answer.trace-results_other": `${values?.count} results`,
       "ai-evidence-answer.error-invalid": "Enter a valid question and limit.",
@@ -77,6 +85,8 @@ describe("Evidence Answer entry", () => {
     expect(screen.getByText("The port mapping is defined in the Compose file [1].")).toBeInTheDocument();
     expect(screen.getByText("Docker ports")).toBeInTheDocument();
     expect(screen.getByText(/Search Memos/)).toBeInTheDocument();
+    expect(screen.getByTestId("ai-evidence-answer-terminal-state")).toHaveTextContent("Answered");
+    expect(screen.getAllByText("Completed")).toHaveLength(2);
     expect(screen.queryByText("deterministic")).not.toBeInTheDocument();
     expect(screen.queryByText("memo-v1")).not.toBeInTheDocument();
     expect(screen.queryByText("memo-42")).not.toBeInTheDocument();
@@ -92,6 +102,18 @@ describe("Evidence Answer entry", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("ai-evidence-answer-error")).toHaveTextContent("Enter a valid question and limit.");
+  });
+
+  it("fills a demo question without sending a request", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AiMemoEvidenceAnswer />);
+    fireEvent.click(screen.getByRole("button", { name: "Ask Evidence Agent" }));
+    fireEvent.click(screen.getByRole("button", { name: "What recent decisions are documented?" }));
+
+    expect(screen.getByRole("textbox", { name: "Question" })).toHaveValue("What recent decisions are documented?");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("renders the fixed refusal without citations or Provider details", async () => {
@@ -115,6 +137,7 @@ describe("Evidence Answer entry", () => {
     await waitFor(() => expect(screen.getByTestId("ai-evidence-answer-result")).toBeInTheDocument());
     expect(screen.getByText("Request refused by the Agent safety policy.")).toBeInTheDocument();
     expect(screen.getByText(/Refuse unsafe request/)).toBeInTheDocument();
+    expect(screen.getByTestId("ai-evidence-answer-terminal-state")).toHaveTextContent("Refused");
     expect(screen.getByText("No matching indexed Memo was found.")).toBeInTheDocument();
     expect(screen.queryByText("policy")).not.toBeInTheDocument();
   });
