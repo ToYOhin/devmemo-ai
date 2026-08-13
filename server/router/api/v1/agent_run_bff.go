@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/labstack/echo/v5"
@@ -149,7 +149,9 @@ func (s *APIV1Service) resolveAgentRunCreateRequest(ctx context.Context, input a
 			Revision: fmt.Sprintf("rev-%d", memo.UpdatedTs),
 		})
 	}
-	sort.Slice(sources, func(i, j int) bool { return sources[i].SourceID < sources[j].SourceID })
+	slices.SortFunc(sources, func(a, b aiagent.AgentRunSourceRevision) int {
+		return strings.Compare(a.SourceID, b.SourceID)
+	})
 	scopeMaterial, _ := json.Marshal(sources)
 	return aiagent.DelegatedAgentRunCreateRequest{
 		SubjectID:      fmt.Sprintf("user-%d", currentUser.ID),
