@@ -134,18 +134,23 @@ func (s *APIV1Service) registerConfiguredAgentRoutes(router agentRouteRegistrar)
 		return err
 	}
 	var executor aiagent.AnswerExecutor
+	var runExecutor aiagent.AgentRunExecutor
 	var legacyExecutor legacyAIExecutor
 	if config.Enabled {
-		executor, err = aiagent.NewClient(config)
+		client, clientErr := aiagent.NewClient(config)
+		err = clientErr
 		if err != nil {
 			return err
 		}
+		executor = client
+		runExecutor = client
 		legacyExecutor, err = newLegacyAIHTTPExecutor(config)
 		if err != nil {
 			return err
 		}
 	}
 	s.registerAgentRoutes(router, config, executor)
+	s.registerAgentRunRoutes(router, config, runExecutor)
 	s.registerLegacyAIRoutes(router, config, legacyExecutor)
 	return nil
 }

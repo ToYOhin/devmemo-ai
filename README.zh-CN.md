@@ -24,6 +24,8 @@ Memo、用户身份和可见性权限的事实来源；独立的 FastAPI AI Serv
   不作为默认行为。
 - 通过 Memos BFF 提供实验性只读 Evidence Answer 入口；它默认关闭，只返回受限回答、
   服务端映射的引用和脱敏执行轨迹。
+- 通过默认关闭、已认证的同源 BFF 创建固定 `project_summary` AgentRun；Memos 先解析
+  1–10 条当前可见 Memo revision，AI Service 再创建无正文 queued run，并只返回绑定创建者的状态。
 
 ## 架构与数据边界
 
@@ -94,8 +96,9 @@ AI_AGENT_ENABLED=false
 - 公共 chunk retrieval 保持关闭；它需要真实的 trusted gateway、Memos visibility
   mapping 以及可验证的关闭与回滚路径。
 - Evidence Answer Agent 仍是显式启用的实验能力；R6 评审基线已发布于 `v0.2.0`。后续 R7
-  切片已增加 frozen AgentRun contract、single-host derived-only SQLite persistence 与 bounded
-  runtime，但 persistence/runtime 仍为 dormant，尚未接入 route、worker、产品 BFF 或 UI。
+  切片已增加 frozen AgentRun contract、single-host derived-only SQLite persistence、bounded
+  runtime，以及只接受固定 `project_summary` task kind 的认证 create/status BFF。执行、artifact、
+  worker 与 UI 仍是后续独立切片。
 - DeepSeek adapter 只能通过显式配置启用，默认 Provider 仍为 deterministic。真实外部 endpoint
   smoke 只使用 synthetic evidence，不构成真实 Memo 或生产部署就绪证明。
 
