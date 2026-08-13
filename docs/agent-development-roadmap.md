@@ -20,7 +20,8 @@
 > `9d7e508259e4b07d416751e9da0514d588a4424f`. Evidence Answer
 > demo polish and one-command local packaging followed through PR #14 at
 > `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7` and PR #15 at
-> `79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`. The current opt-in DeepSeek slice adds a
+> `79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`. PR #16 merged an opt-in DeepSeek
+> slice that adds a
 > bounded non-thinking JSON adapter and synthetic real-endpoint smoke while
 > preserving deterministic as the default; it does not use real Memos.
 
@@ -75,7 +76,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun product path is partial | An authenticated same-origin BFF now creates idempotent queued runs from caller-visible Memo revisions and returns creator-bound status; the bounded runtime remains dormant and no worker, execution route, approval/timeline/artifact API, or UI selects it | Keep the content-free BFF boundary; review execution dispatch and then UI composition as separate slices |
+| P1 | R7 AgentRun product path is partial | An authenticated same-origin BFF now creates idempotent `project_summary` queued runs from caller-visible Memo revisions and returns creator-bound status; the bounded runtime remains dormant and no worker, execution route, approval/timeline/artifact API, or UI selects it | Keep the content-free BFF boundary; add deterministic synchronous execution and minimal artifact UI before reviewing a worker |
 
 ## Delivery rules
 
@@ -590,7 +591,7 @@ The ordered delivery route is:
 3. Close the authenticated same-origin AgentRun create/status BFF while
    preserving Memos-owned identity, visibility, source authority, bounded
    projections, and disabled defaults.
-4. Add one deterministic project-summary/resume-bullets execution path and a
+4. Add one deterministic `project_summary` synchronous execution path and a
    minimal status/artifact UI before considering a general background worker.
 5. Discuss real-user-data Provider rollout and multi-instance operation only
    after the earlier gates have their own privacy, recovery, and security evidence.

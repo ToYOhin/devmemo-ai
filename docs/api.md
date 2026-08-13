@@ -23,16 +23,17 @@ and Provider failures become fixed 503/502 errors without raw exception text.
 The A4 lifecycle outbox/ledger remains dormant and is not connected to Memo
 CRUD, this route, a dispatcher, a worker, or automatic indexing.
 
-## Experimental AgentRun create and status BFF
+## Experimental project-summary AgentRun create and status BFF
 
 When `AI_AGENT_ENABLED=true`, authenticated browsers may create a queued run
-with `POST /api/ai/agent/runs` using only `task`, `request_key`, and one to ten
-`memo_uids`, then read its safe status with `GET /api/ai/agent/runs/:runID`.
-Memos rechecks every selected Memo against the caller's current visibility and
-sends the AI Service only an opaque subject, task digest, idempotency digest,
-and content-free source revisions over signed internal requests. The browser
-response exposes only run ID, status, timestamps, event sequence, source count,
-and terminal reason.
+with `POST /api/ai/agent/runs` using only the exact
+`task_kind=project_summary`, `request_key`, and one to ten `memo_uids`, then
+read its safe status with `GET /api/ai/agent/runs/:runID`. Unknown fields and
+other task kinds are rejected. Memos rechecks every selected Memo against the
+caller's current visibility and sends the AI Service only an opaque subject,
+task-kind digest, idempotency digest, and content-free source revisions over
+signed internal requests. The browser response exposes only run ID, status,
+timestamps, event sequence, source count, and terminal reason.
 
 This slice creates and reads derived SQLite records only. It does not execute a
 run, start a worker, expose task or Memo content, add approval/timeline/artifact

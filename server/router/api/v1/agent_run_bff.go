@@ -22,12 +22,12 @@ import (
 )
 
 const (
-	maxAgentRunTaskBytes = 4 << 10
-	maxAgentRunSources   = 10
+	agentRunTaskProjectSummary = "project_summary"
+	maxAgentRunSources         = 10
 )
 
 type agentBrowserRunCreateRequest struct {
-	Task       string   `json:"task"`
+	TaskKind   string   `json:"task_kind"`
 	RequestKey string   `json:"request_key"`
 	MemoUIDs   []string `json:"memo_uids"`
 }
@@ -108,9 +108,8 @@ func decodeAgentBrowserRunCreateRequest(request *http.Request) (agentBrowserRunC
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return input, errors.New("unexpected request data")
 	}
-	input.Task = strings.TrimSpace(input.Task)
 	input.RequestKey = strings.TrimSpace(input.RequestKey)
-	if input.Task == "" || len(input.Task) > maxAgentRunTaskBytes || input.RequestKey == "" || len(input.RequestKey) > 128 ||
+	if input.TaskKind != agentRunTaskProjectSummary || input.RequestKey == "" || len(input.RequestKey) > 128 ||
 		len(input.MemoUIDs) < 1 || len(input.MemoUIDs) > maxAgentRunSources {
 		return input, errors.New("invalid AgentRun request")
 	}
@@ -157,7 +156,7 @@ func (s *APIV1Service) resolveAgentRunCreateRequest(ctx context.Context, input a
 		SubjectID:      fmt.Sprintf("user-%d", currentUser.ID),
 		ScopeRef:       digestOpaque("scope", string(scopeMaterial)),
 		RequestKey:     digestOpaque("request", input.RequestKey),
-		RequestDigest:  digestHex(input.Task),
+		RequestDigest:  digestHex(input.TaskKind),
 		SourceSnapshot: sources,
 	}, nil
 }

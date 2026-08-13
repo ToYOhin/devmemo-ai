@@ -117,8 +117,10 @@ demonstrate without an external Provider.
 
 The same default-disabled overlay also exposes authenticated same-origin
 AgentRun create/status APIs. They persist only a queued, content-free run bound
-to currently visible Memo revisions. No worker, run execution, approval or
-timeline UI, artifact download, or raw task persistence is included yet.
+to currently visible Memo revisions. The browser contract accepts only the
+fixed `task_kind=project_summary`; it does not accept or persist a free-form
+task. No worker, run execution, approval or timeline UI, or artifact download
+is included yet.
 
 The lifecycle event/outbox/ledger work is currently a dormant contract and
 integration proof. It is not wired to Memo CRUD, a dispatcher, a worker,

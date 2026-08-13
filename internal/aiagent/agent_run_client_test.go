@@ -73,6 +73,32 @@ func TestAgentRunClientSignsCreatorBoundStatusRequest(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestAgentRunClientMapsAIServiceStatus(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		statusCode int
+		want       error
+	}{
+		{name: "not found", statusCode: http.StatusNotFound, want: ErrNotFound},
+		{name: "unavailable", statusCode: http.StatusServiceUnavailable, want: ErrUnavailable},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			client, err := NewClient(Config{Enabled: true, InternalURL: "http://ai-service:8000", Secret: "test-agent-secret"})
+			require.NoError(t, err)
+			client.doer = testHTTPDoer(func(*http.Request) (*http.Response, error) {
+				return jsonResponse(test.statusCode, `{}`), nil
+			})
+
+			_, err = client.GetRun(context.Background(), AgentRunStatusRequest{
+				SubjectID: "user-1",
+				RunID:     "run-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			})
+
+			require.ErrorIs(t, err, test.want)
+		})
+	}
+}
+
 func validDelegatedAgentRunCreateRequest() DelegatedAgentRunCreateRequest {
 	return DelegatedAgentRunCreateRequest{
 		SubjectID:     "user-1",
