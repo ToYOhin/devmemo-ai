@@ -12,10 +12,13 @@ import (
 )
 
 const (
-	BrowserAgentRunCreatePath  = "/api/ai/agent/runs"
-	BrowserAgentRunStatusPath  = "/api/ai/agent/runs/:runID"
-	InternalAgentRunCreatePath = "/internal/ai/agent/runs"
-	InternalAgentRunStatusPath = "/internal/ai/agent/runs/status"
+	BrowserAgentRunCreatePath    = "/api/ai/agent/runs"
+	BrowserAgentRunStatusPath    = "/api/ai/agent/runs/:runID"
+	BrowserAgentRunArtifactPath  = "/api/ai/agent/runs/:runID/artifact"
+	InternalAgentRunCreatePath   = "/internal/ai/agent/runs"
+	InternalAgentRunStatusPath   = "/internal/ai/agent/runs/status"
+	InternalAgentRunExecutePath  = "/internal/ai/agent/runs/execute"
+	InternalAgentRunArtifactPath = "/internal/ai/agent/runs/artifact"
 )
 
 var (
@@ -49,11 +52,35 @@ type AgentRunStatusResponse struct {
 	LastEventSeq   int     `json:"last_event_seq"`
 	SourceCount    int     `json:"source_count"`
 	TerminalReason *string `json:"terminal_reason"`
+	ArtifactID     *string `json:"artifact_id"`
+}
+
+type AgentRunExecutionSource struct {
+	SourceID string `json:"source_id"`
+	Revision string `json:"revision"`
+	Content  string `json:"content"`
+}
+
+type AgentRunExecuteRequest struct {
+	SubjectID string                    `json:"subject_id"`
+	RunID     string                    `json:"run_id"`
+	TaskKind  string                    `json:"task_kind"`
+	Sources   []AgentRunExecutionSource `json:"sources"`
+}
+
+type AgentRunArtifactResponse struct {
+	ArtifactID string `json:"artifact_id"`
+	FileName   string `json:"file_name"`
+	MediaType  string `json:"media_type"`
+	Markdown   string `json:"markdown"`
+	Digest     string `json:"digest"`
 }
 
 type AgentRunExecutor interface {
 	CreateRun(context.Context, DelegatedAgentRunCreateRequest) (AgentRunStatusResponse, error)
 	GetRun(context.Context, AgentRunStatusRequest) (AgentRunStatusResponse, error)
+	ExecuteRun(context.Context, AgentRunExecuteRequest) (AgentRunStatusResponse, error)
+	GetArtifact(context.Context, AgentRunStatusRequest) (AgentRunArtifactResponse, error)
 }
 
 func (c *Client) CreateRun(ctx context.Context, delegated DelegatedAgentRunCreateRequest) (AgentRunStatusResponse, error) {
@@ -68,6 +95,28 @@ func (c *Client) GetRun(ctx context.Context, request AgentRunStatusRequest) (Age
 		return AgentRunStatusResponse{}, ErrInvalidResponse
 	}
 	return c.executeAgentRunRequest(ctx, InternalAgentRunStatusPath, request)
+}
+
+func (c *Client) ExecuteRun(ctx context.Context, request AgentRunExecuteRequest) (AgentRunStatusResponse, error) {
+	if err := request.Validate(); err != nil {
+		return AgentRunStatusResponse{}, err
+	}
+	return c.executeAgentRunRequest(ctx, InternalAgentRunExecutePath, request)
+}
+
+func (c *Client) GetArtifact(ctx context.Context, request AgentRunStatusRequest) (AgentRunArtifactResponse, error) {
+	if !opaqueAgentRunID.MatchString(request.SubjectID) || !opaqueAgentRunID.MatchString(request.RunID) {
+		return AgentRunArtifactResponse{}, ErrInvalidResponse
+	}
+	body, err := c.executeAgentRunRaw(ctx, InternalAgentRunArtifactPath, request)
+	if err != nil {
+		return AgentRunArtifactResponse{}, err
+	}
+	var result AgentRunArtifactResponse
+	if decodeStrictJSON(body, &result) != nil || result.validate() != nil {
+		return AgentRunArtifactResponse{}, ErrInvalidResponse
+	}
+	return result, nil
 }
 
 func (r DelegatedAgentRunCreateRequest) Validate() error {
@@ -89,51 +138,86 @@ func (r DelegatedAgentRunCreateRequest) Validate() error {
 	return nil
 }
 
+func (r AgentRunExecuteRequest) Validate() error {
+	if !opaqueAgentRunID.MatchString(r.SubjectID) || !opaqueAgentRunID.MatchString(r.RunID) ||
+		r.TaskKind != "project_summary" ||
+		len(r.Sources) < 1 || len(r.Sources) > 10 {
+		return ErrInvalidResponse
+	}
+	seen := make(map[string]struct{}, len(r.Sources))
+	for _, source := range r.Sources {
+		if !opaqueAgentRunID.MatchString(source.SourceID) || !opaqueAgentRunID.MatchString(source.Revision) ||
+			strings.TrimSpace(source.Content) == "" || len(source.Content) > 32<<10 {
+			return ErrInvalidResponse
+		}
+		if _, ok := seen[source.SourceID]; ok {
+			return ErrInvalidResponse
+		}
+		seen[source.SourceID] = struct{}{}
+	}
+	return nil
+}
+
 func (c *Client) executeAgentRunRequest(ctx context.Context, path string, payload any) (AgentRunStatusResponse, error) {
+	body, err := c.executeAgentRunRaw(ctx, path, payload)
+	if err != nil {
+		return AgentRunStatusResponse{}, err
+	}
+	var result AgentRunStatusResponse
+	if decodeStrictJSON(body, &result) != nil || result.validate() != nil {
+		return AgentRunStatusResponse{}, ErrInvalidResponse
+	}
+	return result, nil
+}
+
+func (c *Client) executeAgentRunRaw(ctx context.Context, path string, payload any) ([]byte, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return AgentRunStatusResponse{}, ErrUnavailable
+		return nil, ErrUnavailable
 	}
 	headers, err := SignRequest(http.MethodPost, path, body, c.now(), c.config.Secret)
 	if err != nil {
-		return AgentRunStatusResponse{}, ErrUnavailable
+		return nil, ErrUnavailable
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.config.InternalURL, "/")+path, bytes.NewReader(body))
 	if err != nil {
-		return AgentRunStatusResponse{}, ErrUnavailable
+		return nil, ErrUnavailable
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set(SignatureHeader, headers.Signature)
 	req.Header.Set(TimestampHeader, headers.Timestamp)
 	resp, err := c.doer.Do(req)
 	if err != nil {
-		return AgentRunStatusResponse{}, ErrUnavailable
+		return nil, ErrUnavailable
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusConflict {
-		return AgentRunStatusResponse{}, ErrConflict
+		return nil, ErrConflict
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return AgentRunStatusResponse{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	if resp.StatusCode != http.StatusOK {
-		return AgentRunStatusResponse{}, ErrUnavailable
+		return nil, ErrUnavailable
 	}
 	body, err = io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil || len(body) > maxResponseBytes {
-		return AgentRunStatusResponse{}, ErrInvalidResponse
+		return nil, ErrInvalidResponse
 	}
+	return body, nil
+}
+
+func decodeStrictJSON(body []byte, target any) error {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
-	var result AgentRunStatusResponse
-	if err := decoder.Decode(&result); err != nil {
-		return AgentRunStatusResponse{}, ErrInvalidResponse
+	if err := decoder.Decode(target); err != nil {
+		return err
 	}
 	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) || result.validate() != nil {
-		return AgentRunStatusResponse{}, ErrInvalidResponse
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return ErrInvalidResponse
 	}
-	return result, nil
+	return nil
 }
 
 func (r AgentRunStatusResponse) validate() error {
@@ -147,4 +231,13 @@ func (r AgentRunStatusResponse) validate() error {
 	default:
 		return ErrInvalidResponse
 	}
+}
+
+func (r AgentRunArtifactResponse) validate() error {
+	if !opaqueAgentRunID.MatchString(r.ArtifactID) || !strings.HasSuffix(r.FileName, ".md") ||
+		r.MediaType != "text/markdown" || strings.TrimSpace(r.Markdown) == "" ||
+		!agentRunDigest.MatchString(r.Digest) {
+		return ErrInvalidResponse
+	}
+	return nil
 }

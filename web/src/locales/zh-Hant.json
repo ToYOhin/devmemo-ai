@@ -48,6 +48,28 @@
     "error-auth": "請重新登入後使用證據回答。",
     "error-failed": "證據回答暫時無法使用。"
   },
+  "ai-agent-run": {
+    "title": "建立專案成果",
+    "description": "把目前 Memo 轉成有邊界、可下載的本機草稿。",
+    "local-draft": "本機草稿",
+    "task-project_summary": "專案摘要",
+    "task-project_summary-description": "把筆記整理為附證據來源的精簡專案概述。",
+    "progress": "AgentRun 進度",
+    "step-source": "目前 Memo",
+    "step-runtime": "有限執行",
+    "step-artifact": "Markdown",
+    "step-ready": "就緒",
+    "step-running": "執行中",
+    "step-waiting": "等待中",
+    "run": "建立草稿",
+    "running": "正在建立草稿…",
+    "artifact-ready": "草稿已建立",
+    "download": "下載 Markdown",
+    "error-unavailable": "此執行個體未啟用 AgentRun。",
+    "error-auth": "請重新登入後建立草稿。",
+    "error-invalid": "目前 Memo 無法用於所選草稿。",
+    "error-failed": "有限執行未完成，請重試。"
+  },
   "ai-context-pack": {
     "insights-unavailable": "部分已選 Memo 的 insight 目前不可用，已從上下文包排除。",
     "title": "開發上下文包",

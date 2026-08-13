@@ -36,10 +36,23 @@ subsequent tool.
 - Offer an experimental, read-only Evidence Answer entry through the Memos BFF.
   It is disabled by default and returns only bounded answers, server-owned
   citations, and a redacted execution trace.
-- Stage a fixed `project_summary` AgentRun through a default-disabled,
+- Run a fixed `project_summary` AgentRun through a default-disabled,
   authenticated same-origin BFF. Memos resolves one to ten visible Memo
-  revisions before AI Service creates a content-free queued run and exposes
-  creator-bound status.
+  revisions before AI Service synchronously executes the bounded deterministic
+  plan and returns a creator-bound Markdown artifact.
+
+## Current project scope
+
+The local personal-demo loop is complete: capture project notes in a Memo, run
+the fixed `project_summary` AgentRun, observe the bounded execution state, and
+preview or download the generated Markdown artifact. The flow is authenticated,
+visibility-aware, deterministic by default, and does not require an external
+model.
+
+DevMemo AI is not presented as a general autonomous Agent or a production-ready
+multi-instance AI platform. Background workers, approval flows, Memo write-back,
+free-form Agent tasks, real-user external-Provider acceptance, and shared
+multi-instance runtime state remain outside the current product boundary.
 
 ## Architecture and data boundaries
 
@@ -57,7 +70,8 @@ FastAPI AI Service
              ▼
 Memo detail view
   ├─ AI insights review
-  └─ in-memory Context Pack generation and copy
+  ├─ in-memory Context Pack generation and copy
+  └─ bounded project-summary AgentRun and Markdown artifact
 ```
 
 See [docs/structure.md](docs/structure.md) for repository and runtime
@@ -95,6 +109,29 @@ The stable image publishes `linux/amd64`, `linux/arm64`, and `linux/arm/v7`
 manifests. Download native executables from [GitHub
 Releases](https://github.com/ToYOhin/devmemo-ai/releases).
 
+## Run the local Agent demo
+
+The source-build demo requires Docker Desktop, Node.js 24 or later, and pnpm
+11. From the repository root, run:
+
+```powershell
+.\scripts\start-agent-demo.ps1
+```
+
+Then open <http://localhost:5230>, sign in, create a Memo containing project
+notes, open its detail view, and choose **Build draft** in the Project summary
+panel. The run executes synchronously and shows a Markdown preview with a
+download action.
+
+```powershell
+.\scripts\start-agent-demo.ps1 -Action status
+.\scripts\start-agent-demo.ps1 -Action stop
+```
+
+The launcher generates a process-local delegation secret, keeps the Provider
+deterministic, does not publish the AI Service port, restores the managed shell
+environment after completion, and preserves Docker volumes when stopped.
+
 ## Default security and resource posture
 
 The default configuration is intentionally lightweight and conservative:
@@ -115,8 +152,10 @@ AI_AGENT_ENABLED=false
 - The Evidence Answer Agent remains an opt-in experiment. The reviewed R6
   baseline is published at `v0.2.0`; later R7 slices add frozen AgentRun
   contracts, single-host derived-only SQLite persistence, a bounded runtime,
-  and authenticated create/status BFF routes for the fixed `project_summary`
-  task kind. Execution, artifacts, a worker, and UI remain separate slices.
+  and authenticated execution/artifact BFF routes for the fixed
+  `project_summary` task kind. The Memo detail UI can preview or download the
+  Markdown artifact; a worker, approval flow, Memo write, and multi-instance
+  operation remain separate slices.
 - A bounded DeepSeek adapter is available only through explicit configuration.
   Deterministic remains the default; the external endpoint smoke uses synthetic
   evidence and does not establish real-Memo or production deployment readiness.

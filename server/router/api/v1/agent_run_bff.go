@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	agentRunTaskProjectSummary = "project_summary"
-	maxAgentRunSources         = 10
+	agentRunTaskProjectSummary       = "project_summary"
+	maxAgentRunSources               = 10
+	maxAgentRunDelegatedContentBytes = 96 << 10
 )
 
 type agentBrowserRunCreateRequest struct {
@@ -54,18 +55,23 @@ func (s *APIV1Service) registerAgentRunRoutes(router agentRouteRegistrar, config
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"detail": "invalid AgentRun request"})
 		}
-		delegated, err := s.resolveAgentRunCreateRequest(ctx, input)
+		delegated, execution, err := s.resolveAgentRunCreateRequest(ctx, input)
 		if err != nil {
 			if status.Code(err) == codes.InvalidArgument {
 				return c.JSON(http.StatusBadRequest, map[string]string{"detail": "invalid AgentRun scope"})
 			}
 			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
 		}
-		response, err := executor.CreateRun(ctx, delegated)
+		created, err := executor.CreateRun(ctx, delegated)
 		if err != nil {
 			if errors.Is(err, aiagent.ErrConflict) {
 				return c.JSON(http.StatusConflict, map[string]string{"detail": "AgentRun request conflicts"})
 			}
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
+		}
+		execution.RunID = created.RunID
+		response, err := executor.ExecuteRun(ctx, execution)
+		if err != nil {
 			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
 		}
 		return c.JSON(http.StatusOK, response)
@@ -94,6 +100,31 @@ func (s *APIV1Service) registerAgentRunRoutes(router agentRouteRegistrar, config
 			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
 		}
 		return c.JSON(http.StatusOK, response)
+	})
+
+	router.GET(aiagent.BrowserAgentRunArtifactPath, func(c *echo.Context) error {
+		if !config.Enabled {
+			return c.JSON(http.StatusNotFound, map[string]string{"detail": "not found"})
+		}
+		ctx, ok := authenticate(c)
+		if !ok {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
+		}
+		currentUser, err := s.fetchCurrentUser(ctx)
+		if err != nil || currentUser == nil {
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
+		}
+		artifact, err := executor.GetArtifact(ctx, aiagent.AgentRunStatusRequest{
+			SubjectID: fmt.Sprintf("user-%d", currentUser.ID),
+			RunID:     c.Param("runID"),
+		})
+		if err != nil {
+			if errors.Is(err, aiagent.ErrNotFound) || errors.Is(err, aiagent.ErrInvalidResponse) {
+				return c.JSON(http.StatusNotFound, map[string]string{"detail": "AgentRun artifact not found"})
+			}
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"detail": "AgentRun service unavailable"})
+		}
+		return c.JSON(http.StatusOK, artifact)
 	})
 }
 
@@ -126,39 +157,56 @@ func decodeAgentBrowserRunCreateRequest(request *http.Request) (agentBrowserRunC
 	return input, nil
 }
 
-func (s *APIV1Service) resolveAgentRunCreateRequest(ctx context.Context, input agentBrowserRunCreateRequest) (aiagent.DelegatedAgentRunCreateRequest, error) {
+func (s *APIV1Service) resolveAgentRunCreateRequest(ctx context.Context, input agentBrowserRunCreateRequest) (aiagent.DelegatedAgentRunCreateRequest, aiagent.AgentRunExecuteRequest, error) {
 	currentUser, err := s.fetchCurrentUser(ctx)
 	if err != nil || currentUser == nil {
-		return aiagent.DelegatedAgentRunCreateRequest{}, status.Error(codes.Unauthenticated, "user not authenticated")
+		return aiagent.DelegatedAgentRunCreateRequest{}, aiagent.AgentRunExecuteRequest{}, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 	state := store.Normal
-	find := &store.FindMemo{UIDList: input.MemoUIDs, RowStatus: &state, ExcludeContent: true, ExcludeComments: true}
+	find := &store.FindMemo{UIDList: input.MemoUIDs, RowStatus: &state, ExcludeComments: true}
 	applyMemoListVisibility(find, currentUser)
 	memos, err := s.Store.ListMemos(ctx, find)
 	if err != nil {
-		return aiagent.DelegatedAgentRunCreateRequest{}, status.Error(codes.Internal, "failed to resolve AgentRun scope")
+		return aiagent.DelegatedAgentRunCreateRequest{}, aiagent.AgentRunExecuteRequest{}, status.Error(codes.Internal, "failed to resolve AgentRun scope")
 	}
 	if len(memos) != len(input.MemoUIDs) {
-		return aiagent.DelegatedAgentRunCreateRequest{}, status.Error(codes.InvalidArgument, "invalid AgentRun scope")
+		return aiagent.DelegatedAgentRunCreateRequest{}, aiagent.AgentRunExecuteRequest{}, status.Error(codes.InvalidArgument, "invalid AgentRun scope")
 	}
 	sources := make([]aiagent.AgentRunSourceRevision, 0, len(memos))
+	executionSources := make([]aiagent.AgentRunExecutionSource, 0, len(memos))
+	contentBytes := 0
 	for _, memo := range memos {
+		sourceID := "memo-" + hex.EncodeToString([]byte(memo.UID))
+		revision := fmt.Sprintf("rev-%d", memo.UpdatedTs)
 		sources = append(sources, aiagent.AgentRunSourceRevision{
-			SourceID: "memo-" + hex.EncodeToString([]byte(memo.UID)),
-			Revision: fmt.Sprintf("rev-%d", memo.UpdatedTs),
+			SourceID: sourceID,
+			Revision: revision,
 		})
+		executionSources = append(executionSources, aiagent.AgentRunExecutionSource{SourceID: sourceID, Revision: revision, Content: memo.Content})
+		contentBytes += len(memo.Content)
+	}
+	if contentBytes > maxAgentRunDelegatedContentBytes {
+		return aiagent.DelegatedAgentRunCreateRequest{}, aiagent.AgentRunExecuteRequest{}, status.Error(codes.InvalidArgument, "AgentRun source content is too large")
 	}
 	slices.SortFunc(sources, func(a, b aiagent.AgentRunSourceRevision) int {
 		return strings.Compare(a.SourceID, b.SourceID)
 	})
+	slices.SortFunc(executionSources, func(a, b aiagent.AgentRunExecutionSource) int {
+		return strings.Compare(a.SourceID, b.SourceID)
+	})
 	scopeMaterial, _ := json.Marshal(sources)
+	subjectID := fmt.Sprintf("user-%d", currentUser.ID)
 	return aiagent.DelegatedAgentRunCreateRequest{
-		SubjectID:      fmt.Sprintf("user-%d", currentUser.ID),
-		ScopeRef:       digestOpaque("scope", string(scopeMaterial)),
-		RequestKey:     digestOpaque("request", input.RequestKey),
-		RequestDigest:  digestHex(input.TaskKind),
-		SourceSnapshot: sources,
-	}, nil
+			SubjectID:      subjectID,
+			ScopeRef:       digestOpaque("scope", string(scopeMaterial)),
+			RequestKey:     digestOpaque("request", input.RequestKey),
+			RequestDigest:  digestHex(input.TaskKind),
+			SourceSnapshot: sources,
+		}, aiagent.AgentRunExecuteRequest{
+			SubjectID: subjectID,
+			TaskKind:  input.TaskKind,
+			Sources:   executionSources,
+		}, nil
 }
 
 func digestOpaque(prefix, value string) string {

@@ -82,10 +82,11 @@ class AgentRunAPI:
         return project_agent_run(self._store.create_run(run))
 
     def status(self, request: AgentRunStatusRequest) -> dict[str, object] | None:
-        run = self._store.get_run(request.run_id)
-        if run is None or run.subject_id != request.subject_id:
+        snapshot = self._store.load_snapshot(request.run_id)
+        if snapshot is None or snapshot.run.subject_id != request.subject_id:
             return None
-        return project_agent_run(run)
+        artifact_id = snapshot.artifacts[-1].artifact_id if snapshot.artifacts else None
+        return project_agent_run(snapshot.run, artifact_id=artifact_id)
 
 
 def parse_agent_run_create_request(body: bytes) -> AgentRunCreateRequest:
@@ -130,7 +131,7 @@ def parse_agent_run_status_request(body: bytes) -> AgentRunStatusRequest:
     )
 
 
-def project_agent_run(run: AgentRun) -> dict[str, object]:
+def project_agent_run(run: AgentRun, *, artifact_id: str | None = None) -> dict[str, object]:
     """Return the internal allowlist consumed by the Memos BFF."""
 
     return {
@@ -141,6 +142,7 @@ def project_agent_run(run: AgentRun) -> dict[str, object]:
         "last_event_seq": run.last_event_seq,
         "source_count": len(run.source_snapshot),
         "terminal_reason": run.terminal_reason,
+        "artifact_id": artifact_id,
     }
 
 
