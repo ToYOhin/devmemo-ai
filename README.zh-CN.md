@@ -28,6 +28,15 @@ Memo、用户身份和可见性权限的事实来源；独立的 FastAPI AI Serv
   1–10 条当前可见 Memo revision，AI Service 再同步执行受限 deterministic plan，并返回绑定创建者的
   Markdown artifact。
 
+## 当前项目范围
+
+面向个人本地演示的业务闭环已经完整：在 Memo 中记录项目材料，运行固定 `project_summary`
+AgentRun，查看受限执行状态，并预览或下载生成的 Markdown artifact。该流程具备认证与可见性检查，
+默认使用 deterministic Provider，不依赖外部模型。
+
+DevMemo AI 不宣称是通用自治 Agent 或生产级多实例 AI 平台。background worker、approval、Memo
+write-back、自由任务、真实用户数据的外部 Provider 验收以及多实例共享运行状态，仍不属于当前产品边界。
+
 ## 架构与数据边界
 
 ```text
@@ -44,7 +53,8 @@ FastAPI AI Service
              ▼
 Memo 详情页
   ├─ AI insight 审核
-  └─ 在浏览器内存中生成并复制 Context Pack
+  ├─ 在浏览器内存中生成并复制 Context Pack
+  └─ 受限项目总结 AgentRun 与 Markdown artifact
 ```
 
 完整的目录与运行时边界见 [docs/structure.md](docs/structure.md)，接口契约见
@@ -78,6 +88,25 @@ docker pull ghcr.io/toyohin/devmemo-ai:stable
 
 稳定镜像提供 `linux/amd64`、`linux/arm64` 与 `linux/arm/v7` manifests。可执行文件
 请从 [GitHub Releases](https://github.com/ToYOhin/devmemo-ai/releases) 获取。
+
+## 运行本地 Agent 演示
+
+源码构建演示需要 Docker Desktop、Node.js 24 或更高版本，以及 pnpm 11。在仓库根目录运行：
+
+```powershell
+.\scripts\start-agent-demo.ps1
+```
+
+随后打开 <http://localhost:5230>，登录后创建一条包含项目记录的 Memo，进入详情页，在“项目总结”
+面板点击“生成草稿”。任务会同步执行，并展示可下载的 Markdown 预览。
+
+```powershell
+.\scripts\start-agent-demo.ps1 -Action status
+.\scripts\start-agent-demo.ps1 -Action stop
+```
+
+启动脚本会生成仅当前进程使用的委托密钥，保持 deterministic Provider，不向宿主机发布 AI Service
+端口，执行结束后恢复受管 shell 环境变量；停止时保留 Docker volumes。
 
 ## 默认安全与资源策略
 
