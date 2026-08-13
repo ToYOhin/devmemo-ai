@@ -324,6 +324,29 @@ def parse_llm_json(raw_text: str, request: SummaryRequest) -> tuple[str, list[st
         return deterministic_summary(request)
 
 
+def parse_deepseek_chat_answer(raw_text: object) -> str:
+    """Return the one allowed legacy chat field from an exact JSON object."""
+
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        raise ValueError("DeepSeek chat answer must be non-empty JSON")
+
+    def exact_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        payload: dict[str, object] = {}
+        for key, value in pairs:
+            if key in payload:
+                raise ValueError("DeepSeek chat answer contains duplicate fields")
+            payload[key] = value
+        return payload
+
+    payload = json.loads(raw_text, object_pairs_hook=exact_object)
+    if not isinstance(payload, dict) or set(payload) != {"answer"}:
+        raise ValueError("DeepSeek chat answer must contain only answer")
+    answer = payload["answer"]
+    if not isinstance(answer, str) or not answer.strip():
+        raise ValueError("DeepSeek chat answer must be a non-empty string")
+    return answer.strip()
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "devmemo-ai", "provider": provider.name}
@@ -508,19 +531,41 @@ async def chat(request: ChatRequest) -> ChatResponse:
             retrieved_count=0,
         )
 
-    prompt = (
-        "Answer the question using only the knowledge-base context below. "
-        "Cite sources with [1], [2] using the supplied context order, and state uncertainty "
-        "when the context is insufficient.\n"
-        f"Question: {request.question.strip()}\n"
-        f"Context:\n{retrieved.context}"
-    )
+    if provider.name == "deepseek":
+        prompt = (
+            "Answer the question using only the knowledge-base context below. "
+            "Return exactly one JSON object with only the field answer, using the "
+            'shape {"answer":"grounded answer with citations"}. Cite sources with '
+            "[1], [2] using the supplied context order, and state uncertainty when "
+            "the context is insufficient. Output JSON only.\n"
+            f"Question: {request.question.strip()}\n"
+            f"Context:\n{retrieved.context}"
+        )
+    else:
+        prompt = (
+            "Answer the question using only the knowledge-base context below. "
+            "Cite sources with [1], [2] using the supplied context order, and state "
+            "uncertainty when the context is insufficient.\n"
+            f"Question: {request.question.strip()}\n"
+            f"Context:\n{retrieved.context}"
+        )
     try:
         result = await provider.generate(prompt)
     except Exception as error:
         raise HTTPException(status_code=502, detail="LLM provider failed") from error
 
-    answer = _deterministic_rag_answer(retrieved.context) if provider.name == "deterministic" else result.text.strip()
+    if provider.name == "deterministic":
+        answer = _deterministic_rag_answer(retrieved.context)
+    elif provider.name == "deepseek":
+        try:
+            answer = parse_deepseek_chat_answer(result.text)
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise HTTPException(
+                status_code=502,
+                detail="LLM provider returned an invalid answer",
+            ) from error
+    else:
+        answer = result.text.strip()
     if not answer:
         raise HTTPException(status_code=502, detail="LLM provider returned an empty answer")
     return ChatResponse(

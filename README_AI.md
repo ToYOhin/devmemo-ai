@@ -28,7 +28,7 @@ browser-memory Context Packs.
 ## Start with Docker Compose
 
 ```powershell
-docker compose config
+docker compose config --quiet
 docker compose up -d --build
 ```
 
@@ -59,11 +59,20 @@ docker compose --profile ollama up -d ollama
 
 Use environment variables for provider configuration, never committed files:
 
-- `AI_PROVIDER=deterministic|openai|ollama`
+- `AI_PROVIDER=deterministic|openai|deepseek|ollama`
 - `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`
+- `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`
 - `OLLAMA_BASE_URL`, `OLLAMA_MODEL`
 - `AI_EMBEDDING_PROVIDER=deterministic|fastembed`
 - `AI_VECTOR_STORE=memory|qdrant`
+
+The DeepSeek adapter is explicit opt-in. It uses the OpenAI-compatible chat
+endpoint with non-thinking JSON mode, a 1,200-token output ceiling, and at most
+one retry for transport errors, HTTP 408/429, or server errors. The default
+model is `deepseek-v4-pro`; deterministic remains the default Provider. Run the
+synthetic, credential-safe procedure in
+[docs/deepseek-provider-smoke.md](docs/deepseek-provider-smoke.md) before using
+an external Provider with the Agent path.
 
 ## Webhook and public retrieval boundaries
 

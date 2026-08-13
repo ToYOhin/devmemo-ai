@@ -1,6 +1,6 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-12
+> Status date: 2026-08-13
 >
 > Product direction: a local-first, permission-aware RAG Agent for developer
 > memory.
@@ -15,8 +15,14 @@
 > browser AI paths behind the same-origin Memos BFF through PR #10 at
 > `39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3's dormant single-host
 > SQLite AgentRun persistence was squash-merged through PR #12 at
-> `571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4 adds a dormant bounded
-> runner/runtime, but no route, worker, UI, configuration, or default change.
+> `571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4's dormant bounded
+> runner/runtime was squash-merged through PR #13 at
+> `9d7e508259e4b07d416751e9da0514d588a4424f`. Evidence Answer
+> demo polish and one-command local packaging followed through PR #14 at
+> `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7` and PR #15 at
+> `79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`. The current opt-in DeepSeek slice adds a
+> bounded non-thinking JSON adapter and synthetic real-endpoint smoke while
+> preserving deterministic as the default; it does not use real Memos.
 
 This document is the delivery authority for the Agent product line. The
 historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
@@ -552,9 +558,10 @@ contract and fixtures are merged at `0358fb120fd539a97d67b04c47787df0fa72c9ff`,
 and R7-I2's same-origin legacy BFF closure is merged at
 `39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3's dormant, single-host,
 derived-only SQLite adapter was squash-merged through PR #12 at
-`571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4 adds a dormant bounded
-runner/runtime over that adapter. It uses only caller-supplied content-free
-plans and injected authority, cancellation, and tool ports. A canonical plan
+`571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4's dormant bounded
+runner/runtime was squash-merged through PR #13 at
+`9d7e508259e4b07d416751e9da0514d588a4424f`. It uses only caller-supplied
+content-free plans and injected authority, cancellation, and tool ports. A canonical plan
 digest binds the accepted request to the complete step/tool sequence; it also
 checkpoints stable attempt keys, retry state, active-time accounting, and safe
 outcomes.
@@ -563,23 +570,32 @@ or cancellation failure discards uncommitted output. Persisted start/resume
 events count every actual tool delivery against the call budget; an interrupted
 attempt consumes its full attempt-time ceiling before replay. It remains
 unwired: there is no route, background worker, UI, configuration/default
-change, Memo write tool, external Provider, real data, or multi-instance behavior.
+change, Memo write tool, real data, or multi-instance behavior.
+
+PR #14 and PR #15 add the Evidence Answer demo polish and one-command local
+launcher on top of the deterministic path. The current DeepSeek slice adds an
+explicit opt-in provider adapter with non-thinking JSON output, a 1,200-token
+ceiling, one bounded transient retry, and a credential-safe synthetic smoke.
+That smoke reached the real external endpoint without real Memos or user data;
+it is not a production-provider, privacy, or deployment acceptance result.
 
 The ordered delivery route is:
 
-1. Preserve the completed same-origin BFF boundary for legacy
+1. Publish and close the bounded DeepSeek slice while preserving deterministic
+   as the default, environment-only credentials, and synthetic-only smoke.
+2. Preserve the completed same-origin BFF boundary for legacy
    insight/template/summary and Evidence Answer paths. Do not reopen direct
    browser-to-AI access.
-2. Review an authenticated same-origin AgentRun BFF as the next independent
+3. Review an authenticated same-origin AgentRun BFF as the next independent
    slice. It may select the dormant runtime but must preserve Memos-owned
    identity, visibility, source authority, bounded projections, and disabled
    defaults without adding a background job.
-3. Gate run/approval/timeline UI as a later independent slice after the BFF
+4. Gate run/approval/timeline UI as a later independent slice after the BFF
    contract and runtime recovery boundary are stable.
-4. Discuss real Providers, real user data, and multi-instance operation only
-   after the earlier gates have their own privacy, recovery, and security
-   evidence.
+5. Discuss real-user-data Provider rollout and multi-instance operation only
+   after the earlier gates have their own privacy, recovery, and security evidence.
 
-R6 does not authorize real user data, an external Provider, public AI ports, or
-multi-instance deployment. Encrypted transport and shared atomic
+The R6 release itself did not authorize real user data, an external Provider,
+public AI ports, or multi-instance deployment. The later bounded DeepSeek slice
+proves only an opt-in synthetic smoke. Encrypted transport and shared atomic
 replay/capability storage remain mandatory before any multi-instance claim.
