@@ -46,6 +46,10 @@ UI、环境变量、默认开关或产品 artifact 下载路径，并已通过 P
 `9d7e508259e4b07d416751e9da0514d588a4424f`。Evidence Answer 演示 UI 与一键本地演示包装随后分别
 通过 PR #14、PR #15 合并于 `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7`、
 `79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`。
+PR #16 的 DeepSeek opt-in Provider 已 squash merge 于
+`e9f21c55732f162dcde868e5aec7f6cbaee1302a`。后续 AgentRun BFF 切片新增默认关闭的
+same-origin create/status 路径：Memos 复核所选 Memo 的当前可见性，仅委托 task digest 与无正文 revision，
+AI Service 创建或读取 derived SQLite 中的 queued run；尚未接 worker、执行、approval/timeline/artifact API 或 UI。
 
 AI Service 另有显式 opt-in 的 bounded DeepSeek adapter：固定 non-thinking JSON mode、1,200 token
 上限，并只对 transport、408/429 与 5xx 最多安全重试一次。它已使用 synthetic evidence 完成真实 endpoint
@@ -278,9 +282,10 @@ Evidence Answer 与 legacy template/summary/insight 面板都只访问 same-orig
 1. **保持 R7 contract、persistence 与 runtime 边界：** 已具备 provider-neutral contract、deterministic
    sanitized fixture、dormant single-host SQLite persistence，以及仅通过注入端口运行的 bounded runtime；
    每次恢复和 tool commit 前重新检查 current authority，checkpoint 保持单事务与 fail-closed。
-2. **下一步独立评审 AgentRun BFF：** 浏览器继续只访问 same-origin Memos BFF；为 create/status/timeline/
-   approval metadata 设计认证、visibility 与严格响应投影，不发布 AI Service 宿主端口，也不启动 worker。
-3. **再拆分产品体验：** BFF contract 稳定后，独立评审 run/approval/timeline UI，
+2. **保持 AgentRun BFF 无正文：** create/status 已由 same-origin Memos BFF 认证并复核 visibility；
+   浏览器看不到 subject、task digest、source snapshot、AI Service 地址或 delegation secret。
+3. **再拆分执行与产品体验：** 独立评审 dispatch/worker 与 dormant runtime 的接线；稳定后再评审
+   run/approval/timeline/artifact UI，
    每一步都保留默认关闭、fail-closed 与可回滚边界。
 4. **最后讨论真实环境：** 真实 Provider、真实用户数据与多实例需分别完成隐私、备份恢复、加密 transport、
    shared atomic replay/capability storage 证明后才能进入。

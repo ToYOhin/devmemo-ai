@@ -40,6 +40,7 @@ from database import (
 )
 from llm import create_provider
 from app.adapters.agent_observability import BoundedInMemoryObservabilityAdapter
+from app.adapters.agent_run_store import AgentRunPersistenceError
 from app.adapters.chunk_state import SqliteChunkIndexStateStore
 from app.services.content_parser import parse_memo_content
 from app.services.embedding_factory import (
@@ -55,6 +56,15 @@ from app.services.agent_delegation import (
     INTERNAL_ANSWER_PATH,
     AgentDelegationError,
     AgentDelegationHeaders,
+    verify_agent_internal_request,
+)
+from app.services.agent_run_api import (
+    INTERNAL_AGENT_RUN_CREATE_PATH,
+    INTERNAL_AGENT_RUN_STATUS_PATH,
+    AgentRunAPI,
+    AgentRunAPIError,
+    parse_agent_run_create_request,
+    parse_agent_run_status_request,
 )
 from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
 from app.services.durable_rehydration_runtime import (
@@ -631,6 +641,81 @@ async def answer_delegated_agent_request(
         raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
     finally:
         record_answer_observation(recorder, outcome)
+
+
+@app.post(INTERNAL_AGENT_RUN_CREATE_PATH)
+async def create_agent_run(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Create one content-free queued AgentRun from a Memos-signed request."""
+
+    body = await raw_request.body()
+    _verify_agent_run_request(
+        raw_request.method,
+        raw_request.url.path,
+        body,
+        signature,
+        timestamp,
+    )
+    try:
+        return AgentRunAPI(database_path()).create(parse_agent_run_create_request(body))
+    except AgentRunAPIError as error:
+        raise HTTPException(status_code=400, detail="invalid AgentRun request") from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="invalid AgentRun request") from error
+    except AgentRunPersistenceError as error:
+        raise HTTPException(status_code=409, detail="AgentRun request conflicts") from error
+
+
+@app.post(INTERNAL_AGENT_RUN_STATUS_PATH)
+async def get_agent_run_status(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Return one creator-bound, content-free AgentRun status projection."""
+
+    body = await raw_request.body()
+    _verify_agent_run_request(
+        raw_request.method,
+        raw_request.url.path,
+        body,
+        signature,
+        timestamp,
+    )
+    try:
+        result = AgentRunAPI(database_path()).status(parse_agent_run_status_request(body))
+    except AgentRunAPIError as error:
+        raise HTTPException(status_code=400, detail="invalid AgentRun request") from error
+    except AgentRunPersistenceError as error:
+        raise HTTPException(status_code=503, detail="AgentRun service unavailable") from error
+    if result is None:
+        raise HTTPException(status_code=404, detail="AgentRun not found")
+    return result
+
+
+def _verify_agent_run_request(
+    method: str,
+    path: str,
+    body: bytes,
+    signature: str | None,
+    timestamp: str | None,
+) -> None:
+    if not settings.agent_enabled or settings.agent_internal_secret is None:
+        raise HTTPException(status_code=404, detail="not found")
+    try:
+        verify_agent_internal_request(
+            method,
+            path,
+            body,
+            AgentDelegationHeaders(signature or "", timestamp or ""),
+            settings.agent_internal_secret,
+            datetime.now(timezone.utc),
+        )
+    except AgentDelegationError as error:
+        raise HTTPException(status_code=401, detail="invalid Agent delegation") from error
 
 
 @app.post(INTERNAL_LIFECYCLE_PATH)

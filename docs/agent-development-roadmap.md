@@ -75,7 +75,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun remains unwired | The frozen contracts, single-host derived-only SQLite adapter, and dormant bounded runtime now cover atomic checkpoints, stable attempt keys, restart recovery, current-authority rechecks, cancellation, and finite step/call/time budgets; no route, worker, BFF, or UI selects them | Preserve the runtime boundary and separately review an authenticated same-origin AgentRun BFF before any UI composition |
+| P1 | R7 AgentRun product path is partial | An authenticated same-origin BFF now creates idempotent queued runs from caller-visible Memo revisions and returns creator-bound status; the bounded runtime remains dormant and no worker, execution route, approval/timeline/artifact API, or UI selects it | Keep the content-free BFF boundary; review execution dispatch and then UI composition as separate slices |
 
 ## Delivery rules
 
@@ -568,12 +568,13 @@ outcomes.
 Restart rechecks current authority before any attempt, and post-tool authority
 or cancellation failure discards uncommitted output. Persisted start/resume
 events count every actual tool delivery against the call budget; an interrupted
-attempt consumes its full attempt-time ceiling before replay. It remains
-unwired: there is no route, background worker, UI, configuration/default
-change, Memo write tool, real data, or multi-instance behavior.
+attempt consumes its full attempt-time ceiling before replay. The current
+default-disabled AgentRun BFF now creates content-free queued records and reads
+creator-bound status, but the runtime still has no execution dispatch,
+background worker, UI, Memo write tool, real data, or multi-instance behavior.
 
 PR #14 and PR #15 add the Evidence Answer demo polish and one-command local
-launcher on top of the deterministic path. The current DeepSeek slice adds an
+launcher on top of the deterministic path. PR #16 adds an
 explicit opt-in provider adapter with non-thinking JSON output, a 1,200-token
 ceiling, one bounded transient retry, and a credential-safe synthetic smoke.
 That smoke reached the real external endpoint without real Memos or user data;
@@ -581,17 +582,16 @@ it is not a production-provider, privacy, or deployment acceptance result.
 
 The ordered delivery route is:
 
-1. Publish and close the bounded DeepSeek slice while preserving deterministic
-   as the default, environment-only credentials, and synthetic-only smoke.
+1. Preserve the merged bounded DeepSeek slice with deterministic as the
+   default, environment-only credentials, and synthetic-only smoke.
 2. Preserve the completed same-origin BFF boundary for legacy
    insight/template/summary and Evidence Answer paths. Do not reopen direct
    browser-to-AI access.
-3. Review an authenticated same-origin AgentRun BFF as the next independent
-   slice. It may select the dormant runtime but must preserve Memos-owned
-   identity, visibility, source authority, bounded projections, and disabled
-   defaults without adding a background job.
-4. Gate run/approval/timeline UI as a later independent slice after the BFF
-   contract and runtime recovery boundary are stable.
+3. Close the authenticated same-origin AgentRun create/status BFF while
+   preserving Memos-owned identity, visibility, source authority, bounded
+   projections, and disabled defaults.
+4. Add one deterministic project-summary/resume-bullets execution path and a
+   minimal status/artifact UI before considering a general background worker.
 5. Discuss real-user-data Provider rollout and multi-instance operation only
    after the earlier gates have their own privacy, recovery, and security evidence.
 

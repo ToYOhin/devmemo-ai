@@ -90,6 +90,29 @@ def verify_delegated_request(
 ) -> DelegatedAnswerRequest:
     """Verify Memos delegation before parsing its caller-authorized UID scope."""
 
+    verify_agent_internal_request(
+        method,
+        path,
+        body,
+        headers,
+        secret,
+        now,
+        max_age_seconds,
+    )
+    return _parse_request(body)
+
+
+def verify_agent_internal_request(
+    method: str,
+    path: str,
+    body: bytes,
+    headers: AgentDelegationHeaders,
+    secret: str,
+    now: datetime,
+    max_age_seconds: int = 60,
+) -> None:
+    """Verify one signed internal request without assuming its JSON schema."""
+
     if not secret.strip() or max_age_seconds <= 0 or not headers.signature.startswith(SIGNATURE_PREFIX):
         raise AgentDelegationError("invalid Agent delegation")
     try:
@@ -104,7 +127,6 @@ def verify_delegated_request(
     expected = sign_delegated_request(method, path, body, issued_at, secret)
     if not hmac.compare_digest(expected.signature, headers.signature):
         raise AgentDelegationError("invalid Agent delegation")
-    return _parse_request(body)
 
 
 def _canonical_request(method: str, path: str, timestamp: str, body: bytes) -> bytes:

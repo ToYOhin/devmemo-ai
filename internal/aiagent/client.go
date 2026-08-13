@@ -24,6 +24,8 @@ var (
 	ErrProviderFailed  = errors.New("agent provider unavailable")
 	ErrInvalidResponse = errors.New("invalid agent service response")
 	ErrInvalidConfig   = errors.New("invalid agent configuration")
+	ErrConflict        = errors.New("agent request conflicts")
+	ErrNotFound        = errors.New("agent run not found")
 )
 
 // Config is the Memos-side, local-first Agent composition. It is disabled by default.

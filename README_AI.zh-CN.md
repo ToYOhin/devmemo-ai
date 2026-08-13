@@ -94,6 +94,10 @@ Memo、prompt/context、embedding、身份、可见性数据或 secret。
 仍需用户显式提交。结果区域会显示终态、每个已完成 Agent step 和受限引用，因此无需外部
 Provider 也能直观展示 deterministic 只读 Agent 流程。
 
+同一默认关闭的 overlay 也提供已认证的同源 AgentRun create/status API。当前只持久化与调用者
+可见 Memo revision 绑定的无正文 queued run；尚未包含 worker、任务执行、approval/timeline UI、
+artifact 下载或原始 task 持久化。
+
 生命周期 event/outbox/ledger 当前仍是 dormant 契约和集成证明，尚未接入 Memo CRUD、
 dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 rollout 前应先阅读
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
