@@ -55,7 +55,7 @@ Agent，而不是通用自治助手：
 | P1 | Evaluation 仍以 synthetic 数据为主 | 64-case corpus 与 threshold 可复现，但不代表真实用户或外部 Provider 表现 | 保留固定脱敏测试集；只有经过独立隐私与迁移评审后才引入代表性数据 |
 | P1 | 运维 authority 不完整 | request/provider observation 已存在，但 oldest-pending lag、跨进程 rebuild state 与 reconciliation ownership 不权威 | 增加 oldest-pending query、已评审 shared rebuild authority 与 dedicated reconciliation owner，禁止推断状态 |
 | P1 | AI Service 边界仍集中 | Ruff、mypy、branch coverage 与定向测试已成为门禁，但大型 routing/storage/Agent 模块仍较难审查 | 保留既有质量门禁，并在后续切片触及时逐步提取 domain/service 边界 |
-| P1 | R7 AgentRun 产品路径仍不完整 | 认证同源 BFF 现可从调用者可见的 Memo revision 创建幂等 `project_summary` queued run，并返回绑定创建者的 status；bounded runtime 仍 dormant，尚无 worker、执行 route、approval/timeline/artifact API 或 UI 选择它 | 保持无正文 BFF 边界；先增加 deterministic 同步执行与最小 artifact UI，再评审 worker |
+| P1 | R7 AgentRun 产品路径保持有意受限 | 认证同源路径现可从调用者可见的 Memo revision 同步执行固定 `project_summary`，并向创建者返回 Markdown artifact；尚无 background worker、approval、Memo write、通用 task prompt 或多实例主张 | 保持固定 deterministic 演示与签名正文边界；worker、approval 或更宽任务模型必须另行评审 |
 
 ## 交付规则
 
@@ -397,10 +397,10 @@ retry，以及不落盘凭据的 synthetic smoke。该 smoke 已访问真实外�
 1. 保持已合并的 bounded DeepSeek 切片及 deterministic 默认值、仅环境变量凭据与 synthetic-only smoke。
 2. 保持已完成的 legacy insight/template/summary 与 Evidence Answer 同源 BFF 边界，不得恢复
    browser-to-AI 直连。
-3. 收口认证同源 AgentRun create/status BFF，同时保持 Memos-owned identity、visibility、source authority、
+3. 保持认证同源 AgentRun create/status BFF，同时保持 Memos-owned identity、visibility、source authority、
    有限投影和默认关闭。
-4. 在考虑通用 background worker 前，先增加一条 deterministic `project_summary` 同步执行路径与
-   最小 status/artifact UI。
+4. 保持 deterministic `project_summary` 同步执行与最小 Markdown artifact UI；通用 background worker
+   必须作为后续独立切片评审。
 5. 只有前述门禁分别获得隐私、恢复和安全证据后，才讨论真实用户数据 Provider rollout 与多实例。
 
 R6 release 本身不授权真实用户数据、外部 Provider、公开 AI 端口或多实例部署；后续 bounded DeepSeek

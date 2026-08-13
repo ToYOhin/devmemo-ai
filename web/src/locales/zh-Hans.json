@@ -55,6 +55,28 @@
     "error-auth": "请重新登录后使用证据回答。",
     "error-failed": "证据回答暂时不可用。"
   },
+  "ai-agent-run": {
+    "title": "生成项目成果",
+    "description": "把当前 Memo 转成有边界、可下载的本地草稿。",
+    "local-draft": "本地草稿",
+    "task-project_summary": "项目总结",
+    "task-project_summary-description": "把笔记整理为带证据来源的精简项目概述。",
+    "progress": "AgentRun 进度",
+    "step-source": "当前 Memo",
+    "step-runtime": "有限执行",
+    "step-artifact": "Markdown",
+    "step-ready": "就绪",
+    "step-running": "执行中",
+    "step-waiting": "等待中",
+    "run": "生成草稿",
+    "running": "正在生成草稿…",
+    "artifact-ready": "草稿已生成",
+    "download": "下载 Markdown",
+    "error-unavailable": "此实例未启用 AgentRun。",
+    "error-auth": "请重新登录后生成草稿。",
+    "error-invalid": "当前 Memo 无法用于所选草稿。",
+    "error-failed": "有限执行未完成，请重试。"
+  },
   "ai-context-pack": {
     "insights-unavailable": "部分已选 Memo 的 insight 当前不可用，已从上下文包排除。",
     "title": "开发上下文包",

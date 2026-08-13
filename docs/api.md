@@ -23,22 +23,25 @@ and Provider failures become fixed 503/502 errors without raw exception text.
 The A4 lifecycle outbox/ledger remains dormant and is not connected to Memo
 CRUD, this route, a dispatcher, a worker, or automatic indexing.
 
-## Experimental project-summary AgentRun create and status BFF
+## Experimental project-summary AgentRun execution and artifact BFF
 
-When `AI_AGENT_ENABLED=true`, authenticated browsers may create a queued run
+When `AI_AGENT_ENABLED=true`, authenticated browsers may create and
+synchronously execute a run
 with `POST /api/ai/agent/runs` using only the exact
 `task_kind=project_summary`, `request_key`, and one to ten `memo_uids`, then
-read its safe status with `GET /api/ai/agent/runs/:runID`. Unknown fields and
-other task kinds are rejected. Memos rechecks every selected Memo against the
-caller's current visibility and sends the AI Service only an opaque subject,
-task-kind digest, idempotency digest, and content-free source revisions over
-signed internal requests. The browser response exposes only run ID, status,
-timestamps, event sequence, source count, and terminal reason.
+read its safe status with `GET /api/ai/agent/runs/:runID` or its derived
+Markdown with `GET /api/ai/agent/runs/:runID/artifact`. Unknown fields and other
+task kinds are rejected. Memos rechecks every selected Memo against the caller's
+current visibility. It creates the run using only opaque digests and content-free
+source revisions, then sends the authorized source content to the bounded runtime
+over a separate signed internal request. The browser status exposes only run ID,
+status, timestamps, event sequence, source count, terminal reason, and artifact ID.
 
-This slice creates and reads derived SQLite records only. It does not execute a
-run, start a worker, expose task or Memo content, add approval/timeline/artifact
-routes, or add UI. The routes remain absent under the default-disabled Agent
-configuration.
+The deterministic runtime writes a derived Markdown artifact to local SQLite and
+the same-origin artifact route returns its filename, media type, Markdown, and
+digest to the authenticated creator. It does not start a worker, persist a
+free-form task, write back to a Memo, or add approval flow or multi-instance
+claims. All routes remain absent under the default-disabled Agent configuration.
 
 R5-I1 through R5-I7 do not add a public or internal runtime endpoint. The fixed
 `/internal/ai/agent/evidence/rehydrate` path currently exists only as an

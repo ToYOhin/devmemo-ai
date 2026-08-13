@@ -92,6 +92,33 @@ export class AiEvidenceAnswerRequestError extends Error {
   }
 }
 
+export type AiAgentRunTaskKind = "project_summary";
+
+export interface AiAgentRunStatus {
+  run_id: string;
+  status: "queued" | "running" | "waiting_approval" | "succeeded" | "failed" | "cancelled";
+  created_at: string;
+  updated_at: string;
+  last_event_seq: number;
+  source_count: number;
+  terminal_reason: string | null;
+  artifact_id: string | null;
+}
+
+export interface AiAgentRunArtifact {
+  artifact_id: string;
+  file_name: string;
+  media_type: "text/markdown";
+  markdown: string;
+  digest: string;
+}
+
+export class AiAgentRunRequestError extends Error {
+  constructor(public readonly status: number | null) {
+    super("AgentRun request failed");
+  }
+}
+
 export const getAiBffBasePath = (): string => {
   const configuredUrl = import.meta.env.VITE_AI_SERVICE_URL?.trim();
   return configuredUrl ? "/api/ai" : "";
@@ -210,6 +237,40 @@ export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null =
     citations: citations as AiEvidenceCitation[],
     trace: { terminal_state: terminalState, steps: steps as AiEvidenceTraceStep[] },
   };
+};
+
+export const parseAiAgentRunStatus = (value: unknown): AiAgentRunStatus | null => {
+  const keys = ["run_id", "status", "created_at", "updated_at", "last_event_seq", "source_count", "terminal_reason", "artifact_id"];
+  if (!isRecord(value) || !hasExactKeys(value, keys)) return null;
+  const statuses = ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"];
+  if (
+    typeof value.run_id !== "string" ||
+    typeof value.status !== "string" ||
+    !statuses.includes(value.status) ||
+    typeof value.created_at !== "string" ||
+    typeof value.updated_at !== "string" ||
+    !Number.isInteger(value.last_event_seq) ||
+    !Number.isInteger(value.source_count) ||
+    (value.terminal_reason !== null && typeof value.terminal_reason !== "string") ||
+    (value.artifact_id !== null && typeof value.artifact_id !== "string")
+  ) {
+    return null;
+  }
+  return value as unknown as AiAgentRunStatus;
+};
+
+export const parseAiAgentRunArtifact = (value: unknown): AiAgentRunArtifact | null => {
+  if (!isRecord(value) || !hasExactKeys(value, ["artifact_id", "file_name", "media_type", "markdown", "digest"])) return null;
+  if (
+    typeof value.artifact_id !== "string" ||
+    typeof value.file_name !== "string" ||
+    value.media_type !== "text/markdown" ||
+    typeof value.markdown !== "string" ||
+    typeof value.digest !== "string"
+  ) {
+    return null;
+  }
+  return value as unknown as AiAgentRunArtifact;
 };
 
 export const parseAiMemoNote = (value: unknown): AiMemoNote | null => {
@@ -428,4 +489,33 @@ export async function requestAiEvidenceAnswer(question: string, limit: number, s
   const answer = parseAiEvidenceAnswer(await response.json());
   if (!answer) throw new AiEvidenceAnswerRequestError(null);
   return answer;
+}
+
+export async function requestAiAgentRun(
+  taskKind: AiAgentRunTaskKind,
+  requestKey: string,
+  memoUIDs: string[],
+  signal?: AbortSignal,
+): Promise<AiAgentRunStatus> {
+  const response = await fetch("/api/ai/agent/runs", {
+    method: "POST",
+    headers: aiBffHeaders(true),
+    body: JSON.stringify({ task_kind: taskKind, request_key: requestKey, memo_uids: memoUIDs }),
+    signal,
+  });
+  if (!response.ok) throw new AiAgentRunRequestError(response.status);
+  const status = parseAiAgentRunStatus(await response.json());
+  if (!status) throw new AiAgentRunRequestError(null);
+  return status;
+}
+
+export async function requestAiAgentRunArtifact(runID: string, signal?: AbortSignal): Promise<AiAgentRunArtifact> {
+  const response = await fetch(`/api/ai/agent/runs/${encodeURIComponent(runID)}/artifact`, {
+    headers: aiBffHeaders(),
+    signal,
+  });
+  if (!response.ok) throw new AiAgentRunRequestError(response.status);
+  const artifact = parseAiAgentRunArtifact(await response.json());
+  if (!artifact) throw new AiAgentRunRequestError(null);
+  return artifact;
 }

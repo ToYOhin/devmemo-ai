@@ -94,10 +94,11 @@ Memo、prompt/context、embedding、身份、可见性数据或 secret。
 仍需用户显式提交。结果区域会显示终态、每个已完成 Agent step 和受限引用，因此无需外部
 Provider 也能直观展示 deterministic 只读 Agent 流程。
 
-同一默认关闭的 overlay 也提供已认证的同源 AgentRun create/status API。当前只持久化与调用者
-可见 Memo revision 绑定的无正文 queued run。浏览器契约只接受固定
-`task_kind=project_summary`，不接受或持久化自由文本 task；尚未包含 worker、任务执行、
-approval/timeline UI 或 artifact 下载。
+同一默认关闭的 overlay 也提供已认证的同源 AgentRun create/status API 与 deterministic
+`project_summary` 演示。在 Memo 详情页运行这一固定任务后，系统会同步经过 bounded runtime，
+生成可预览、可下载的 Markdown artifact。Memos 会重新检查 visibility，只通过已签名 internal
+request 发送所选正文；AI Service 在本地持久化派生 artifact，但不保存自由文本 task。当前不包含
+background worker、approval、Memo write 或多实例主张。
 
 生命周期 event/outbox/ledger 当前仍是 dormant 契约和集成证明，尚未接入 Memo CRUD、
 dispatcher、worker、自动索引、Qdrant 或默认 Compose。任何运行时 rollout 前应先阅读

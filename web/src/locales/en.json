@@ -64,6 +64,28 @@
     "error-auth": "Sign in again to use Evidence Answer.",
     "error-failed": "Evidence Answer is temporarily unavailable."
   },
+  "ai-agent-run": {
+    "title": "Build a project artifact",
+    "description": "Turn this Memo into a bounded, downloadable local draft.",
+    "local-draft": "Local draft",
+    "task-project_summary": "Project summary",
+    "task-project_summary-description": "Structure the note as a concise project overview with evidence.",
+    "progress": "AgentRun progress",
+    "step-source": "Current Memo",
+    "step-runtime": "Bounded run",
+    "step-artifact": "Markdown",
+    "step-ready": "Ready",
+    "step-running": "Running",
+    "step-waiting": "Waiting",
+    "run": "Build draft",
+    "running": "Building draft...",
+    "artifact-ready": "Draft ready",
+    "download": "Download Markdown",
+    "error-unavailable": "AgentRun is not enabled on this instance.",
+    "error-auth": "Sign in again to build a draft.",
+    "error-invalid": "This Memo cannot be used for the selected draft.",
+    "error-failed": "The bounded run did not finish. Try again."
+  },
   "ai-insights": {
     "title": "AI Inbox",
     "review": "Reviewable memory",

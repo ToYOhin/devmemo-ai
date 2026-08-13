@@ -116,11 +116,13 @@ to its bounded citations, which makes the deterministic read-only flow easy to
 demonstrate without an external Provider.
 
 The same default-disabled overlay also exposes authenticated same-origin
-AgentRun create/status APIs. They persist only a queued, content-free run bound
-to currently visible Memo revisions. The browser contract accepts only the
-fixed `task_kind=project_summary`; it does not accept or persist a free-form
-task. No worker, run execution, approval or timeline UI, or artifact download
-is included yet.
+AgentRun create/status APIs and a deterministic `project_summary` demo. From a
+Memo detail page, the fixed task synchronously exercises the bounded runtime and
+produces a previewable, downloadable Markdown artifact. Memos rechecks
+visibility and sends the selected content only over the signed internal request;
+AI Service persists the derived Markdown artifact locally but not a free-form
+task. No background worker, approval flow, Memo write, or multi-instance claim
+is included.
 
 The lifecycle event/outbox/ledger work is currently a dormant contract and
 integration proof. It is not wired to Memo CRUD, a dispatcher, a worker,

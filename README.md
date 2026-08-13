@@ -36,10 +36,10 @@ subsequent tool.
 - Offer an experimental, read-only Evidence Answer entry through the Memos BFF.
   It is disabled by default and returns only bounded answers, server-owned
   citations, and a redacted execution trace.
-- Stage a fixed `project_summary` AgentRun through a default-disabled,
+- Run a fixed `project_summary` AgentRun through a default-disabled,
   authenticated same-origin BFF. Memos resolves one to ten visible Memo
-  revisions before AI Service creates a content-free queued run and exposes
-  creator-bound status.
+  revisions before AI Service synchronously executes the bounded deterministic
+  plan and returns a creator-bound Markdown artifact.
 
 ## Architecture and data boundaries
 
@@ -115,8 +115,10 @@ AI_AGENT_ENABLED=false
 - The Evidence Answer Agent remains an opt-in experiment. The reviewed R6
   baseline is published at `v0.2.0`; later R7 slices add frozen AgentRun
   contracts, single-host derived-only SQLite persistence, a bounded runtime,
-  and authenticated create/status BFF routes for the fixed `project_summary`
-  task kind. Execution, artifacts, a worker, and UI remain separate slices.
+  and authenticated execution/artifact BFF routes for the fixed
+  `project_summary` task kind. The Memo detail UI can preview or download the
+  Markdown artifact; a worker, approval flow, Memo write, and multi-instance
+  operation remain separate slices.
 - A bounded DeepSeek adapter is available only through explicit configuration.
   Deterministic remains the default; the external endpoint smoke uses synthetic
   evidence and does not establish real-Memo or production deployment readiness.

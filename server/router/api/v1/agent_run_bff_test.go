@@ -19,8 +19,10 @@ import (
 
 type recordingAgentRunExecutor struct {
 	created   aiagent.DelegatedAgentRunCreateRequest
+	executed  aiagent.AgentRunExecuteRequest
 	status    aiagent.AgentRunStatusRequest
 	result    aiagent.AgentRunStatusResponse
+	artifact  aiagent.AgentRunArtifactResponse
 	createErr error
 	statusErr error
 	calls     int
@@ -36,6 +38,18 @@ func (e *recordingAgentRunExecutor) GetRun(_ context.Context, request aiagent.Ag
 	e.calls++
 	e.status = request
 	return e.result, e.statusErr
+}
+
+func (e *recordingAgentRunExecutor) ExecuteRun(_ context.Context, request aiagent.AgentRunExecuteRequest) (aiagent.AgentRunStatusResponse, error) {
+	e.calls++
+	e.executed = request
+	return e.result, nil
+}
+
+func (e *recordingAgentRunExecutor) GetArtifact(_ context.Context, request aiagent.AgentRunStatusRequest) (aiagent.AgentRunArtifactResponse, error) {
+	e.calls++
+	e.status = request
+	return e.artifact, nil
 }
 
 func TestAgentRunBFFCreatesContentFreeVisibleScope(t *testing.T) {
@@ -60,14 +74,18 @@ func TestAgentRunBFFCreatesContentFreeVisibleScope(t *testing.T) {
 	echoServer.ServeHTTP(response, request)
 
 	require.Equal(t, http.StatusOK, response.Code)
-	require.Equal(t, 1, executor.calls)
+	require.Equal(t, 2, executor.calls)
 	require.Equal(t, "user-"+formatAgentUserID(caller.ID), executor.created.SubjectID)
 	require.Equal(t, digestHex(agentRunTaskProjectSummary), executor.created.RequestDigest)
 	require.Len(t, executor.created.SourceSnapshot, 2)
+	require.Equal(t, "project_summary", executor.executed.TaskKind)
+	require.Equal(t, executor.result.RunID, executor.executed.RunID)
+	require.Len(t, executor.executed.Sources, 2)
 	require.NotContains(t, response.Body.String(), "subject_id")
 	require.NotContains(t, response.Body.String(), "request_digest")
 	require.NotContains(t, response.Body.String(), "source_snapshot")
 	require.NotContains(t, response.Body.String(), "project_summary")
+	require.NotContains(t, response.Body.String(), "content")
 }
 
 func TestAgentRunBFFRejectsInvisibleMemo(t *testing.T) {
@@ -196,6 +214,33 @@ func TestAgentRunBFFIsAbsentWhenDisabled(t *testing.T) {
 	echoServer.ServeHTTP(response, request)
 
 	require.Equal(t, http.StatusNotFound, response.Code)
+}
+
+func TestAgentRunBFFArtifactUsesAuthenticatedSubject(t *testing.T) {
+	ctx := context.Background()
+	testStore := teststore.NewTestingStore(ctx, t)
+	t.Cleanup(func() { _ = testStore.Close() })
+	service := &APIV1Service{Store: testStore, Secret: "test-secret"}
+	caller := createAgentVisibilityUser(ctx, t, testStore, "agent-run-artifact-caller")
+	executor := &recordingAgentRunExecutor{artifact: aiagent.AgentRunArtifactResponse{
+		ArtifactID: "artifact-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		FileName:   "project-summary.md",
+		MediaType:  "text/markdown",
+		Markdown:   "# Project summary\n",
+		Digest:     strings.Repeat("a", 64),
+	}}
+	echoServer := echo.New()
+	service.registerAgentRunRoutes(echoServer, aiagent.Config{Enabled: true}, executor)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/ai/agent/runs/run-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/artifact", http.NoBody)
+	request.Header.Set("Authorization", bearerToken(t, caller))
+	response := httptest.NewRecorder()
+	echoServer.ServeHTTP(response, request)
+
+	require.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, "user-"+formatAgentUserID(caller.ID), executor.status.SubjectID)
+	require.Contains(t, response.Body.String(), "project-summary.md")
+	require.NotContains(t, response.Body.String(), "subject_id")
 }
 
 func validAgentRunStatus() aiagent.AgentRunStatusResponse {

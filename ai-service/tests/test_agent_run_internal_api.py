@@ -75,6 +75,7 @@ def test_internal_agent_run_create_is_idempotent_and_content_free(monkeypatch, t
         "last_event_seq": 0,
         "source_count": 1,
         "terminal_reason": None,
+        "artifact_id": None,
     }
     stored = database.read_bytes()
     assert b"private task text" not in stored

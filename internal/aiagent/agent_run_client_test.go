@@ -99,6 +99,50 @@ func TestAgentRunClientMapsAIServiceStatus(t *testing.T) {
 	}
 }
 
+func TestAgentRunClientExecutesAuthorizedSourcesAndReadsMarkdown(t *testing.T) {
+	config := Config{Enabled: true, InternalURL: "http://ai-service:8000", Secret: "test-agent-secret"}
+	client, err := NewClient(config)
+	require.NoError(t, err)
+	now := time.Date(2026, time.August, 13, 8, 0, 0, 0, time.UTC)
+	client.now = func() time.Time { return now }
+	client.doer = testHTTPDoer(func(request *http.Request) (*http.Response, error) {
+		body, readErr := io.ReadAll(request.Body)
+		require.NoError(t, readErr)
+		require.NoError(t, VerifyRequest(request.Method, request.URL.Path, body, SignedHeaders{
+			Signature: request.Header.Get(SignatureHeader),
+			Timestamp: request.Header.Get(TimestampHeader),
+		}, now, time.Minute, config.Secret))
+		if request.URL.Path == InternalAgentRunExecutePath {
+			require.Contains(t, string(body), `"task_kind":"project_summary"`)
+			require.Contains(t, string(body), "authorized Memo content")
+			return jsonResponse(http.StatusOK, strings.Replace(validAgentRunJSON(), `"terminal_reason":null`, `"terminal_reason":null,"artifact_id":"artifact-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, 1)), nil
+		}
+		require.Equal(t, InternalAgentRunArtifactPath, request.URL.Path)
+		return jsonResponse(http.StatusOK, `{"artifact_id":"artifact-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","file_name":"project-summary.md","media_type":"text/markdown","markdown":"# Project summary\n","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`), nil
+	})
+
+	status, err := client.ExecuteRun(context.Background(), AgentRunExecuteRequest{
+		SubjectID: "user-1",
+		RunID:     "run-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		TaskKind:  "project_summary",
+		Sources: []AgentRunExecutionSource{{
+			SourceID: "memo-72756e2d61",
+			Revision: "rev-1700000000",
+			Content:  "authorized Memo content",
+		}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, status.ArtifactID)
+
+	artifact, err := client.GetArtifact(context.Background(), AgentRunStatusRequest{
+		SubjectID: "user-1",
+		RunID:     "run-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "project-summary.md", artifact.FileName)
+	require.Equal(t, "# Project summary\n", artifact.Markdown)
+}
+
 func validDelegatedAgentRunCreateRequest() DelegatedAgentRunCreateRequest {
 	return DelegatedAgentRunCreateRequest{
 		SubjectID:     "user-1",

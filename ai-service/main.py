@@ -40,6 +40,7 @@ from database import (
 )
 from llm import create_provider
 from app.adapters.agent_observability import BoundedInMemoryObservabilityAdapter
+from app.adapters.agent_run_artifact_store import AgentRunArtifactStoreError
 from app.adapters.agent_run_store import AgentRunPersistenceError
 from app.adapters.chunk_state import SqliteChunkIndexStateStore
 from app.services.content_parser import parse_memo_content
@@ -66,6 +67,13 @@ from app.services.agent_run_api import (
     parse_agent_run_create_request,
     parse_agent_run_status_request,
 )
+from app.services.agent_run_demo_api import (
+    INTERNAL_AGENT_RUN_ARTIFACT_PATH,
+    INTERNAL_AGENT_RUN_EXECUTE_PATH,
+    AgentRunDemoAPI,
+    AgentRunDemoAPIError,
+)
+from app.services.agent_run_runtime import AgentRunRuntimeError
 from app.services.evidence_answer_agent import AgentProviderError, EvidenceAnswerAgent
 from app.services.durable_rehydration_runtime import (
     build_durable_rehydration_orchestrator,
@@ -693,6 +701,45 @@ async def get_agent_run_status(
         raise HTTPException(status_code=503, detail="AgentRun service unavailable") from error
     if result is None:
         raise HTTPException(status_code=404, detail="AgentRun not found")
+    return result
+
+
+@app.post(INTERNAL_AGENT_RUN_EXECUTE_PATH)
+async def execute_agent_run(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Synchronously execute one bounded deterministic AgentRun demo preset."""
+
+    body = await raw_request.body()
+    _verify_agent_run_request(raw_request.method, raw_request.url.path, body, signature, timestamp)
+    try:
+        return await AgentRunDemoAPI(database_path()).execute(body)
+    except (AgentRunDemoAPIError, ValueError) as error:
+        raise HTTPException(status_code=400, detail="invalid AgentRun demo request") from error
+    except (AgentRunPersistenceError, AgentRunArtifactStoreError, AgentRunRuntimeError) as error:
+        raise HTTPException(status_code=503, detail="AgentRun service unavailable") from error
+
+
+@app.post(INTERNAL_AGENT_RUN_ARTIFACT_PATH)
+async def get_agent_run_artifact(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Return one creator-bound Markdown artifact through the internal boundary."""
+
+    body = await raw_request.body()
+    _verify_agent_run_request(raw_request.method, raw_request.url.path, body, signature, timestamp)
+    try:
+        result = AgentRunDemoAPI(database_path()).artifact(body)
+    except AgentRunDemoAPIError as error:
+        raise HTTPException(status_code=400, detail="invalid AgentRun artifact request") from error
+    except (AgentRunPersistenceError, AgentRunArtifactStoreError) as error:
+        raise HTTPException(status_code=503, detail="AgentRun service unavailable") from error
+    if result is None:
+        raise HTTPException(status_code=404, detail="AgentRun artifact not found")
     return result
 
 

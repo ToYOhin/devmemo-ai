@@ -76,7 +76,7 @@ answers, measurable quality, and reproducible recovery**.
 | P1 | Evaluation remains synthetic | The 64-case corpus and thresholds are reproducible, but they do not represent real-user or external-Provider performance | Preserve the sanitized fixed suite; add representative data only under a separate privacy and migration review |
 | P1 | Operational authority is incomplete | Request/provider observations exist, but oldest-pending lag, cross-process rebuild state, and reconciliation ownership are not authoritative | Add an oldest-pending query, reviewed shared rebuild authority, and a dedicated reconciliation owner without inferring state |
 | P1 | AI Service boundaries remain concentrated | Ruff, mypy, branch coverage, and focused tests now gate changes, but large routing/storage/Agent modules remain harder to review | Extract domain/service boundaries incrementally while preserving the established quality gates |
-| P1 | R7 AgentRun product path is partial | An authenticated same-origin BFF now creates idempotent `project_summary` queued runs from caller-visible Memo revisions and returns creator-bound status; the bounded runtime remains dormant and no worker, execution route, approval/timeline/artifact API, or UI selects it | Keep the content-free BFF boundary; add deterministic synchronous execution and minimal artifact UI before reviewing a worker |
+| P1 | R7 AgentRun product path remains intentionally bounded | The authenticated same-origin path now runs fixed `project_summary` tasks synchronously from caller-visible Memo revisions and returns a creator-bound Markdown artifact; it has no background worker, approval flow, Memo write, general task prompt, or multi-instance claim | Preserve the fixed deterministic demo and signed content boundary; review any worker, approval flow, or broader task model as a separate slice |
 
 ## Delivery rules
 
@@ -588,11 +588,12 @@ The ordered delivery route is:
 2. Preserve the completed same-origin BFF boundary for legacy
    insight/template/summary and Evidence Answer paths. Do not reopen direct
    browser-to-AI access.
-3. Close the authenticated same-origin AgentRun create/status BFF while
+3. Preserve the authenticated same-origin AgentRun create/status BFF while
    preserving Memos-owned identity, visibility, source authority, bounded
    projections, and disabled defaults.
-4. Add one deterministic `project_summary` synchronous execution path and a
-   minimal status/artifact UI before considering a general background worker.
+4. Preserve the deterministic `project_summary` synchronous execution and
+   minimal Markdown artifact UI; consider a general background worker only as
+   a separate reviewed slice.
 5. Discuss real-user-data Provider rollout and multi-instance operation only
    after the earlier gates have their own privacy, recovery, and security evidence.
 
