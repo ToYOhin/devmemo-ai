@@ -42,6 +42,7 @@ if ($Action -eq "stop") {
 $managedEnvironment = @(
   "AI_AGENT_ENABLED",
   "AI_AGENT_INTERNAL_SECRET",
+  "AI_AGENT_PROVIDER_MASTER_KEY",
   "AI_INDEX_ON_WEBHOOK",
   "AI_PROVIDER",
   "AI_EMBEDDING_PROVIDER",
@@ -65,6 +66,25 @@ try {
   }
 
   $env:AI_AGENT_INTERNAL_SECRET = [Convert]::ToBase64String($secretBytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+  $providerMasterKey = $previousEnvironment["AI_AGENT_PROVIDER_MASTER_KEY"]
+  if ([string]::IsNullOrWhiteSpace($providerMasterKey)) {
+    $providerKeyDirectory = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "DevMemoAI"
+    $providerKeyPath = Join-Path $providerKeyDirectory "agent-provider-master-key"
+    if (Test-Path -LiteralPath $providerKeyPath) {
+      $providerMasterKey = [IO.File]::ReadAllText($providerKeyPath).Trim()
+    }
+    else {
+      $providerKeyBytes = [byte[]]::new(32)
+      [Security.Cryptography.RandomNumberGenerator]::Fill($providerKeyBytes)
+      $providerMasterKey = [Convert]::ToBase64String($providerKeyBytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+      [IO.Directory]::CreateDirectory($providerKeyDirectory) | Out-Null
+      [IO.File]::WriteAllText($providerKeyPath, $providerMasterKey)
+    }
+  }
+  if ($providerMasterKey -notmatch '^[A-Za-z0-9_-]{43}$') {
+    throw "AI_AGENT_PROVIDER_MASTER_KEY must be an unpadded base64url 32-byte secret."
+  }
+  $env:AI_AGENT_PROVIDER_MASTER_KEY = $providerMasterKey
   $env:AI_AGENT_ENABLED = "true"
   $env:AI_INDEX_ON_WEBHOOK = "true"
   $env:AI_PROVIDER = "deterministic"

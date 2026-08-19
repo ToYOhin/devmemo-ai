@@ -10,7 +10,7 @@ from app.adapters.agent_run_store import SQLiteAgentRunStore
 from app.domain.agent_run import ArtifactStatus
 from app.services.agent_run_api import project_agent_run
 from app.services.agent_run_demo import AgentRunDemoExecutor, AgentRunDemoRequest
-from app.services.agent_run_report import ALLOWED_DEMO_TASKS, ReportSource
+from app.services.agent_run_report import ALLOWED_DEMO_TASKS, ReportProvider, ReportSource
 
 
 INTERNAL_AGENT_RUN_EXECUTE_PATH = "/internal/ai/agent/runs/execute"
@@ -24,10 +24,11 @@ class AgentRunDemoAPIError(ValueError):
 
 
 class AgentRunDemoAPI:
-    def __init__(self, database: str | Path) -> None:
+    def __init__(self, database: str | Path, *, provider: ReportProvider | None = None) -> None:
         self._database = database
         self._runs = SQLiteAgentRunStore(database)
         self._artifacts = SQLiteAgentRunArtifactStore(database)
+        self._provider = provider
 
     async def execute(self, body: bytes) -> dict[str, object]:
         payload = _exact_object(body)
@@ -49,7 +50,10 @@ class AgentRunDemoAPI:
             if not source.content.strip() or len(source.content) > MAX_SOURCE_CONTENT_CHARS:
                 raise AgentRunDemoAPIError("invalid AgentRun demo request")
             sources.append(source)
-        snapshot = await AgentRunDemoExecutor(self._database).execute(
+        snapshot = await AgentRunDemoExecutor(
+            self._database,
+            provider=self._provider,
+        ).execute(
             AgentRunDemoRequest(
                 subject_id=_string(payload, "subject_id"),
                 run_id=_string(payload, "run_id"),

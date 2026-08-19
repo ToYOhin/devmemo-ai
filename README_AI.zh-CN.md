@@ -50,7 +50,7 @@ docker compose --profile ollama up -d ollama
 - FastEmbed 是可选 CPU embedding provider，可能下载模型数据。
 - Ollama 是可选本地模型运行时；Compose 固定到显式上游版本。
 
-provider 配置应通过环境变量注入，不能提交到仓库：
+环境变量仍是旧 AI 路由和无界面部署的启动回退配置，不能提交到仓库：
 
 - `AI_PROVIDER=deterministic|openai|deepseek|ollama`
 - `OPENAI_API_KEY`、`OPENAI_MODEL`、`OPENAI_BASE_URL`
@@ -64,6 +64,27 @@ DeepSeek adapter 仅在显式选择时启用。它通过 OpenAI-compatible chat 
 服务端错误最多重试一次。默认模型为 `deepseek-v4-pro`；默认 Provider 仍是 deterministic。
 在 Agent 路径使用外部 Provider 前，请先执行
 [DeepSeek Provider 合成 smoke](docs/deepseek-provider-smoke.zh-CN.md) 中不会持久化凭据的步骤。
+
+### 管理员配置 Agent Provider
+
+显式启用默认关闭的 Agent overlay 后，管理员可以在 **设置 → AI → Agent Provider**
+中选择 deterministic、OpenAI、DeepSeek 或受限的本地 Ollama 端点。保存后的配置只会
+覆盖 Evidence Answer 与 AgentRun 使用的 `AI_PROVIDER`；旧 summary/chat 路由继续使用
+原有环境变量配置。
+
+保存凭据前，需要把 `AI_AGENT_PROVIDER_MASTER_KEY` 设置为随机 32 字节的无填充
+base64url 值。AI Service 会派生独立密钥，并使用 AES-GCM 把 API key 加密保存到 AI
+自有 SQLite；Provider、模型和 Base URL 也会作为认证加密元数据。读取接口只返回
+`api_key_set` 和短掩码提示，原始 Key 只写，不会返回 Memos 或浏览器。主密钥丢失或
+轮换后，原凭据将无法解密，因此必须与数据库分开备份，且不得提交或记录到日志。
+`scripts/start-agent-demo.ps1` 会把本地演示主密钥保存在当前 Windows 用户的 Local
+AppData 目录。
+
+远程 Provider 必须同时启用配置，并显式允许已授权 Memo 内容离开实例。“测试连接”
+只发送固定合成提示。Evidence Answer 遇到 Provider 失败会关闭失败；AgentRun 只接受
+严格的 `agent-run-project-summary-v1` JSON 契约，由服务端生成 Markdown，并在超时、
+网络失败或输出不合约时，在 artifact 中明确标记 deterministic 回退。这些控制和合成
+测试不等于真实 Provider 或真实用户验收。
 
 ## Webhook 与公开检索边界
 
@@ -94,8 +115,9 @@ Memo、prompt/context、embedding、身份、可见性数据或 secret。
 仍需用户显式提交。结果区域会显示终态、每个已完成 Agent step 和受限引用，因此无需外部
 Provider 也能直观展示 deterministic 只读 Agent 流程。
 
-同一默认关闭的 overlay 也提供已认证的同源 AgentRun create/status API 与 deterministic
-`project_summary` 演示。在 Memo 详情页运行这一固定任务后，系统会同步经过 bounded runtime，
+同一默认关闭的 overlay 也提供已认证的同源 AgentRun create/status API 与
+`project_summary` 演示。它默认仍为 deterministic；只有显式同意的 Agent Provider 才会通过
+上述严格契约完成报告 finalization。在 Memo 详情页运行这一固定任务后，系统会同步经过 bounded runtime，
 生成可预览、可下载的 Markdown artifact。Memos 会重新检查 visibility，只通过已签名 internal
 request 发送所选正文；AI Service 在本地持久化派生 artifact，但不保存自由文本 task。当前不包含
 background worker、approval、Memo write 或多实例主张。

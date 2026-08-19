@@ -1,6 +1,8 @@
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
+import json
 
 import pytest
 
@@ -13,7 +15,7 @@ from app.services.agent_run_demo import (
     AgentRunDemoExecutor,
     AgentRunDemoRequest,
 )
-from app.services.agent_run_report import ReportSource
+from app.services.agent_run_report import PROVIDER_REPORT_VERSION, ReportSource
 
 
 NOW = datetime(2026, 8, 13, 9, 0, tzinfo=timezone.utc)
@@ -44,7 +46,9 @@ def test_demo_executor_runs_bounded_runtime_and_persists_markdown(tmp_path) -> N
     executor = AgentRunDemoExecutor(database, utc_now=lambda: NOW)
 
     result = asyncio.run(
-        executor.execute(AgentRunDemoRequest("user-17", "run-demo-001", "project_summary", SOURCES))
+        executor.execute(
+            AgentRunDemoRequest("user-17", "run-demo-001", "project_summary", SOURCES)
+        )
     )
 
     assert result.run.status is RunStatus.SUCCEEDED
@@ -79,3 +83,42 @@ def test_demo_executor_rejects_task_or_subject_mismatch(tmp_path) -> None:
         asyncio.run(executor.execute(AgentRunDemoRequest("user-18", "run-demo-001", "project_summary", SOURCES)))
     with pytest.raises(AgentRunDemoError):
         asyncio.run(executor.execute(AgentRunDemoRequest("user-17", "run-demo-001", "custom_summary", SOURCES)))
+
+
+@dataclass(frozen=True)
+class _ProviderResult:
+    text: str
+
+
+class _Provider:
+    name = "openai"
+
+    async def generate(self, _prompt: str) -> _ProviderResult:
+        return _ProviderResult(
+            json.dumps(
+                {
+                    "version": PROVIDER_REPORT_VERSION,
+                    "summary": "Provider-backed project summary.",
+                    "bullets": ["Authenticated BFF", "Bounded runtime", "Evidence artifact"],
+                    "limitations": ["Synthetic verification only"],
+                    "citation_refs": ["source-1"],
+                }
+            )
+        )
+
+
+def test_demo_executor_persists_validated_provider_finalizer_output(tmp_path) -> None:
+    database = tmp_path / "agent-runs.db"
+    _create_run(database)
+    executor = AgentRunDemoExecutor(database, provider=_Provider(), utc_now=lambda: NOW)
+
+    result = asyncio.run(
+        executor.execute(
+            AgentRunDemoRequest("user-17", "run-demo-001", "project_summary", SOURCES)
+        )
+    )
+
+    artifact = SQLiteAgentRunArtifactStore(database).get(result.artifacts[0].storage_ref)
+    assert artifact is not None
+    assert "Provider-backed project summary." in artifact.markdown
+    assert "`source-1`: `memo-616263` at `rev-1700000000`" in artifact.markdown

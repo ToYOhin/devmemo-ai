@@ -57,7 +57,8 @@ docker compose --profile ollama up -d ollama
 - Ollama is an optional local model runtime; its image is pinned to an explicit
   upstream release in Compose.
 
-Use environment variables for provider configuration, never committed files:
+Environment variables remain the startup fallback for legacy AI routes and
+headless deployments; never put them in committed files:
 
 - `AI_PROVIDER=deterministic|openai|deepseek|ollama`
 - `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`
@@ -73,6 +74,33 @@ model is `deepseek-v4-pro`; deterministic remains the default Provider. Run the
 synthetic, credential-safe procedure in
 [docs/deepseek-provider-smoke.md](docs/deepseek-provider-smoke.md) before using
 an external Provider with the Agent path.
+
+### Admin-managed Agent Provider
+
+When the default-disabled Agent overlay is enabled, an administrator can use
+**Settings → AI → Agent Provider** to select deterministic, OpenAI, DeepSeek,
+or an approved local Ollama endpoint. A saved setting overrides `AI_PROVIDER`
+for Evidence Answer and AgentRun only; legacy summary/chat routes keep their
+existing environment configuration.
+
+Set `AI_AGENT_PROVIDER_MASTER_KEY` to an unpadded base64url-encoded random
+32-byte value before saving a credential. AI Service derives a dedicated key
+and encrypts the API key with AES-GCM in its AI-owned SQLite database. The
+provider, model, and base URL are authenticated encryption metadata. Reads
+return only `api_key_set` plus a short masked hint; the raw key is write-only
+and is never returned to Memos or the browser. Rotating or losing the master
+key makes the stored credential unreadable, so back it up separately from the
+database and never commit or log it. `scripts/start-agent-demo.ps1` keeps its
+local demo master key under the current Windows user's Local AppData folder.
+
+Remote Provider use requires both enabling the configuration and explicitly
+allowing authorized Memo content to leave the instance. The connection-test
+button sends only a fixed synthetic prompt. Evidence Answer fails closed on a
+Provider error. AgentRun accepts only the strict
+`agent-run-project-summary-v1` JSON contract, renders Markdown on the server,
+and marks a deterministic fallback in the artifact when the Provider times
+out, fails, or returns invalid output. These controls and synthetic tests do
+not constitute real-Provider or real-user acceptance evidence.
 
 ## Webhook and public retrieval boundaries
 
@@ -116,9 +144,11 @@ to its bounded citations, which makes the deterministic read-only flow easy to
 demonstrate without an external Provider.
 
 The same default-disabled overlay also exposes authenticated same-origin
-AgentRun create/status APIs and a deterministic `project_summary` demo. From a
+AgentRun create/status APIs and a `project_summary` demo. From a
 Memo detail page, the fixed task synchronously exercises the bounded runtime and
-produces a previewable, downloadable Markdown artifact. Memos rechecks
+produces a previewable, downloadable Markdown artifact. It remains deterministic
+by default; an explicitly consented Agent Provider may finalize the report
+through the validated contract described above. Memos rechecks
 visibility and sends the selected content only over the signed internal request;
 AI Service persists the derived Markdown artifact locally but not a free-form
 task. No background worker, approval flow, Memo write, or multi-instance claim

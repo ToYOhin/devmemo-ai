@@ -70,7 +70,9 @@ class AgentProviderResult(Protocol):
 
 
 class AgentProvider(Protocol):
-    name: str
+    @property
+    def name(self) -> str:
+        ...
 
     async def generate(self, prompt: str) -> AgentProviderResult:
         ...

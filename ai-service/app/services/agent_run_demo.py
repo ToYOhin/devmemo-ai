@@ -16,8 +16,9 @@ from app.adapters.agent_run_store import SQLiteAgentRunStore
 from app.domain.agent_run import Artifact, ArtifactStatus, SourceRevision
 from app.services.agent_run_report import (
     ALLOWED_DEMO_TASKS,
+    ReportProvider,
     ReportSource,
-    build_markdown_report,
+    build_agent_run_report,
 )
 from app.services.agent_run_runtime import (
     BoundedAgentRunPlan,
@@ -46,10 +47,12 @@ class AgentRunDemoExecutor:
         self,
         database: str | Path,
         *,
+        provider: ReportProvider | None = None,
         utc_now: Callable[[], datetime] | None = None,
     ) -> None:
         self._runs = SQLiteAgentRunStore(database)
         self._artifacts = SQLiteAgentRunArtifactStore(database)
+        self._provider = provider
         self._utc_now = utc_now or (lambda: datetime.now(timezone.utc))
 
     async def execute(self, request: AgentRunDemoRequest):
@@ -71,6 +74,7 @@ class AgentRunDemoExecutor:
                 request.task_kind,
                 request.sources,
                 self._artifacts,
+                self._provider,
                 self._utc_now,
             ),
             utc_now=self._utc_now,
@@ -95,16 +99,21 @@ class _RequestAuthority:
 
 
 class _MarkdownToolExecutor:
-    def __init__(self, task_kind, sources, store, utc_now) -> None:
+    def __init__(self, task_kind, sources, store, provider, utc_now) -> None:
         self._task_kind = task_kind
         self._sources = sources
         self._store = store
+        self._provider = provider
         self._utc_now = utc_now
 
     async def execute(self, invocation: ToolInvocation) -> ToolResult:
         if invocation.tool_name != "create_report_artifact":
             return ToolResult(ToolResultStatus.FAILED, "unsupported_tool")
-        report = build_markdown_report(self._task_kind, self._sources)
+        report = await build_agent_run_report(
+            self._task_kind,
+            self._sources,
+            self._provider,
+        )
         digest = _digest(report.markdown)
         artifact_id = f"artifact-{_digest(invocation.run_id)[:32]}"
         storage_ref = f"storage-{_digest(artifact_id)[:32]}"
