@@ -4,6 +4,7 @@ import json
 import httpx
 import pytest
 
+import llm
 from llm import DeepSeekProvider, create_provider
 
 
@@ -40,6 +41,18 @@ def test_deepseek_provider_uses_bounded_non_thinking_json_request():
         "thinking": {"type": "disabled"},
         "max_tokens": 1200,
     }
+
+
+def test_provider_response_size_is_bounded(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(llm, "MAX_PROVIDER_RESPONSE_BYTES", 64)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"{" + (b" " * 64), request=request)
+
+    provider = DeepSeekProvider("test-key", transport=httpx.MockTransport(handler))
+
+    with pytest.raises(RuntimeError, match="response exceeded the size limit"):
+        asyncio.run(provider.generate("Return JSON."))
 
 
 @pytest.mark.parametrize("status_code", [408, 429, 500, 503])

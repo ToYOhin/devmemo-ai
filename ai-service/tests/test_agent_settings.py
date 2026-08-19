@@ -35,6 +35,18 @@ def test_enabled_agent_requires_a_distinct_internal_delegation_secret(monkeypatc
     assert AiSettings.from_env().agent_internal_secret == "agent-only-test-secret"
 
 
+def test_agent_provider_master_key_is_optional_but_strict(monkeypatch):
+    monkeypatch.delenv("AI_AGENT_PROVIDER_MASTER_KEY", raising=False)
+    assert AiSettings.from_env().agent_provider_master_key is None
+
+    monkeypatch.setenv("AI_AGENT_PROVIDER_MASTER_KEY", CURRENT_REHYDRATION_SECRET)
+    assert AiSettings.from_env().agent_provider_master_key == CURRENT_REHYDRATION_SECRET
+
+    monkeypatch.setenv("AI_AGENT_PROVIDER_MASTER_KEY", "not-a-key")
+    with pytest.raises(ValueError, match="AI_AGENT_PROVIDER_MASTER_KEY"):
+        AiSettings.from_env()
+
+
 def test_rehydration_runtime_is_disabled_and_secret_free_by_default(monkeypatch):
     monkeypatch.delenv("AI_AGENT_REHYDRATION_ENABLED", raising=False)
     monkeypatch.setenv(
