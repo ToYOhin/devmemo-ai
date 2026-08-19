@@ -19,13 +19,14 @@ const (
 )
 
 var (
-	ErrUnavailable     = errors.New("agent service unavailable")
-	ErrRetrievalFailed = errors.New("agent retrieval unavailable")
-	ErrProviderFailed  = errors.New("agent provider unavailable")
-	ErrInvalidResponse = errors.New("invalid agent service response")
-	ErrInvalidConfig   = errors.New("invalid agent configuration")
-	ErrConflict        = errors.New("agent request conflicts")
-	ErrNotFound        = errors.New("agent run not found")
+	ErrUnavailable           = errors.New("agent service unavailable")
+	ErrRetrievalFailed       = errors.New("agent retrieval unavailable")
+	ErrProviderFailed        = errors.New("agent provider unavailable")
+	ErrInvalidResponse       = errors.New("invalid agent service response")
+	ErrInvalidConfig         = errors.New("invalid agent configuration")
+	ErrInvalidProviderConfig = errors.New("invalid agent provider configuration")
+	ErrConflict              = errors.New("agent request conflicts")
+	ErrNotFound              = errors.New("agent run not found")
 )
 
 // Config is the Memos-side, local-first Agent composition. It is disabled by default.

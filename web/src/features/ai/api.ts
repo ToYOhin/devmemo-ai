@@ -119,6 +119,44 @@ export class AiAgentRunRequestError extends Error {
   }
 }
 
+export type AiAgentProviderName = "deterministic" | "openai" | "deepseek" | "ollama";
+
+export interface AiAgentProviderSettings {
+  version: "agent-provider-config-v1";
+  provider: AiAgentProviderName;
+  model: string;
+  base_url: string;
+  enabled: boolean;
+  allow_real_memo_data: boolean;
+  api_key_set: boolean;
+  api_key_hint: string;
+  config_version: number;
+  source: "stored" | "environment";
+}
+
+export interface AiAgentProviderUpdate {
+  version: "agent-provider-config-v1";
+  provider: AiAgentProviderName;
+  model: string;
+  base_url: string;
+  api_key?: string;
+  enabled: boolean;
+  allow_real_memo_data: boolean;
+}
+
+export interface AiAgentProviderTestResult {
+  status: "ok";
+  provider: AiAgentProviderName;
+  model: string;
+  latency_ms: number;
+}
+
+export class AiAgentProviderRequestError extends Error {
+  constructor(public readonly status: number | null) {
+    super("Agent provider request failed");
+  }
+}
+
 export const getAiBffBasePath = (): string => {
   const configuredUrl = import.meta.env.VITE_AI_SERVICE_URL?.trim();
   return configuredUrl ? "/api/ai" : "";
@@ -176,6 +214,40 @@ const readTags = (value: unknown): string[] | null => {
 const hasExactKeys = (value: Record<string, unknown>, keys: string[]): boolean => {
   const actualKeys = Object.keys(value);
   return actualKeys.length === keys.length && actualKeys.every((key) => keys.includes(key));
+};
+
+const isAgentProviderName = (value: unknown): value is AiAgentProviderName =>
+  value === "deterministic" || value === "openai" || value === "deepseek" || value === "ollama";
+
+export const parseAiAgentProviderSettings = (value: unknown): AiAgentProviderSettings | null => {
+  const keys = [
+    "version",
+    "provider",
+    "model",
+    "base_url",
+    "enabled",
+    "allow_real_memo_data",
+    "api_key_set",
+    "api_key_hint",
+    "config_version",
+    "source",
+  ];
+  if (!isRecord(value) || !hasExactKeys(value, keys)) return null;
+  if (
+    value.version !== "agent-provider-config-v1" ||
+    !isAgentProviderName(value.provider) ||
+    typeof value.model !== "string" ||
+    typeof value.base_url !== "string" ||
+    typeof value.enabled !== "boolean" ||
+    typeof value.allow_real_memo_data !== "boolean" ||
+    typeof value.api_key_set !== "boolean" ||
+    typeof value.api_key_hint !== "string" ||
+    !Number.isInteger(value.config_version) ||
+    (value.source !== "stored" && value.source !== "environment")
+  ) {
+    return null;
+  }
+  return value as unknown as AiAgentProviderSettings;
 };
 
 export const parseAiEvidenceAnswer = (value: unknown): AiEvidenceAnswer | null => {
@@ -518,4 +590,50 @@ export async function requestAiAgentRunArtifact(runID: string, signal?: AbortSig
   const artifact = parseAiAgentRunArtifact(await response.json());
   if (!artifact) throw new AiAgentRunRequestError(null);
   return artifact;
+}
+
+export async function getAiAgentProviderSettings(signal?: AbortSignal): Promise<AiAgentProviderSettings> {
+  const response = await fetch("/api/ai/agent/provider", {
+    headers: aiBffHeaders(),
+    signal,
+  });
+  if (!response.ok) throw new AiAgentProviderRequestError(response.status);
+  const settings = parseAiAgentProviderSettings(await response.json());
+  if (!settings) throw new AiAgentProviderRequestError(null);
+  return settings;
+}
+
+export async function updateAiAgentProviderSettings(input: AiAgentProviderUpdate, signal?: AbortSignal): Promise<AiAgentProviderSettings> {
+  const response = await fetch("/api/ai/agent/provider", {
+    method: "PUT",
+    headers: aiBffHeaders(true),
+    body: JSON.stringify(input),
+    signal,
+  });
+  if (!response.ok) throw new AiAgentProviderRequestError(response.status);
+  const settings = parseAiAgentProviderSettings(await response.json());
+  if (!settings) throw new AiAgentProviderRequestError(null);
+  return settings;
+}
+
+export async function testAiAgentProvider(signal?: AbortSignal): Promise<AiAgentProviderTestResult> {
+  const response = await fetch("/api/ai/agent/provider/test", {
+    method: "POST",
+    headers: aiBffHeaders(),
+    signal,
+  });
+  if (!response.ok) throw new AiAgentProviderRequestError(response.status);
+  const value: unknown = await response.json();
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["status", "provider", "model", "latency_ms"]) ||
+    value.status !== "ok" ||
+    !isAgentProviderName(value.provider) ||
+    typeof value.model !== "string" ||
+    !Number.isInteger(value.latency_ms) ||
+    Number(value.latency_ms) < 0
+  ) {
+    throw new AiAgentProviderRequestError(null);
+  }
+  return value as unknown as AiAgentProviderTestResult;
 }

@@ -1,0 +1,31 @@
+{
+  "version": "agent-provider-config-v1",
+  "browser": {
+    "path": "/api/ai/agent/provider",
+    "admin_only": true,
+    "write_only_fields": ["api_key"]
+  },
+  "internal": {
+    "path": "/internal/ai/agent/provider",
+    "test_path": "/internal/ai/agent/provider/test",
+    "authentication": "devmemo-agent-v1-hmac"
+  },
+  "providers": ["deterministic", "openai", "deepseek", "ollama"],
+  "safe_response_fields": [
+    "version",
+    "provider",
+    "model",
+    "base_url",
+    "enabled",
+    "allow_real_memo_data",
+    "api_key_set",
+    "api_key_hint",
+    "config_version",
+    "source"
+  ],
+  "synthetic_test": {
+    "request": {"version": "agent-provider-config-v1"},
+    "success_fields": ["status", "provider", "model", "latency_ms"],
+    "uses_real_memo_data": false
+  }
+}

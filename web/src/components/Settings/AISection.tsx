@@ -23,6 +23,7 @@ import {
   InstanceSettingSchema,
 } from "@/types/proto/api/v1/instance_service_pb";
 import { useTranslate } from "@/utils/i18n";
+import AgentProviderSettingsForm from "./AgentProviderSettingsForm";
 import SettingGroup from "./SettingGroup";
 import { SettingPanel } from "./SettingList";
 import SettingSection from "./SettingSection";
@@ -332,6 +333,10 @@ const AISection = () => {
           onChange={setTranscription}
           referencedProvider={transcriptionProviderRef}
         />
+      </SettingGroup>
+
+      <SettingGroup title={t("setting.ai.agent-provider-title")} description={t("setting.ai.agent-provider-description")} showSeparator>
+        <AgentProviderSettingsForm />
       </SettingGroup>
 
       <AIProviderDialog
