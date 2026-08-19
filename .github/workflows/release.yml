@@ -184,6 +184,9 @@ jobs:
           if [ "$GOOS" = "windows" ]; then
             artifact_name="${package_name}.zip"
             zip -q "${artifact_name}" devmemo-ai.exe
+            installer_name="${package_name}_setup.exe"
+            cp devmemo-ai.exe "${installer_name}"
+            echo "installer_name=${installer_name}" >> "$GITHUB_ENV"
           else
             artifact_name="${package_name}.tar.gz"
             tar czf "${artifact_name}" devmemo-ai
@@ -196,6 +199,14 @@ jobs:
         with:
           name: ${{ env.artifact_name }}
           path: build/${{ env.artifact_name }}
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+
+      - name: Upload Windows installer artifact
+        if: matrix.goos == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.installer_name }}
+          path: build/${{ env.installer_name }}
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   checksums:

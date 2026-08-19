@@ -90,6 +90,11 @@ var (
 			}
 
 			printGreetings(instanceProfile)
+			if viper.GetBool("open-browser") {
+				if err := openBrowser(profileAccessURL(instanceProfile)); err != nil {
+					slog.Warn("failed to open browser", "error", err)
+				}
+			}
 
 			go func() {
 				<-c
@@ -127,6 +132,7 @@ func init() {
 	rootCmd.PersistentFlags().String("instance-url", "", "the url of your memos instance")
 	rootCmd.PersistentFlags().Bool("allow-private-webhooks", false, "allow webhook URLs to resolve to private/reserved IP addresses")
 	rootCmd.PersistentFlags().String("log-level", "info", "log verbosity level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().Bool("open-browser", false, "open the local web interface after startup")
 
 	if err := viper.BindPFlag("demo", rootCmd.PersistentFlags().Lookup("demo")); err != nil {
 		panic(err)
@@ -156,6 +162,9 @@ func init() {
 		panic(err)
 	}
 	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("open-browser", rootCmd.PersistentFlags().Lookup("open-browser")); err != nil {
 		panic(err)
 	}
 
@@ -200,6 +209,9 @@ func printGreetings(profile *profile.Profile) {
 }
 
 func main() {
+	if maybeRunWindowsInstaller() {
+		return
+	}
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
