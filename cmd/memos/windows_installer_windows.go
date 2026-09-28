@@ -86,6 +86,20 @@ func defaultWindowsInstallPaths() (windowsInstallPaths, error) {
 }
 
 func installWindowsApp(source string, paths windowsInstallPaths) error {
+	return installWindowsAppWithOperations(source, paths, windowsInstallOperations{
+		rename:              os.Rename,
+		createShortcuts:     createWindowsShortcuts,
+		registerUninstaller: registerWindowsUninstaller,
+	})
+}
+
+type windowsInstallOperations struct {
+	rename              func(string, string) error
+	createShortcuts     func(windowsInstallPaths) error
+	registerUninstaller func(windowsInstallPaths) error
+}
+
+func installWindowsAppWithOperations(source string, paths windowsInstallPaths, ops windowsInstallOperations) error {
 	if err := os.MkdirAll(paths.InstallDir, 0755); err != nil {
 		return fmt.Errorf("create installation directory: %w", err)
 	}
@@ -93,24 +107,62 @@ func installWindowsApp(source string, paths windowsInstallPaths) error {
 		return fmt.Errorf("create data directory: %w", err)
 	}
 
-	temporaryTarget := paths.Executable + ".new"
+	stagingDir, err := os.MkdirTemp(paths.InstallDir, ".devmemo-install-")
+	if err != nil {
+		return fmt.Errorf("create installation staging directory: %w", err)
+	}
+	// Remove only files owned by this attempt. A failed rollback leaves its backup intact.
+	defer os.Remove(stagingDir)
+	temporaryTarget := filepath.Join(stagingDir, windowsExecutableName)
+	defer os.Remove(temporaryTarget)
 	if err := copyFile(source, temporaryTarget); err != nil {
 		return err
 	}
-	if err := os.Remove(paths.Executable); err != nil && !os.IsNotExist(err) {
-		_ = os.Remove(temporaryTarget)
-		return fmt.Errorf("replace existing installation: %w", err)
+
+	backup := filepath.Join(stagingDir, "previous.exe")
+	hasBackup := false
+	if info, err := os.Stat(paths.Executable); err == nil {
+		if !info.Mode().IsRegular() {
+			return errors.New("existing installation is not a regular executable file")
+		}
+		if err := ops.rename(paths.Executable, backup); err != nil {
+			return fmt.Errorf("back up existing installation: %w", err)
+		}
+		hasBackup = true
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect existing installation: %w", err)
 	}
-	if err := os.Rename(temporaryTarget, paths.Executable); err != nil {
-		_ = os.Remove(temporaryTarget)
-		return fmt.Errorf("activate installed executable: %w", err)
+	rollback := func(cause error, activated bool) error {
+		if activated {
+			if err := os.Remove(paths.Executable); err != nil && !os.IsNotExist(err) {
+				removalError := fmt.Errorf("remove failed executable at %q before rollback: %w", paths.Executable, err)
+				if hasBackup {
+					removalError = fmt.Errorf("backup retained at %q: %w", backup, removalError)
+				}
+				return errors.Join(cause, removalError)
+			}
+		}
+		if hasBackup {
+			if err := ops.rename(backup, paths.Executable); err != nil {
+				return errors.Join(cause, fmt.Errorf("restore previous executable (backup retained at %q): %w", backup, err))
+			}
+		}
+		return cause
+	}
+	if err := ops.rename(temporaryTarget, paths.Executable); err != nil {
+		return rollback(fmt.Errorf("activate installed executable: %w", err), false)
 	}
 
-	if err := createWindowsShortcuts(paths); err != nil {
-		return err
+	if err := ops.createShortcuts(paths); err != nil {
+		return rollback(err, true)
 	}
-	if err := registerWindowsUninstaller(paths); err != nil {
-		return err
+	if err := ops.registerUninstaller(paths); err != nil {
+		return rollback(err, true)
+	}
+	if hasBackup {
+		if err := os.Remove(backup); err != nil {
+			return rollback(fmt.Errorf("remove previous executable backup: %w", err), true)
+		}
 	}
 	return nil
 }
@@ -213,6 +265,12 @@ func launchInstalledWindowsApp(paths windowsInstallPaths) error {
 }
 
 func uninstallWindowsApp(currentExecutable string) error {
+	return uninstallWindowsAppWithOperations(currentExecutable, runWindowsPowerShell, func() {
+		_ = registry.DeleteKey(registry.CURRENT_USER, windowsUninstallKey)
+	})
+}
+
+func uninstallWindowsAppWithOperations(currentExecutable string, runPowerShell func(string, bool) (string, error), removeRegistration func()) error {
 	paths, err := defaultWindowsInstallPaths()
 	if err != nil {
 		return err
@@ -229,7 +287,6 @@ func uninstallWindowsApp(currentExecutable string) error {
 		return errors.New("uninstall must be run from the installed application")
 	}
 
-	_ = registry.DeleteKey(registry.CURRENT_USER, windowsUninstallKey)
 	script := fmt.Sprintf(`
 $desktop = [Environment]::GetFolderPath('Desktop')
 $programs = [Environment]::GetFolderPath('Programs')
@@ -243,9 +300,10 @@ Get-Process -Name 'DevMemoAI' -ErrorAction SilentlyContinue |
 Wait-Process -Id $uninstallerPid -Timeout 300 -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath '%s' -Recurse -Force -ErrorAction SilentlyContinue
 `, powershellQuote(paths.Executable), os.Getpid(), powershellQuote(paths.InstallDir))
-	if _, err := runWindowsPowerShell(script, true); err != nil {
+	if _, err := runPowerShell(script, true); err != nil {
 		return fmt.Errorf("schedule installed files removal: %w", err)
 	}
+	removeRegistration()
 	return nil
 }
 
