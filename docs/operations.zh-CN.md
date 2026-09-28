@@ -58,6 +58,12 @@ Memos 登录与可见性，再验证 `GET /health`、AI 详情页和已接受 In
 
 ## 安全边界
 
+缩略图生成会先在 1 MiB 的头部探测预算内检查图片尺寸，再进行完整解码，源图片最多允许
+5000 万像素。无效、超限或无法在头部预算内确认尺寸的图片，沿用原文件回退策略；这不代表
+拒绝上传，也不会删除附件。TIFF 调色板检查依赖已固定版本的 `golang.org/x/image` 解码器。
+这些输入防护与合成回归不等于修复了 `github.com/disintegration/imaging` 的上游版本告警
+GHSA-q7pp-wcgr-pffx。
+
 除非确有可选 adapter 需求，否则保持默认 deterministic + memory。继续保持
 `AI_PUBLIC_CHUNK_RETRIEVAL=false`，直到真实 trusted gateway、Memos visibility mapping、
 受控灰度和经过测试的关闭/回滚路径全部具备。Context Pack 只存在于浏览器内存中，不能视为

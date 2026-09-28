@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"image"
 	"io"
 	"log/slog"
 	"net/http"
@@ -38,8 +39,11 @@ const (
 	// thumbnailMaxSize is the maximum dimension (width or height) for thumbnails.
 	thumbnailMaxSize = 600
 
+	// Match the upload EXIF pixel budget before allocating a decoded thumbnail source.
+	thumbnailMaxImagePixels = 50_000_000
+
 	// thumbnailMetadataProbeSize is the maximum number of original image bytes inspected
-	// before thumbnail generation to detect metadata that the JPEG thumbnail pipeline cannot preserve.
+	// in each metadata/dimension probe before full image decoding.
 	thumbnailMetadataProbeSize = 1 << 20
 
 	// maxConcurrentThumbnails limits concurrent thumbnail generation to prevent memory exhaustion.
@@ -539,7 +543,7 @@ func (s *FileServerService) generateThumbnail(ctx context.Context, attachment *s
 	}
 	defer reader.Close()
 
-	img, err := imaging.Decode(reader, imaging.AutoOrientation(true))
+	img, err := decodeThumbnailImage(reader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode image")
 	}
@@ -560,6 +564,23 @@ func (s *FileServerService) generateThumbnail(ctx context.Context, attachment *s
 	}
 
 	return s.readCachedThumbnail(thumbnailPath)
+}
+
+func decodeThumbnailImage(reader io.Reader) (image.Image, error) {
+	// Keep and replay only the bounded header, so non-seekable storage readers do
+	// not need a second download and the pixel check applies to the same content.
+	var header bytes.Buffer
+	config, _, err := image.DecodeConfig(io.TeeReader(io.LimitReader(reader, thumbnailMetadataProbeSize), &header))
+	if err != nil {
+		return nil, errors.Wrap(err, "inspect image dimensions within header budget")
+	}
+	if config.Width <= 0 || config.Height <= 0 {
+		return nil, errors.New("invalid image dimensions")
+	}
+	if config.Width > thumbnailMaxImagePixels/config.Height {
+		return nil, errors.Errorf("image dimensions exceed maximum of %d pixels", thumbnailMaxImagePixels)
+	}
+	return imaging.Decode(io.MultiReader(bytes.NewReader(header.Bytes()), reader), imaging.AutoOrientation(true))
 }
 
 // calculateThumbnailDimensions calculates the target dimensions for a thumbnail.

@@ -71,6 +71,14 @@ tested disable-and-rebuild rollback.
 
 ## Security boundary
 
+Thumbnail generation checks image dimensions within a 1 MiB header probe before
+full decoding and accepts at most 50 million source pixels. Invalid or oversized
+images, or headers that cannot be inspected within that budget, use the existing
+original-file fallback; this does not reject the upload or delete the attachment.
+TIFF palette checks rely on the pinned `golang.org/x/image` decoder. These input
+guards and synthetic regressions do not constitute an upstream fix for the
+`github.com/disintegration/imaging` version advisory GHSA-q7pp-wcgr-pffx.
+
 Keep the default deterministic + memory profile unless optional adapters are
 needed. Leave `AI_PUBLIC_CHUNK_RETRIEVAL=false` until a real trusted gateway,
 Memos visibility mapping, controlled rollout, and a tested disable-and-rollback
