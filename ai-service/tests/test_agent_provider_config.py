@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import closing
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -16,6 +17,29 @@ from app.services.agent_provider_registry import AgentProviderRegistry, AgentPro
 
 SECRET = "synthetic-agent-provider-secret-with-enough-entropy"
 CONTRACT = Path(__file__).parents[2] / "contracts" / "agent-provider-config-v1.json"
+
+
+@pytest.fixture
+def provider_store_connections(monkeypatch):
+    connect = sqlite3.connect
+    connections = []
+
+    def tracked_connect(*args, **kwargs):
+        connection = connect(*args, **kwargs)
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr("app.adapters.agent_provider_store.sqlite3.connect", tracked_connect)
+    yield connections
+    for connection in connections:
+        connection.close()
+
+
+def _assert_connections_closed(connections):
+    assert connections
+    for connection in connections:
+        with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+            connection.execute("SELECT 1")
 
 
 @dataclass(frozen=True)
@@ -81,7 +105,7 @@ def test_encrypted_store_never_persists_plaintext_key(tmp_path):
 
     assert saved.config_version == 1
     assert loaded == saved
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         row = connection.execute("SELECT api_key_nonce, api_key_ciphertext FROM agent_provider_config").fetchone()
     assert row is not None
     assert row[0] != b"synthetic-secret-value"
@@ -105,11 +129,53 @@ def test_store_preserves_write_only_key_and_rejects_wrong_master_secret(tmp_path
         SQLiteAgentProviderStore(database, "different-secret").load()
 
 
+def test_store_closes_connections_after_save_and_load(tmp_path, provider_store_connections):
+    database = tmp_path / "agent.db"
+    store = SQLiteAgentProviderStore(database, SECRET)
+
+    saved = store.save(_config())
+    assert store.load() == saved
+
+    assert len(provider_store_connections) == 3
+    _assert_connections_closed(provider_store_connections)
+    database.rename(tmp_path / "closed.db")
+
+
+def test_store_closes_connection_after_read_error(monkeypatch, tmp_path, provider_store_connections):
+    store = SQLiteAgentProviderStore(tmp_path / "agent.db", SECRET)
+
+    def fail_schema(_connection):
+        raise sqlite3.OperationalError("synthetic schema failure")
+
+    monkeypatch.setattr(store, "_ensure_schema", fail_schema)
+    with pytest.raises(AgentProviderStoreError, match="credential store is unavailable"):
+        store.load()
+
+    _assert_connections_closed(provider_store_connections)
+
+
+def test_store_closes_connections_and_preserves_data_after_write_error(tmp_path, provider_store_connections):
+    database = tmp_path / "agent.db"
+    store = SQLiteAgentProviderStore(database, SECRET)
+    saved = store.save(_config())
+    with closing(sqlite3.connect(database)) as connection, connection:
+        connection.execute(
+            "CREATE TRIGGER reject_provider_update AFTER UPDATE ON agent_provider_config "
+            "BEGIN SELECT RAISE(ABORT, 'synthetic write failure'); END"
+        )
+
+    with pytest.raises(AgentProviderStoreError, match="credential store is unavailable"):
+        store.save(_config(api_key="synthetic-replacement-key"))
+
+    assert store.load() == saved
+    _assert_connections_closed(provider_store_connections)
+
+
 def test_store_authenticates_provider_routing_metadata(tmp_path):
     database = tmp_path / "agent.db"
     store = SQLiteAgentProviderStore(database, SECRET)
     store.save(_config())
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             "UPDATE agent_provider_config SET base_url = ? WHERE id = 1",
             ("https://attacker.example/v1",),
@@ -146,7 +212,7 @@ def test_store_rejects_corrupt_records_without_exposing_credentials(tmp_path, co
             )
         )
         statement = "UPDATE agent_provider_config SET provider = 'unsupported' WHERE id = 1"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(statement)
 
     with pytest.raises(AgentProviderStoreError) as error:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timezone
 import json
@@ -41,7 +42,7 @@ class SQLiteAgentProviderStore:
 
     def load(self) -> AgentProviderConfig | None:
         try:
-            with sqlite3.connect(self._database) as connection:
+            with closing(sqlite3.connect(self._database)) as connection, connection:
                 self._ensure_schema(connection)
                 row = connection.execute(
                     """
@@ -91,7 +92,7 @@ class SQLiteAgentProviderStore:
             normalized.base_url,
         )
         try:
-            with sqlite3.connect(self._database) as connection:
+            with closing(sqlite3.connect(self._database)) as connection, connection:
                 self._ensure_schema(connection)
                 connection.execute(
                     """
