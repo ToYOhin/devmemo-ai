@@ -86,6 +86,10 @@ AppData 目录。
 网络失败或输出不合约时，在 artifact 中明确标记 deterministic 回退。这些控制和合成
 测试不等于真实 Provider 或真实用户验收。
 
+已配置的 Agent Provider 仍受 20 秒截止时间限制。Memos BFF 仅为 Evidence Answer、
+AgentRun 执行和连接测试提供 25 秒预算，为传输和收尾留出余量；元数据请求仍为
+10 秒。调用方更短的截止时间继续优先。
+
 ## Webhook 与公开检索边界
 
 默认 Compose 阻止私网 Webhook 目标。`docker-compose.local-webhook.yml` 只适用于受控的

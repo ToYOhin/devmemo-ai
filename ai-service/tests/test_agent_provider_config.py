@@ -13,6 +13,7 @@ from app.adapters.agent_provider_store import AgentProviderStoreError, SQLiteAge
 from app.domain.agent_provider import AgentProviderConfig, AgentProviderConfigError, masked_api_key
 from app.services.agent_provider_api import AgentProviderAPI, AgentProviderAPIError
 from app.services.agent_provider_registry import AgentProviderRegistry, AgentProviderRuntimeError
+from app.services.agent_run_report import ReportSource, build_agent_run_report
 
 
 SECRET = "synthetic-agent-provider-secret-with-enough-entropy"
@@ -365,6 +366,37 @@ async def test_registry_enforces_hard_provider_timeout(tmp_path):
 
     with pytest.raises(AgentProviderRuntimeError, match="connection test failed"):
         await registry.test_connection()
+
+
+def test_registry_default_timeout_matches_shared_bff_budget(tmp_path):
+    budget = json.loads(CONTRACT.read_text(encoding="utf-8"))["timeout_budget"]
+    registry = AgentProviderRegistry(tmp_path / "agent.db", SECRET)
+
+    assert registry._timeout_seconds == budget["provider_seconds"] == 20
+    assert budget["bff_provider_seconds"] == 25
+    assert budget["bff_metadata_seconds"] == 10
+
+
+@pytest.mark.asyncio
+async def test_registry_timeout_reaches_agent_run_fallback(tmp_path):
+    registry = AgentProviderRegistry(
+        tmp_path / "agent.db",
+        SECRET,
+        provider_factory=lambda config: _Provider(config.provider, "{}", delay=0.05),
+        timeout_seconds=0.01,
+    )
+    registry.update(_config(allow_real_memo_data=True), preserve_api_key=False)
+
+    report = await build_agent_run_report(
+        "project_summary",
+        (ReportSource("synthetic-source", "synthetic-revision", "Synthetic test evidence."),),
+        registry.dynamic_provider(),
+    )
+
+    assert report.provider == "deterministic"
+    assert report.fallback_reason == "provider_timeout"
+    assert "Synthetic test evidence." in report.markdown
+    assert "provider_timeout" in report.markdown
 
 
 def test_internal_api_returns_masked_contract_and_preserves_omitted_key(tmp_path):

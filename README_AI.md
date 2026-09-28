@@ -102,6 +102,11 @@ and marks a deterministic fallback in the artifact when the Provider times
 out, fails, or returns invalid output. These controls and synthetic tests do
 not constitute real-Provider or real-user acceptance evidence.
 
+Configured Agent Providers retain a 20-second deadline. The Memos BFF allows
+25 seconds only for Evidence Answer, AgentRun execution, and connection tests,
+leaving room for transport and finalization; metadata requests stay at 10
+seconds. A shorter caller deadline still takes precedence.
+
 ## Webhook and public retrieval boundaries
 
 The default Compose file blocks private-network Webhook targets. The

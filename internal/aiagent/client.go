@@ -14,8 +14,11 @@ import (
 
 const (
 	// BrowserAnswerPath is the Memos-only BFF route; it is never sent to AI Service.
-	BrowserAnswerPath = "/api/ai/agent/answer"
-	maxResponseBytes  = 1 << 20
+	BrowserAnswerPath      = "/api/ai/agent/answer"
+	maxResponseBytes       = 1 << 20
+	metadataRequestTimeout = 10 * time.Second
+	// Keep five seconds for transport/finalization after AI Service's 20-second Provider deadline.
+	providerRequestTimeout = 25 * time.Second
 )
 
 var (
@@ -63,6 +66,21 @@ type httpDoer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
+type agentHTTPClient struct {
+	metadata http.Client
+	provider http.Client
+}
+
+func (c *agentHTTPClient) Do(request *http.Request) (*http.Response, error) {
+	if request.Method == http.MethodPost {
+		switch request.URL.Path {
+		case InternalAnswerPath, InternalAgentRunExecutePath, InternalAgentProviderTestPath:
+			return c.provider.Do(request)
+		}
+	}
+	return c.metadata.Do(request)
+}
+
 // Client sends a signed, capability-scoped request to the AI internal endpoint.
 type Client struct {
 	config Config
@@ -76,8 +94,11 @@ func NewClient(config Config) (*Client, error) {
 	}
 	return &Client{
 		config: config,
-		doer:   &http.Client{Timeout: 10 * time.Second},
-		now:    time.Now,
+		doer: &agentHTTPClient{
+			metadata: http.Client{Timeout: metadataRequestTimeout},
+			provider: http.Client{Timeout: providerRequestTimeout},
+		},
+		now: time.Now,
 	}, nil
 }
 

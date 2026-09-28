@@ -11,6 +11,11 @@
     "authentication": "devmemo-agent-v1-hmac"
   },
   "providers": ["deterministic", "openai", "deepseek", "ollama"],
+  "timeout_budget": {
+    "provider_seconds": 20,
+    "bff_provider_seconds": 25,
+    "bff_metadata_seconds": 10
+  },
   "safe_response_fields": [
     "version",
     "provider",
