@@ -9,7 +9,7 @@ import sqlite3
 import pytest
 
 from app.adapters.agent_provider_store import AgentProviderStoreError, SQLiteAgentProviderStore
-from app.domain.agent_provider import AgentProviderConfig, AgentProviderConfigError
+from app.domain.agent_provider import AgentProviderConfig, AgentProviderConfigError, masked_api_key
 from app.services.agent_provider_api import AgentProviderAPI, AgentProviderAPIError
 from app.services.agent_provider_registry import AgentProviderRegistry, AgentProviderRuntimeError
 
@@ -46,6 +46,20 @@ def _config(**overrides) -> AgentProviderConfig:
     }
     values.update(overrides)
     return AgentProviderConfig(**values)
+
+
+def _update_payload(**overrides) -> dict[str, object]:
+    values: dict[str, object] = {
+        "version": "agent-provider-config-v1",
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "synthetic-secret-value",
+        "enabled": True,
+        "allow_real_memo_data": False,
+    }
+    values.update(overrides)
+    return values
 
 
 def test_shared_agent_provider_contract_is_masked_and_provider_neutral():
@@ -105,6 +119,50 @@ def test_store_authenticates_provider_routing_metadata(tmp_path):
         store.load()
 
 
+def test_store_rejects_unavailable_or_missing_credentials(tmp_path):
+    with pytest.raises(AgentProviderStoreError, match="credential store is unavailable"):
+        SQLiteAgentProviderStore(tmp_path / "agent.db", " ")
+
+    store = SQLiteAgentProviderStore(tmp_path / "agent.db", SECRET)
+    assert store.load() is None
+    with pytest.raises(AgentProviderConfigError, match="credential is required"):
+        store.save(_config(api_key=None), preserve_api_key=True)
+
+
+@pytest.mark.parametrize("corruption", ["nonce", "provider"])
+def test_store_rejects_corrupt_records_without_exposing_credentials(tmp_path, corruption):
+    database = tmp_path / "agent.db"
+    store = SQLiteAgentProviderStore(database, SECRET)
+    if corruption == "nonce":
+        store.save(_config())
+        statement = "UPDATE agent_provider_config SET api_key_nonce = 'not-bytes' WHERE id = 1"
+    else:
+        store.save(
+            _config(
+                provider="deterministic",
+                model="",
+                base_url="",
+                api_key=None,
+            )
+        )
+        statement = "UPDATE agent_provider_config SET provider = 'unsupported' WHERE id = 1"
+    with sqlite3.connect(database) as connection:
+        connection.execute(statement)
+
+    with pytest.raises(AgentProviderStoreError) as error:
+        store.load()
+
+    assert str(error.value) == "Agent provider credential store is unavailable"
+    assert "synthetic-secret-value" not in str(error.value)
+
+
+def test_store_projects_sqlite_open_failures_to_a_safe_error(tmp_path):
+    store = SQLiteAgentProviderStore(tmp_path, SECRET)
+
+    with pytest.raises(AgentProviderStoreError, match="credential store is unavailable"):
+        store.load()
+
+
 @pytest.mark.parametrize(
     ("config", "message"),
     [
@@ -121,6 +179,56 @@ def test_store_authenticates_provider_routing_metadata(tmp_path):
 def test_provider_config_rejects_unsafe_remote_settings(config, message):
     with pytest.raises(AgentProviderConfigError, match=message):
         config.validated()
+
+
+@pytest.mark.parametrize(
+    ("config", "message"),
+    [
+        (_config(provider="unsupported"), "unsupported Agent provider"),
+        (_config(enabled=1), "invalid Agent provider flags"),
+        (_config(config_version=-1), "invalid Agent provider config version"),
+        (_config(source="file"), "invalid Agent provider config source"),
+        (_config(api_key=""), "invalid Agent provider credential"),
+        (
+            _config(provider="deterministic", model="remote-model", base_url="", api_key=None),
+            "does not accept remote settings",
+        ),
+        (
+            _config(
+                provider="deterministic",
+                model="",
+                base_url="",
+                api_key=None,
+                allow_real_memo_data=True,
+            ),
+            "does not require external data consent",
+        ),
+        (_config(api_key=None), "credential is required"),
+        (
+            _config(provider="ollama", model="llama3.2", base_url="http://localhost:11434"),
+            "does not accept an API key",
+        ),
+        (_config(base_url="https://api.openai.com:not-a-port/v1"), "base URL"),
+        (
+            _config(
+                provider="ollama",
+                model="llama3.2",
+                base_url="http://localhost:11435",
+                api_key=None,
+            ),
+            "local service port",
+        ),
+    ],
+)
+def test_provider_config_rejects_invalid_contract_values(config, message):
+    with pytest.raises(AgentProviderConfigError, match=message):
+        config.validated()
+
+
+def test_masked_api_key_handles_empty_and_short_values():
+    assert masked_api_key(None) == ""
+    assert masked_api_key("") == ""
+    assert masked_api_key("abc") == "••••abc"
 
 
 @pytest.mark.asyncio
@@ -231,3 +339,47 @@ def test_internal_api_rejects_unknown_or_raw_read_fields(tmp_path):
     api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
     with pytest.raises(AgentProviderAPIError):
         api.update(b'{"version":"agent-provider-config-v1","api_key_hint":"leak"}')
+
+
+@pytest.mark.parametrize("body", [b"{", b"\xff"])
+def test_internal_api_projects_malformed_update_requests(tmp_path, body):
+    api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
+
+    with pytest.raises(AgentProviderAPIError, match="invalid Agent provider request"):
+        api.update(body)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"version": "agent-provider-config-v1"},
+        _update_payload(unexpected=True),
+        _update_payload(version="unsupported-version"),
+        _update_payload(api_key=123),
+        _update_payload(provider=""),
+        _update_payload(enabled=1),
+        _update_payload(provider="unsupported"),
+    ],
+)
+def test_internal_api_projects_invalid_contract_values(tmp_path, payload):
+    api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
+
+    with pytest.raises(AgentProviderAPIError, match="invalid|unsupported"):
+        api.update(json.dumps(payload).encode())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"{",
+        b"{}",
+        b'{"version":"agent-provider-config-v1","unexpected":true}',
+    ],
+)
+async def test_internal_api_projects_invalid_connection_test_requests(tmp_path, body):
+    api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
+
+    with pytest.raises(AgentProviderAPIError, match="invalid Agent provider test request"):
+        await api.test(body)
