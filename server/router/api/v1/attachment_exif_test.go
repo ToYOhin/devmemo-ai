@@ -208,6 +208,26 @@ func TestStripImageExifRejectsOversizedDimensionsBeforeDecode(t *testing.T) {
 	require.Contains(t, err.Error(), "image dimensions exceed maximum")
 }
 
+func TestStripImageExifRejectsPackBitsExpansionBeyondPixelBound(t *testing.T) {
+	t.Parallel()
+
+	_, err := stripImageExif(testPackBitsTIFFWithOversizedDecodedStrip(), "image/tiff")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "PackBits: decompressed data too large")
+}
+
+func TestStripImageExifRejectsOutOfRangeTIFFPaletteIndex(t *testing.T) {
+	// GHSA-q7pp-wcgr-pffx reaches imaging's scanner with an invalid palette index.
+	// Verify the decoder rejects it before image processing, with a valid control.
+	valid := testPalettedTIFF(1)
+	_, err := stripImageExif(valid, "image/tiff")
+	require.NoError(t, err)
+
+	_, err = stripImageExif(testPalettedTIFF(2), "image/tiff")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid color index")
+}
+
 func testPNGHeaderWithDimensions(width, height uint32) []byte {
 	var buf bytes.Buffer
 	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
@@ -229,4 +249,66 @@ func writePNGChunk(buf *bytes.Buffer, chunkType string, data []byte) {
 	buf.Write(data)
 	crc := crc32.ChecksumIEEE(append([]byte(chunkType), data...))
 	_ = binary.Write(buf, binary.BigEndian, crc)
+}
+
+func testPackBitsTIFFWithOversizedDecodedStrip() []byte {
+	const (
+		entryCount  = 9
+		stripOffset = 8 + 2 + entryCount*12 + 4
+	)
+
+	var buf bytes.Buffer
+	buf.WriteString("II")
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(42))
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(8))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(entryCount))
+
+	writeTIFFEntry := func(tag, fieldType uint16, count, value uint32) {
+		_ = binary.Write(&buf, binary.LittleEndian, tag)
+		_ = binary.Write(&buf, binary.LittleEndian, fieldType)
+		_ = binary.Write(&buf, binary.LittleEndian, count)
+		_ = binary.Write(&buf, binary.LittleEndian, value)
+	}
+	writeTIFFEntry(256, 3, 1, 1)           // ImageWidth: 1
+	writeTIFFEntry(257, 3, 1, 1)           // ImageLength: 1
+	writeTIFFEntry(258, 3, 1, 8)           // BitsPerSample: 8
+	writeTIFFEntry(259, 3, 1, 32773)       // Compression: PackBits
+	writeTIFFEntry(262, 3, 1, 1)           // PhotometricInterpretation: BlackIsZero
+	writeTIFFEntry(273, 4, 1, stripOffset) // StripOffsets
+	writeTIFFEntry(277, 3, 1, 1)           // SamplesPerPixel: 1
+	writeTIFFEntry(278, 4, 1, 1)           // RowsPerStrip: 1
+	writeTIFFEntry(279, 4, 1, 2)           // StripByteCounts: 2
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(0))
+	buf.Write([]byte{0xf8, 0x00}) // Repeat one byte 9 times; patched decoder caps this 1x1 block at 8 bytes.
+	return buf.Bytes()
+}
+
+func testPalettedTIFF(pixelIndex byte) []byte {
+	const paletteOffset = 8 + 2 + 10*12 + 4
+	var buf bytes.Buffer
+	buf.WriteString("II")
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(42))
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(8))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(10))
+	for _, field := range []struct {
+		tag, fieldType uint16
+		count, value   uint32
+	}{
+		{256, 3, 1, 1},                  // Width: 1
+		{257, 3, 1, 1},                  // Height: 1
+		{258, 3, 1, 8},                  // BitsPerSample: 8
+		{259, 3, 1, 1},                  // No compression
+		{262, 3, 1, 3},                  // Palette color
+		{273, 4, 1, paletteOffset + 12}, // StripOffsets
+		{277, 3, 1, 1},                  // SamplesPerPixel: 1
+		{278, 4, 1, 1},                  // RowsPerStrip: 1
+		{279, 4, 1, 1},                  // StripByteCounts: 1
+		{320, 3, 6, paletteOffset},      // ColorMap: two entries per RGB channel
+	} {
+		_ = binary.Write(&buf, binary.LittleEndian, field)
+	}
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(0))
+	buf.Write(make([]byte, 12))
+	buf.WriteByte(pixelIndex)
+	return buf.Bytes()
 }
