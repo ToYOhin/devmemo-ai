@@ -61,7 +61,7 @@ class AgentProviderAPI:
                 enabled=_required_bool(payload, "enabled"),
                 allow_real_memo_data=_required_bool(payload, "allow_real_memo_data"),
             )
-            preserve_api_key = not bool(api_key) and config.provider.strip().lower() != "deterministic"
+            preserve_api_key = not bool(api_key) and config.provider.strip().lower() in {"openai", "deepseek"}
             view = self._registry.update(config, preserve_api_key=preserve_api_key)
         except AgentProviderConfigError as error:
             raise AgentProviderAPIError(str(error)) from error

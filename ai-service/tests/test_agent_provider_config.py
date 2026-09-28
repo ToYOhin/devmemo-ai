@@ -335,6 +335,45 @@ def test_internal_api_returns_masked_contract_and_preserves_omitted_key(tmp_path
     assert api.update(json.dumps(update_without_key).encode())["config_version"] == 2
 
 
+@pytest.mark.parametrize("initial_provider", [None, "deterministic", "openai"])
+@pytest.mark.parametrize("credential", [{}, {"api_key": None}, {"api_key": ""}])
+def test_internal_api_enables_keyless_ollama_without_preserving_credentials(
+    monkeypatch, tmp_path, initial_provider, credential
+):
+    monkeypatch.setenv("AI_PROVIDER", "deterministic")
+    registry = AgentProviderRegistry(tmp_path / "agent.db", SECRET)
+    if initial_provider is not None:
+        initial = _config()
+        if initial_provider == "deterministic":
+            initial = _config(provider="deterministic", model="", base_url="", api_key=None)
+        registry.update(initial, preserve_api_key=False)
+    api = AgentProviderAPI(registry)
+    payload = _update_payload(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
+    payload.pop("api_key")
+    payload.update(credential)
+
+    response = api.update(json.dumps(payload).encode())
+
+    assert response["provider"] == "ollama"
+    assert response["enabled"] is True
+    assert response["api_key_set"] is False
+    assert response["api_key_hint"] == ""
+    assert response["allow_real_memo_data"] is False
+    assert api.get() == response
+    assert SQLiteAgentProviderStore(tmp_path / "agent.db", SECRET).load().api_key is None
+
+
+@pytest.mark.parametrize("provider", ["openai", "deepseek"])
+def test_internal_api_still_requires_credentials_for_new_remote_provider(monkeypatch, tmp_path, provider):
+    monkeypatch.setenv("AI_PROVIDER", "deterministic")
+    api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
+    payload = _update_payload(provider=provider, base_url=f"https://api.{provider}.com/v1")
+    payload.pop("api_key")
+
+    with pytest.raises(AgentProviderAPIError, match="credential is required"):
+        api.update(json.dumps(payload).encode())
+
+
 def test_internal_api_rejects_unknown_or_raw_read_fields(tmp_path):
     api = AgentProviderAPI(AgentProviderRegistry(tmp_path / "agent.db", SECRET))
     with pytest.raises(AgentProviderAPIError):
