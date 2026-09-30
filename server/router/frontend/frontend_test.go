@@ -206,8 +206,8 @@ func TestEchoStaticFSRejectsEncodedPathSeparator(t *testing.T) {
 
 	e := echo.New()
 	protected := e.Group("/api")
-	protected.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c *echo.Context) error {
+	protected.Use(func(_ echo.HandlerFunc) echo.HandlerFunc {
+		return func(_ *echo.Context) error {
 			return echo.NewHTTPError(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 	})

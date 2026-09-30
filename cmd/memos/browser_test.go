@@ -52,7 +52,6 @@ func TestOpenBrowserUsesPlatformCommand(t *testing.T) {
 	}
 
 	err := openBrowser("http://localhost:5230")
-	require.NoError(t, err)
 
 	switch runtime.GOOS {
 	case "windows":
@@ -64,5 +63,11 @@ func TestOpenBrowserUsesPlatformCommand(t *testing.T) {
 	case "linux":
 		require.Equal(t, "xdg-open", gotName)
 		require.Equal(t, []string{"http://localhost:5230"}, gotArgs)
+	default:
+		require.ErrorContains(t, err, "not supported")
+		require.Empty(t, gotName)
+		require.Empty(t, gotArgs)
+		return
 	}
+	require.NoError(t, err)
 }

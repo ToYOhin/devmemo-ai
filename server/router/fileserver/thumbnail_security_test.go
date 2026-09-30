@@ -101,6 +101,8 @@ func TestDecodeThumbnailImagePreservesEXIFOrientation(t *testing.T) {
 				for x := range width {
 					sx, sy := x, y
 					switch orientation {
+					case 1:
+						// The encoded image already has the desired orientation.
 					case 2:
 						sx = 1 - x
 					case 3:
@@ -115,6 +117,8 @@ func TestDecodeThumbnailImagePreservesEXIFOrientation(t *testing.T) {
 						sx, sy = 1-y, 2-x
 					case 8:
 						sx, sy = 1-y, x
+					default:
+						t.Fatalf("unsupported synthetic orientation: %d", orientation)
 					}
 					require.Equal(t, color.NRGBAModel.Convert(plain.At(sx, sy)), color.NRGBAModel.Convert(result.At(x, y)))
 				}

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"os/exec"
 	"runtime"
 	"strconv"
+
+	"github.com/pkg/errors"
 
 	"github.com/usememos/memos/internal/profile"
 )
@@ -36,6 +37,6 @@ func openBrowser(targetURL string) error {
 	case "linux":
 		return runBrowserCommand("xdg-open", targetURL)
 	default:
-		return fmt.Errorf("opening a browser is not supported on %s", runtime.GOOS)
+		return errors.Errorf("opening a browser is not supported on %s", runtime.GOOS)
 	}
 }
