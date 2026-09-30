@@ -75,9 +75,11 @@ Thumbnail generation checks image dimensions within a 1 MiB header probe before
 full decoding and accepts at most 50 million source pixels. Invalid or oversized
 images, or headers that cannot be inspected within that budget, use the existing
 original-file fallback; this does not reject the upload or delete the attachment.
-TIFF palette checks rely on the pinned `golang.org/x/image` decoder. These input
-guards and synthetic regressions do not constitute an upstream fix for the
-`github.com/disintegration/imaging` version advisory GHSA-q7pp-wcgr-pffx.
+TIFF palette checks rely on the pinned `golang.org/x/image` decoder. Image
+processing uses `github.com/kovidgoyal/imaging v1.6.5`, replacing the dependency
+affected by GHSA-q7pp-wcgr-pffx. Its scanner handles all byte-sized palette indices;
+synthetic regressions cover invalid indices, TIFF rejection, and original-file
+fallback while retaining automatic EXIF orientation and Lanczos resizing.
 
 Keep the default deterministic + memory profile unless optional adapters are
 needed. Leave `AI_PUBLIC_CHUNK_RETRIEVAL=false` until a real trusted gateway,

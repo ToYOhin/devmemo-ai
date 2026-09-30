@@ -9,7 +9,7 @@ import (
 	"image/jpeg"
 	"testing"
 
-	"github.com/disintegration/imaging"
+	"github.com/kovidgoyal/imaging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

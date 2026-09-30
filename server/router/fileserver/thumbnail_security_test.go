@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"image"
+	"image/color"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/kovidgoyal/imaging"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 
@@ -64,6 +66,63 @@ func TestDecodeThumbnailImageReplaysNonSeekableHeader(t *testing.T) {
 	require.Equal(t, image.Rect(0, 0, 1, 1), img.Bounds())
 }
 
+func TestDecodeThumbnailImagePreservesEXIFOrientation(t *testing.T) {
+	source := image.NewNRGBA(image.Rect(0, 0, 2, 3))
+	for y := range 3 {
+		for x := range 2 {
+			source.SetNRGBA(x, y, color.NRGBA{R: uint8(30 + 80*x), G: uint8(20 + 70*y), B: 100, A: 255})
+		}
+	}
+	var encoded bytes.Buffer
+	require.NoError(t, imaging.Encode(&encoded, source, imaging.JPEG, imaging.JPEGQuality(90)))
+	plain, _, err := image.Decode(bytes.NewReader(encoded.Bytes()))
+	require.NoError(t, err)
+	for orientation := uint16(1); orientation <= 8; orientation++ {
+		t.Run(fmt.Sprintf("orientation %d", orientation), func(t *testing.T) {
+			// A single synthetic orientation tag; no user metadata or external files.
+			exif := make([]byte, 32)
+			copy(exif, "Exif\x00\x00II\x2a\x00")
+			binary.LittleEndian.PutUint32(exif[10:14], 8)
+			binary.LittleEndian.PutUint16(exif[14:16], 1)
+			binary.LittleEndian.PutUint16(exif[16:18], 274)
+			binary.LittleEndian.PutUint16(exif[18:20], 3)
+			binary.LittleEndian.PutUint32(exif[20:24], 1)
+			binary.LittleEndian.PutUint16(exif[24:26], orientation)
+			content := append([]byte{0xff, 0xd8, 0xff, 0xe1, 0, 34}, exif...)
+			content = append(content, encoded.Bytes()[2:]...)
+			result, err := decodeThumbnailImage(iotest.OneByteReader(bytes.NewReader(content)))
+			require.NoError(t, err)
+			width, height := 2, 3
+			if orientation >= 5 {
+				width, height = height, width
+			}
+			require.Equal(t, image.Rect(0, 0, width, height), result.Bounds())
+			for y := range height {
+				for x := range width {
+					sx, sy := x, y
+					switch orientation {
+					case 2:
+						sx = 1 - x
+					case 3:
+						sx, sy = 1-x, 2-y
+					case 4:
+						sy = 2 - y
+					case 5:
+						sx, sy = y, x
+					case 6:
+						sx, sy = y, 2-x
+					case 7:
+						sx, sy = 1-y, 2-x
+					case 8:
+						sx, sy = 1-y, x
+					}
+					require.Equal(t, color.NRGBAModel.Convert(plain.At(sx, sy)), color.NRGBAModel.Convert(result.At(x, y)))
+				}
+			}
+		})
+	}
+}
+
 func TestDecodeThumbnailImageBoundsHeaderProbe(t *testing.T) {
 	// Point the TIFF directory beyond the probe budget. This fixture is just over
 	// 1 MiB of zeroes, with no image buffer or decompression workload.
@@ -75,6 +134,35 @@ func TestDecodeThumbnailImageBoundsHeaderProbe(t *testing.T) {
 	require.ErrorContains(t, err, "inspect image dimensions within header budget")
 	require.Nil(t, img)
 	require.Equal(t, thumbnailMetadataProbeSize, reader.bytesRead)
+}
+
+func TestImagingPaletteBounds(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		index     byte
+		wantAlpha uint32
+	}{
+		{"valid palette index", 0, 0xffff},
+		{"out-of-range palette index", 255, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			img := image.NewPaletted(image.Rect(0, 0, 1, 1), color.Palette{
+				color.NRGBA{R: 80, G: 120, B: 160, A: 255},
+			})
+			img.Pix[0] = test.index
+			for name, transform := range map[string]func(image.Image) image.Image{
+				"grayscale": func(src image.Image) image.Image { return imaging.Grayscale(src) },
+				"resize":    func(src image.Image) image.Image { return imaging.Resize(src, 2, 2, imaging.Lanczos) },
+			} {
+				t.Run(name, func(t *testing.T) {
+					result := transform(img)
+					require.NotNil(t, result)
+					_, _, _, alpha := result.At(0, 0).RGBA()
+					require.Equal(t, test.wantAlpha, alpha)
+				})
+			}
+		})
+	}
 }
 
 type thumbnailCountingReader struct {
