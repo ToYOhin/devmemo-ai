@@ -87,6 +87,10 @@ sanitized evaluation method/results and current completion gates are recorded in
 
 ### One-click Windows install
 
+The installer is planned for **v0.4.0**; its prepared release notes do not mean
+that a tag, Release, or candidate package has been published. See the
+[v0.4.0 scope and final-package acceptance checklist](docs/releases/v0.4.0.md).
+
 Download the Windows installer whose file name ends in `_setup.exe` from a
 subsequent GitHub Release that includes this feature, and run it. The installer does not require administrator privileges.
 It installs the application in `%LOCALAPPDATA%\Programs\DevMemoAI`, stores memo

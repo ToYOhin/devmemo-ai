@@ -68,6 +68,9 @@ Memo 详情页
 
 ### Windows 一键安装
 
+安装器计划随 **v0.4.0** 提供；整理发布元数据和说明不代表已打 tag、发布 Release 或生成候选包。
+请参阅 [v0.4.0 发布范围与最终候选包隔离验收清单](docs/releases/v0.4.0.zh-CN.md)。
+
 从包含该功能的后续 GitHub Release 下载文件名以 `_setup.exe` 结尾的 Windows 安装程序并双击运行。安装程序
 不要求管理员权限，会把应用安装到当前用户的
 `%LOCALAPPDATA%\Programs\DevMemoAI`，把 Memo 数据保存在

@@ -5,22 +5,76 @@ All notable changes to DevMemo AI are documented in this file.
 DevMemo AI release versions are independent from the Memos upstream baseline.
 See [UPSTREAM.md](UPSTREAM.md) for upstream compatibility information.
 
-## Unreleased
+## [0.4.0] - Unreleased
+
+Prepared release metadata, not a published tag or Release. Complete release
+notes, upgrade guidance, evidence boundaries, and the pending final-package
+acceptance checklist are in [the v0.4.0 release guide](docs/releases/v0.4.0.md)
+([简体中文](docs/releases/v0.4.0.zh-CN.md)).
 
 ### Features
 
 - Added a per-user Windows one-click installer executable that installs the
   standalone DevMemo AI core, creates Start Menu and desktop shortcuts, opens
   the local UI on startup, and preserves memo data during uninstall.
-- Added a reproducible PowerShell build script and future Release workflow
-  asset for the Windows installer without introducing a third-party installer
+- Added a reproducible PowerShell build script and Release workflow packaging
+  for the Windows installer without introducing a third-party installer
   dependency.
+- Added an administrator-only Agent Provider settings panel and versioned
+  configuration contract for deterministic, OpenAI, DeepSeek, and local Ollama.
+  Saved settings apply to Evidence Answer and AgentRun, not legacy AI routes.
+- Added encrypted AI-owned SQLite credential storage and authenticated internal
+  configuration APIs. Keys are write-only; reads expose only a masked hint and
+  whether a key is present.
+- Connected configured Providers to Evidence Answer and the AgentRun report
+  finalizer, with strict output validation, bounded deadlines, and explicitly
+  marked deterministic AgentRun fallback.
+
+### Bug Fixes
+
+- Allow a first keyless Ollama configuration to be saved, close Provider SQLite
+  connections deterministically, and give the BFF a bounded finalization budget
+  beyond the unchanged 20-second Provider deadline.
+- Preserve the old Windows executable on installation/upgrade failures, retain
+  its backup if rollback fails, and retain uninstall registration when the
+  cleanup helper cannot start. Partial shortcut/registry updates require a
+  repair rerun; they are not included in executable rollback.
+- Protect static files and `/api`, `/file`, and `/mcp` route boundaries against
+  encoded path separators, including `%2F`, without an unintended SPA fallback.
+- Bound thumbnail dimension/metadata decoding, handle malformed TIFF input and
+  original-file fallback, and replace the vulnerable imaging dependency with
+  a palette-safe fork.
+- Keep unresolved pull requests out of stale-closure automation.
+
+### Dependencies and regression coverage
+
+- Update Echo to 5.2.0, x/image to 0.41.0, x/crypto to 0.55.0, x/net to 0.58.0,
+  gRPC to 1.83.2, CEL to 0.29.0, and go-archive to 0.3.0; use
+  `github.com/kovidgoyal/imaging` 1.6.5.
+- Update Mermaid to 11.16.1 with adversarial XY, Radar, and Architecture
+  regressions; update the Web runtime/build/test dependency closure, including
+  nanoid 3.3.18 and undici 7.29.1 overrides.
+- Update cryptography to 50.0.0 and verify legacy HKDF-SHA256/AES-GCM synthetic
+  credential compatibility and tamper rejection. Update pytest to 9.0.3 and
+  declare pytest-asyncio 1.4.0 in the development lockfile.
+- Add isolated Windows installer lifecycle regressions to Windows CI and
+  synthetic Provider configuration, masking, storage, timeout, and fallback
+  regressions without reducing safety or coverage thresholds.
 
 ### Security and operational boundaries
 
 - The standalone Windows executable includes the embedded web UI and Memos
   core only. AI Service, Agent, Qdrant, Ollama, and external Providers remain
   separate explicit opt-ins and are not claimed by the installer.
+- Agent and lifecycle defaults remain disabled; deterministic and memory-based
+  defaults remain unchanged. Remote Agent Provider use requires explicit Memo
+  export consent. Legacy AI routes keep their environment configuration.
+- Stored Provider credentials require a separately backed-up master key;
+  changing or losing that key makes existing credentials unreadable.
+- Source CI and synthetic installer tests do not prove final-package installation,
+  real Windows integration, real Provider quality, or real-user-data acceptance.
+  The final v0.4.0 package checklist remains pending, and the current Windows
+  build path has no Authenticode signing.
 
 ## [0.3.0] - 2026-08-13
 
