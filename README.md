@@ -85,6 +85,48 @@ sanitized evaluation method/results and current completion gates are recorded in
 
 ## Quick start
 
+### One-click Windows install
+
+Download the Windows installer whose file name ends in `_setup.exe` from a
+subsequent GitHub Release that includes this feature, and run it. The installer does not require administrator privileges.
+It installs the application in `%LOCALAPPDATA%\Programs\DevMemoAI`, stores memo
+data in `%LOCALAPPDATA%\DevMemoAI\data`, creates desktop and Start Menu
+shortcuts, and opens <http://localhost:5230> automatically.
+
+Uninstall it from Windows Installed apps or the `Uninstall DevMemo AI` Start
+Menu shortcut. Uninstalling preserves memo data, and upgrades do not overwrite
+the data directory.
+
+If executable replacement or shortcut/registration setup fails, the installer
+attempts to restore the previous executable (or remove a failed first install).
+If restoration also fails, the error identifies the retained executable backup.
+This rollback covers the executable, not partial shortcut/registry updates;
+after resolving the reported error, rerun the installer to repair those entries.
+If the uninstall helper cannot start, the uninstall registration is retained.
+
+The Windows installer contains the embedded web UI and Memos core. It does not
+bundle the Python AI Service. Agent, Qdrant, Ollama, and external Providers
+remain separate Docker or explicit opt-in paths; the standalone executable is
+not evidence of a complete Agent runtime.
+
+The current build path does not configure Authenticode signing, so Windows
+SmartScreen may identify the downloaded executable as coming from an unknown
+publisher. Configure a signing certificate before broad distribution and
+always verify the SHA-256 checksum published with the Release.
+
+Build the installer from a source worktree with:
+
+```powershell
+Set-Location devmemo-ai
+.\scripts\build-windows-installer.ps1
+```
+
+Artifacts are written to `build/windows-installer/` by default. `DevMemoAI.exe`
+is the portable binary; the executable ending in `Setup.exe` is the one-click
+installer.
+
+### Docker Compose
+
 Prerequisite: Docker Desktop with Docker Compose.
 
 ```powershell

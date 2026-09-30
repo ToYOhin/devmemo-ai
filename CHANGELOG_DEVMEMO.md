@@ -7,6 +7,21 @@ See [UPSTREAM.md](UPSTREAM.md) for upstream compatibility information.
 
 ## Unreleased
 
+### Features
+
+- Added a per-user Windows one-click installer executable that installs the
+  standalone DevMemo AI core, creates Start Menu and desktop shortcuts, opens
+  the local UI on startup, and preserves memo data during uninstall.
+- Added a reproducible PowerShell build script and future Release workflow
+  asset for the Windows installer without introducing a third-party installer
+  dependency.
+
+### Security and operational boundaries
+
+- The standalone Windows executable includes the embedded web UI and Memos
+  core only. AI Service, Agent, Qdrant, Ollama, and external Providers remain
+  separate explicit opt-ins and are not claimed by the installer.
+
 ## [0.3.0] - 2026-08-13
 
 ### Features

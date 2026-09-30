@@ -23,6 +23,7 @@ class AiSettings:
     index_on_webhook: bool = False
     agent_enabled: bool = False
     agent_internal_secret: str | None = None
+    agent_provider_master_key: str | None = None
     agent_rehydration_enabled: bool = False
     agent_rehydration_secret_current: str | None = None
     agent_rehydration_secret_previous: str | None = None
@@ -69,6 +70,11 @@ class AiSettings:
         agent_internal_secret = os.getenv("AI_AGENT_INTERNAL_SECRET", "").strip() or None
         if agent_enabled and agent_internal_secret is None:
             raise ValueError("AI_AGENT_INTERNAL_SECRET is required when AI_AGENT_ENABLED=true")
+        agent_provider_master_key = (
+            _parse_rehydration_secret("AI_AGENT_PROVIDER_MASTER_KEY")
+            if os.getenv("AI_AGENT_PROVIDER_MASTER_KEY", "").strip()
+            else None
+        )
         agent_rehydration_enabled = parse_env_bool(
             "AI_AGENT_REHYDRATION_ENABLED", default=False
         )
@@ -145,6 +151,7 @@ class AiSettings:
             index_on_webhook=index_on_webhook,
             agent_enabled=agent_enabled,
             agent_internal_secret=agent_internal_secret,
+            agent_provider_master_key=agent_provider_master_key,
             agent_rehydration_enabled=agent_rehydration_enabled,
             agent_rehydration_secret_current=agent_rehydration_secret_current,
             agent_rehydration_secret_previous=agent_rehydration_secret_previous,

@@ -85,3 +85,31 @@ jobs:
           files: ./coverage.out
           flags: ${{ matrix.test-group }}
           fail_ci_if_error: false
+
+  windows-installer-tests:
+    name: Windows Installer Regression
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      GOMAXPROCS: "1"
+      GOMEMLIMIT: "768MiB"
+      CGO_ENABLED: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      # Uses temporary files and mocked system operations, never the real installer.
+      - name: Run isolated Windows installer regressions
+        shell: pwsh
+        run: go test -p 1 -parallel 1 -count=1 -timeout 120s -v ./cmd/memos

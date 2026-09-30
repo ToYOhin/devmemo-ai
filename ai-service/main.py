@@ -40,6 +40,7 @@ from database import (
 )
 from llm import create_provider
 from app.adapters.agent_observability import BoundedInMemoryObservabilityAdapter
+from app.adapters.agent_provider_store import AgentProviderStoreError
 from app.adapters.agent_run_artifact_store import AgentRunArtifactStoreError
 from app.adapters.agent_run_store import AgentRunPersistenceError
 from app.adapters.chunk_state import SqliteChunkIndexStateStore
@@ -58,6 +59,16 @@ from app.services.agent_delegation import (
     AgentDelegationError,
     AgentDelegationHeaders,
     verify_agent_internal_request,
+)
+from app.services.agent_provider_api import (
+    INTERNAL_AGENT_PROVIDER_PATH,
+    INTERNAL_AGENT_PROVIDER_TEST_PATH,
+    AgentProviderAPI,
+    AgentProviderAPIError,
+)
+from app.services.agent_provider_registry import (
+    AgentProviderRegistry,
+    AgentProviderRuntimeError,
 )
 from app.services.agent_run_api import (
     INTERNAL_AGENT_RUN_CREATE_PATH,
@@ -266,6 +277,11 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="DevMemo AI Service", version="0.1.0", lifespan=lifespan)
 provider = create_provider()
+agent_provider_registry = (
+    AgentProviderRegistry(database_path(), settings.agent_provider_master_key)
+    if settings.agent_enabled and settings.agent_provider_master_key is not None
+    else None
+)
 embedding_service = build_embedding_service(settings)
 chunk_lifecycle_coordinator = build_chunk_lifecycle_coordinator(
     settings,
@@ -617,9 +633,14 @@ async def answer_delegated_agent_request(
             )
             if durable_retrieval is None:
                 raise RetrievalUnavailableError("Agent retrieval unavailable")
+        runtime_provider = (
+            agent_provider_registry.dynamic_provider()
+            if agent_provider_registry is not None
+            else provider
+        )
         result = await EvidenceAnswerAgent(
             RetrievalService(embedding_service),
-            provider,
+            runtime_provider,
             durable_retrieval,
             observability_recorder=recorder,
             monotonic_clock=time.monotonic if recorder is not None else None,
@@ -646,6 +667,8 @@ async def answer_delegated_agent_request(
     except RetrievalUnavailableError as error:
         raise HTTPException(status_code=503, detail="Agent retrieval unavailable") from error
     except AgentProviderError as error:
+        raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
+    except AgentProviderRuntimeError as error:
         raise HTTPException(status_code=502, detail="Agent provider unavailable") from error
     finally:
         record_answer_observation(recorder, outcome)
@@ -715,7 +738,15 @@ async def execute_agent_run(
     body = await raw_request.body()
     _verify_agent_run_request(raw_request.method, raw_request.url.path, body, signature, timestamp)
     try:
-        return await AgentRunDemoAPI(database_path()).execute(body)
+        runtime_provider = (
+            agent_provider_registry.dynamic_provider()
+            if agent_provider_registry is not None
+            else provider
+        )
+        return await AgentRunDemoAPI(
+            database_path(),
+            provider=runtime_provider,
+        ).execute(body)
     except (AgentRunDemoAPIError, ValueError) as error:
         raise HTTPException(status_code=400, detail="invalid AgentRun demo request") from error
     except (AgentRunPersistenceError, AgentRunArtifactStoreError, AgentRunRuntimeError) as error:
@@ -741,6 +772,102 @@ async def get_agent_run_artifact(
     if result is None:
         raise HTTPException(status_code=404, detail="AgentRun artifact not found")
     return result
+
+
+@app.get(INTERNAL_AGENT_PROVIDER_PATH)
+async def get_agent_provider_setting(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Return only masked Agent provider metadata to the signed Memos BFF."""
+
+    _verify_agent_run_request(
+        raw_request.method,
+        raw_request.url.path,
+        b"",
+        signature,
+        timestamp,
+    )
+    if agent_provider_registry is None:
+        raise HTTPException(status_code=404, detail="not found")
+    try:
+        return AgentProviderAPI(agent_provider_registry).get()
+    except AgentProviderStoreError as error:
+        raise HTTPException(status_code=503, detail="Agent provider settings unavailable") from error
+
+
+@app.put(INTERNAL_AGENT_PROVIDER_PATH)
+async def update_agent_provider_setting(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Persist one write-only Agent credential from the signed Memos BFF."""
+
+    body = await _read_bounded_agent_provider_body(
+        raw_request,
+        16 << 10,
+        "invalid Agent provider request",
+    )
+    _verify_agent_run_request(
+        raw_request.method,
+        raw_request.url.path,
+        body,
+        signature,
+        timestamp,
+    )
+    if agent_provider_registry is None:
+        raise HTTPException(status_code=404, detail="not found")
+    try:
+        return AgentProviderAPI(agent_provider_registry).update(body)
+    except AgentProviderAPIError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except AgentProviderStoreError as error:
+        raise HTTPException(status_code=503, detail="Agent provider settings unavailable") from error
+
+
+@app.post(INTERNAL_AGENT_PROVIDER_TEST_PATH)
+async def test_agent_provider_setting(
+    raw_request: Request,
+    signature: str | None = Header(default=None, alias="X-DevMemo-Agent-Signature"),
+    timestamp: str | None = Header(default=None, alias="X-DevMemo-Agent-Timestamp"),
+) -> dict[str, object]:
+    """Run an explicit synthetic-only Provider connection test."""
+
+    body = await _read_bounded_agent_provider_body(
+        raw_request,
+        1024,
+        "invalid Agent provider test request",
+    )
+    _verify_agent_run_request(
+        raw_request.method,
+        raw_request.url.path,
+        body,
+        signature,
+        timestamp,
+    )
+    if agent_provider_registry is None:
+        raise HTTPException(status_code=404, detail="not found")
+    try:
+        return await AgentProviderAPI(agent_provider_registry).test(body)
+    except AgentProviderAPIError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except AgentProviderRuntimeError as error:
+        raise HTTPException(status_code=502, detail="Agent provider connection test failed") from error
+    except AgentProviderStoreError as error:
+        raise HTTPException(status_code=503, detail="Agent provider settings unavailable") from error
+
+
+async def _read_bounded_agent_provider_body(raw_request: Request, limit: int, detail: str) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in raw_request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise HTTPException(status_code=400, detail=detail)
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _verify_agent_run_request(

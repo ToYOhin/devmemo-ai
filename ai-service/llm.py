@@ -4,8 +4,15 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+import json
+from typing import Any
 
 import httpx
+
+from app.domain.agent_provider import AgentProviderConfig
+
+
+MAX_PROVIDER_RESPONSE_BYTES = 1 << 20
 
 
 @dataclass(frozen=True)
@@ -34,18 +41,19 @@ class OpenAIProvider:
 
     async def generate(self, prompt: str) -> LLMResult:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
+            payload = await _post_bounded_json(
+                client,
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                json={
+                payload={
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.2,
                     "response_format": {"type": "json_object"},
+                    "max_tokens": 1200,
                 },
             )
-            response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+            content = payload["choices"][0]["message"]["content"]
             return LLMResult(text=content, provider=self.name)
 
 
@@ -84,13 +92,13 @@ class DeepSeekProvider:
         ) as client:
             for attempt in range(2):
                 try:
-                    response = await client.post(
+                    response = await _post_bounded_json(
+                        client,
                         f"{self.base_url}/chat/completions",
                         headers={"Authorization": f"Bearer {self.api_key}"},
-                        json=payload,
+                        payload=payload,
                     )
-                    response.raise_for_status()
-                    content = response.json()["choices"][0]["message"]["content"]
+                    content = response["choices"][0]["message"]["content"]
                     return LLMResult(text=content, provider=self.name)
                 except (httpx.TransportError, httpx.HTTPStatusError) as error:
                     if attempt == 1 or not _is_retryable_deepseek_error(error):
@@ -108,46 +116,125 @@ class OllamaProvider:
 
     async def generate(self, prompt: str) -> LLMResult:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
+            payload = await _post_bounded_json(
+                client,
                 f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
+                payload={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"num_predict": 1200},
+                },
             )
-            response.raise_for_status()
-            return LLMResult(text=response.json()["response"], provider=self.name)
+            return LLMResult(text=payload["response"], provider=self.name)
 
 
-def create_provider() -> (
-    DeterministicProvider | OpenAIProvider | DeepSeekProvider | OllamaProvider
-):
-    provider = os.getenv("AI_PROVIDER", "deterministic").lower()
-    if provider in {"deterministic", "mock"}:
+async def _post_bounded_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    payload: dict[str, object],
+    headers: dict[str, str] | None = None,
+) -> Any:
+    chunks: list[bytes] = []
+    size = 0
+    async with client.stream("POST", url, headers=headers, json=payload) as response:
+        response.raise_for_status()
+        async for chunk in response.aiter_bytes():
+            size += len(chunk)
+            if size > MAX_PROVIDER_RESPONSE_BYTES:
+                raise RuntimeError("Agent provider response exceeded the size limit")
+            chunks.append(chunk)
+    return json.loads(b"".join(chunks))
+
+
+def create_provider_from_config(
+    config: AgentProviderConfig,
+    *,
+    timeout: float = 60.0,
+) -> DeterministicProvider | OpenAIProvider | DeepSeekProvider | OllamaProvider:
+    normalized = config.validated()
+    provider = normalized.provider
+    if provider == "deterministic":
         return DeterministicProvider()
+    if provider == "openai":
+        return OpenAIProvider(
+            api_key=normalized.api_key or "",
+            model=normalized.model,
+            base_url=normalized.base_url,
+            timeout=timeout,
+        )
+    if provider == "deepseek":
+        return DeepSeekProvider(
+            api_key=normalized.api_key or "",
+            model=normalized.model,
+            base_url=normalized.base_url,
+            timeout=timeout,
+        )
+    if provider == "ollama":
+        return OllamaProvider(
+            model=normalized.model,
+            base_url=normalized.base_url,
+            timeout=timeout,
+        )
+    raise RuntimeError(f"Unsupported AI_PROVIDER: {provider}")
+
+
+def provider_config_from_env() -> AgentProviderConfig:
+    provider = os.getenv("AI_PROVIDER", "deterministic").strip().lower()
+    if provider == "mock":
+        provider = "deterministic"
     if provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY", "")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
-        return OpenAIProvider(
-            api_key=api_key,
+        return AgentProviderConfig(
+            provider=provider,
             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        )
+            api_key=api_key,
+            enabled=True,
+            allow_real_memo_data=True,
+            source="environment",
+        ).validated()
     if provider == "deepseek":
         api_key = os.getenv("DEEPSEEK_API_KEY", "")
         if not api_key:
-            raise RuntimeError(
-                "DEEPSEEK_API_KEY is required when AI_PROVIDER=deepseek"
-            )
-        return DeepSeekProvider(
-            api_key=api_key,
+            raise RuntimeError("DEEPSEEK_API_KEY is required when AI_PROVIDER=deepseek")
+        return AgentProviderConfig(
+            provider=provider,
             model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro"),
             base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-        )
+            api_key=api_key,
+            enabled=True,
+            allow_real_memo_data=True,
+            source="environment",
+        ).validated()
     if provider == "ollama":
-        return OllamaProvider(
+        return AgentProviderConfig(
+            provider=provider,
             model=os.getenv("OLLAMA_MODEL", "llama3.2"),
             base_url=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
-        )
-    raise RuntimeError(f"Unsupported AI_PROVIDER: {provider}")
+            api_key=None,
+            enabled=True,
+            allow_real_memo_data=True,
+            source="environment",
+        ).validated()
+    if provider != "deterministic":
+        raise RuntimeError(f"Unsupported AI_PROVIDER: {provider}")
+    return AgentProviderConfig(
+        provider="deterministic",
+        model="",
+        base_url="",
+        api_key=None,
+        enabled=True,
+        allow_real_memo_data=False,
+        source="environment",
+    ).validated()
+
+
+def create_provider() -> DeterministicProvider | OpenAIProvider | DeepSeekProvider | OllamaProvider:
+    return create_provider_from_config(provider_config_from_env())
 
 
 def _is_retryable_deepseek_error(

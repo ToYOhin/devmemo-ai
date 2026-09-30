@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/fstest"
 
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
@@ -150,16 +151,77 @@ func TestFrontendService_SkipsDynamicRoutes(t *testing.T) {
 
 	e := echo.New()
 	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)
-	e.GET("/api/test", func(c *echo.Context) error {
-		return c.String(http.StatusOK, "ok")
-	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	for _, route := range []string{"/api/test", "/file/test", "/mcp/test"} {
+		e.GET(route, func(c *echo.Context) error {
+			return c.String(http.StatusOK, "dynamic-route")
+		})
+
+		req := httptest.NewRequest(http.MethodGet, route, nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "dynamic-route", rec.Body.String())
+		require.Empty(t, rec.Header().Get(echo.HeaderCacheControl))
+	}
+}
+
+func TestFrontendService_EncodedSlashPreservesDynamicRouteBoundaries(t *testing.T) {
+	frontendFS := fstest.MapFS{
+		"index.html":      {Data: []byte("frontend-index")},
+		"assets/app.js":   {Data: []byte("static-asset")},
+		"api/secret.txt":  {Data: []byte("api-secret")},
+		"file/secret.txt": {Data: []byte("file-secret")},
+		"mcp/secret.txt":  {Data: []byte("mcp-secret")},
+	}
+
+	e := echo.New()
+	(&FrontendService{}).serveWithFilesystem(e, frontendFS)
+
+	req := httptest.NewRequest(http.MethodGet, "/assets/app.js", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "static-asset", rec.Body.String())
+
+	for _, protectedPath := range []string{
+		"/api%2Fsecret.txt",
+		"/file%2Fsecret.txt",
+		"/mcp%2Fsecret.txt",
+	} {
+		req := httptest.NewRequest(http.MethodGet, protectedPath, nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.NotContains(t, rec.Body.String(), "secret")
+	}
+}
+
+func TestEchoStaticFSRejectsEncodedPathSeparator(t *testing.T) {
+	frontendFS := fstest.MapFS{
+		"api/secret.txt": {Data: []byte("api-secret")},
+	}
+
+	e := echo.New()
+	protected := e.Group("/api")
+	protected.Use(func(_ echo.HandlerFunc) echo.HandlerFunc {
+		return func(_ *echo.Context) error {
+			return echo.NewHTTPError(http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+	})
+	protected.GET("/*", func(c *echo.Context) error {
+		return c.NoContent(http.StatusNoContent)
+	})
+	e.StaticFS("/", frontendFS)
+
+	req := httptest.NewRequest(http.MethodGet, "/api%2Fsecret.txt", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.Empty(t, rec.Header().Get(echo.HeaderCacheControl))
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	require.NotContains(t, rec.Body.String(), "api-secret")
 }
 
 func TestFrontendService_RobotsTXT(t *testing.T) {

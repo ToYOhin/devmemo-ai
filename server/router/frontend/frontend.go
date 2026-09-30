@@ -39,7 +39,10 @@ func NewFrontendService(profile *profile.Profile, store *store.Store) *FrontendS
 }
 
 func (s *FrontendService) Serve(_ context.Context, e *echo.Echo) {
-	frontendFS := getFileSystem("dist")
+	s.serveWithFilesystem(e, getFileSystem("dist"))
+}
+
+func (s *FrontendService) serveWithFilesystem(e *echo.Echo, frontendFS fs.FS) {
 	skipper := func(c *echo.Context) bool {
 		requestPath := c.Request().URL.Path
 		if shouldSkipFrontendStatic(requestPath) {
