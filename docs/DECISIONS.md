@@ -16,9 +16,11 @@ deterministic、OpenAI、Ollama 实现放在 adapter 层，业务逻辑依赖 pr
 
 先定义 embedding/vector store 接口和 fake 测试，再接入 FastEmbed/Qdrant。
 
-## ADR-005：每个切片产生下一阶段 Prompt
+## ADR-005：按需交接，不重复生成下一阶段记录
 
 对外变更应同步更新适用的用户文档与变更记录，并如实说明验证范围。
+2026-10-01 收敛：当前事实由 project-status、目标由 roadmap、详细证明由带日期的审计记录
+各自负责。用户要求新窗口时维护一份 Git 外交接和精简 Prompt，不为每次小改动新增重复文件。
 
 ## ADR-006：模板失败回退 plain Memo
 
@@ -31,6 +33,9 @@ memo_templates 按 memo_id 唯一 upsert，保留 kind、payload、raw_content�
 ## ADR-008：VITE_AI_SERVICE_URL 是前端安全开关
 
 React 只在显式配置时启用 AI query；404、非法响应和网络错误局部降级。AI_CORS_ORIGINS 默认 localhost:3001，Phase 2d 支持 GET/POST。
+
+这是早期直接调用的历史决策；R7 已将浏览器 AI 请求统一到认证同源 Memos BFF。
+当前配置/API 以 README_AI 和 docs/api.md 为准，不恢复浏览器直连 AI Service。
 
 ## ADR-009：Windows 使用低并发验证
 

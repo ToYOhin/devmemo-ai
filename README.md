@@ -74,12 +74,14 @@ Memo detail view
   └─ bounded project-summary AgentRun and Markdown artifact
 ```
 
+Start with [current delivery/evidence](docs/project-status.md) and the
+[project roadmap](docs/roadmap.md); historical audits are dated evidence, not current task queues.
 See [docs/structure.md](docs/structure.md) for repository and runtime
 boundaries, and [docs/api.md](docs/api.md) for API contracts. The experimental
 Agent design and remaining delivery gates are documented separately in
 [docs/agent-architecture.md](docs/agent-architecture.md) and
 [docs/agent-development-roadmap.md](docs/agent-development-roadmap.md). The
-sanitized evaluation method/results and current completion gates are recorded in
+sanitized evaluation method/results and historical completion gates are recorded in
 [docs/agent-evaluation-benchmark.md](docs/agent-evaluation-benchmark.md) and
 [docs/r6-completion-audit.md](docs/r6-completion-audit.md).
 
@@ -87,8 +89,9 @@ sanitized evaluation method/results and current completion gates are recorded in
 
 ### One-click Windows install
 
-The installer is planned for **v0.4.0**; its prepared release notes do not mean
-that a tag, Release, or candidate package has been published. See the
+The **v0.4.0** core installer has a locally built/tested candidate, but no stable
+tag or Release is published. Local package acceptance and clean-tag distribution
+are different evidence. See the
 [v0.4.0 scope and final-package acceptance checklist](docs/releases/v0.4.0.md).
 
 Download the Windows installer whose file name ends in `_setup.exe` from a
@@ -107,6 +110,11 @@ If restoration also fails, the error identifies the retained executable backup.
 This rollback covers the executable, not partial shortcut/registry updates;
 after resolving the reported error, rerun the installer to repair those entries.
 If the uninstall helper cannot start, the uninstall registration is retained.
+PowerShell command/shortcut failures now reach the rollback path. Uninstall
+starts a hidden worker; close the dialog to let it remove the running executable.
+The dialog names a completion log under `%LOCALAPPDATA%\DevMemoAI`, outside the
+data directory. Only `COMPLETED` means removal succeeded; `FAILED` records an
+error. Registration is removed only after files/shortcuts are cleaned up.
 
 The Windows installer contains the embedded web UI and Memos core. It does not
 bundle the Python AI Service. Agent, Qdrant, Ollama, and external Providers
@@ -115,7 +123,7 @@ not evidence of a complete Agent runtime.
 
 The current build path does not configure Authenticode signing, so Windows
 SmartScreen may identify the downloaded executable as coming from an unknown
-publisher. Configure a signing certificate before broad distribution and
+publisher. Signing is a separate broad-distribution concern, not a requirement for a personal demo;
 always verify the SHA-256 checksum published with the Release.
 
 Build the installer from a source worktree with:

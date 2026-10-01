@@ -1,65 +1,17 @@
 # Evidence Answer Agent
 
-> Status: the A1 local-first, read-only backend is implemented and locally
-> runtime-verified. A2 adds an explicit experimental Web entry, A3 completed a
-> controlled local Provider smoke, and A4 now defines the local RAG lifecycle
-> contract. A4-I1 implements its pure event, acknowledgement, and state-machine
-> rules. A4-I2 adds an SQLite-only dormant source-outbox adapter and temporary-
-> database transaction proof. A4-I3 adds a dormant AI derived-ledger adapter and
-> fake-vector crash-recovery proof. A4-I4 adds authenticated lifecycle transport
-> contracts without a route or dispatcher. A4-I5 adds a synthetic disposable
-> outbox-to-ledger integration proof with restart, retry, tombstone,
-> reconciliation, and rebuild-generation coverage. R4-I1 adds a strict
-> provider-neutral grounded-answer result contract, and R4-I2 integrates it into
-> the non-deterministic answer path using only synthetic evidence and fake
-> Provider tests. R4-I3 verifies that path with a disposable local Provider
-> smoke. R5-I1 adds an unwired durable authorized-retrieval contract with a
-> two-stage, content-free candidate boundary and fake repository proof. R5-I2
-> adds an unwired disposable SQLite repository-adapter parity proof with
-> reopen and snapshot-consistency coverage. R5-I3 selects current-authority
-> Memos rehydration through a provider-neutral, unwired design contract; the AI
-> side retains complete content only in request memory. R5-I4 proves the
-> domain-separated request/response HMAC, freshness, exact parsing, and bounded
-> process-local replay contract entirely in process. R5-I5 proves Go/Python
-> canonical and exact-payload parity against the same synthetic fixture. R5-I6
-> defines the pure Go current-authority reader boundary and proves its
-> all-or-nothing projection with an in-memory fake. R5-I7 adds an unwired real
-> SQLite current-authority reader with temporary-database parity and race proofs.
-> R5-I8 adds an unwired process-local authority capability issuer/resolver with
-> a bounded in-memory registry and synthetic concurrency proof. R5-I9 adds an
-> unwired single-host transport composition with a dedicated process-local request
-> replay store and synthetic call-order/concurrency proof. R5-I10 adds an
-> unregistered single-host `net/http` handler/client contract with strict HTTP
-> projection, fixed five-second timeout, and in-memory/fake-transport proof.
-> R5-I11A adds strict, disabled-by-default Go/Python runtime configuration for
-> a dedicated current/previous rehydration keyring and one AI-side Memos origin.
-> R5-I11B adds fixed-order matching-key verification and opt-in registration on
-> the existing Memos listener. R5-I11C adds an opt-in Python HTTP client owned by
-> the AI Service lifespan, with deterministic transport close. R5-I12 issues a
-> Memos-owned authority capability from the authenticated BFF path and carries
-> only its opaque ref inside the signed delegation. R5-I13 adds injected durable
-> candidate-to-rehydration orchestration with snapshot recheck and request-memory
-> materialization. R5-I14 adds a content-free vector/lifecycle adapter, a ledger-
-> owned active-generation revision, authorized UID query pushdown, and strict
-> default-disabled lifespan ownership. R5-I15 makes the verified answer Agent
-> select that owned orchestrator under the same opt-in, with no legacy fallback,
-> and proves the disposable synthetic single-host product path. R5-I16 records
-> the completion audit and authorization checklist. The authorized post-I16
-> lifecycle slice now connects SQLite mutation/outbox delivery, the existing
-> internal AI listener, generation activation, and Qdrant-derived state. Two
-> disposable authenticated-browser runs completed the private/public visibility,
-> update/delete, restart, rollback, and exact-cleanup matrix. R5 is complete only
-> for this default-disabled single-host scope. R6 locally adds the strict
-> 64-case evaluation/threshold/runner stack, a fixed pre-retrieval refusal
-> synchronized across Python, Go, and Web, and bounded content-free answer,
-> retrieval, Provider, and authoritative lifecycle observations. These local
-> results do not close the Python engineering-tool, disposable R6 browser,
-> clean-checkout CI, or reviewed merge/tag/release gates.
+Current delivery/evidence: [project status](project-status.md). Implementation
+ownership: [structure](structure.md). Next order: [Agent roadmap](agent-development-roadmap.md).
 
-Delivery order, current gaps, acceptance gates, and the resume-ready definition
-of done are maintained in [DevMemo Agent Development Roadmap](agent-development-roadmap.md).
-This architecture document remains the authority for security and data-flow
-contracts; the roadmap must not relax them.
+R1–R6 and the bounded R7 demo are delivered for the documented opt-in single-host
+scope. Lifecycle/rehydration have runtime composition; AgentRun has a synchronous
+fixed-task path and optional configured Provider finalization. Safe defaults remain unchanged.
+
+This file defines security/data-flow contracts, not the current task queue.
+Stage-local "unwired" descriptions preserve the proof when each slice was added;
+subsequent composition supersedes those delivery states. R5/R6 audits preserve
+their own dated runtime/CI/publication evidence. Do not infer real-user model
+quality or multi-instance acceptance from them. Roadmaps must not relax these contracts.
 
 ## Purpose
 
@@ -179,6 +131,10 @@ empty index terminates with `no_context` after retrieval and must not call the
 LLM provider.
 
 ## Delivery status
+
+Historical stage-local implementation trail follows. For current composition
+and delivery gaps use [project status](project-status.md), not an isolated early
+"unwired" milestone below.
 
 1. **Contract and feature gate — complete.** Strict `AI_AGENT_ENABLED`
    parsing and provider-neutral Agent domain types have serialization tests.

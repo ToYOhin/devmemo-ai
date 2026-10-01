@@ -1,6 +1,23 @@
 # Development
 
-## MVP commands
+Current scope and next work: [project status](project-status.md) and [roadmap](roadmap.md).
+Commands below are opt-in choices, not a request to start every environment.
+
+## Choose the execution lane
+
+For Windows core, use the existing portable/installed executable. A key-free
+local source run with already prepared Web assets can use:
+
+```powershell
+$env:GOMAXPROCS = "1"
+go run -p 1 ./cmd/memos --addr 127.0.0.1 --port 5230 --data .devmemo-local/core-demo-data --open-browser=false
+```
+
+Use a dedicated synthetic data directory. The core path does not start Python
+or a model. Build/install instructions are in the root README; no candidate
+rebuild is required for documentation or an unchanged validated input.
+
+## Optional AI/Compose commands
 
 ```powershell
 $env:GOTOOLCHAIN = "local"
@@ -38,17 +55,30 @@ uv pip compile requirements-dev.txt --python-version 3.12 --generate-hashes --ou
 
 ## Provider configuration
 
-Use `AI_PROVIDER=deterministic` for a key-free local smoke test. Use `openai` with `OPENAI_API_KEY`, or `ollama` with `OLLAMA_BASE_URL` and `OLLAMA_MODEL`.
+Use `AI_PROVIDER=deterministic` for a key-free local smoke. With the Agent opt-in
+and AI Service available, administrators can configure the Agent under
+Settings → AI → Agent Provider. The server requires a separate master key for
+encrypted credential storage; reads are masked. Saved settings affect Agent
+paths only. Legacy routes keep `AI_PROVIDER` and environment configuration.
+See [AI setup](../README_AI.md) for consent, endpoints and budgets. Never use real
+credentials in regression tests; deterministic/synthetic verification needs none.
 
 ## Current development slices
 
-Keep changes independently revertable. The current slices are:
+Keep changes independently revertable. Check the affected layer rather than
+restarting historical slices:
 
-1. FastAPI service, LLM adapter and AI-owned SQLite boundary.
-2. Memo templates and summary UI through `web/src/features/ai/`.
-3. Provider-neutral embeddings, optional FastEmbed/Qdrant and index health.
-4. RAG retrieval, HMAC Webhook, outbox retry/ops/retention audit.
-5. Offline chunk evaluation and explicit chunk Webhook lifecycle.
+1. Windows installer: `go test -p 1 -parallel 1 -count=1 -timeout 120s ./cmd/memos`
+   on Windows. Real PowerShell/COM tests use temporary targets, not an existing install.
+2. AI behavior: run the nearest synthetic test file, then the pinned quality gates
+   above when the Python input changes. Do not lower coverage's 88.0% threshold.
+3. Memos BFF/authority: relevant `internal/aiagent` or `server/router/api/v1` tests.
+4. Web: existing lint/tests/build for actual Web changes, not for documentation.
+5. Docs only: diff/links/content checks; no frontend, Go candidate or Docker build.
+
+Use `GOMAXPROCS=1`, `-p 1`, serial commands and the existing dependency versions.
+Review current evidence before repeating full checks. Package, UI, Provider and
+CI lanes remain distinct; publishing needs its own explicit request.
 
 ## Scope boundaries
 

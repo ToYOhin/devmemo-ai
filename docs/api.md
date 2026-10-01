@@ -1,5 +1,8 @@
 # DevMemo AI API
 
+Current scope/evidence: [project status](project-status.md). Stage-numbered
+sections retain contract history; current browser access is authenticated same-origin BFF.
+
 ## Experimental Evidence Answer Agent
 
 `POST /api/ai/agent/answer` is an authenticated Memos BFF route and is disabled
@@ -20,8 +23,33 @@ part of this response.
 Non-deterministic answers must pass `grounded-answer-result-v1`; empty retrieval
 skips the Provider. Invalid delegation returns 401 internally, while retrieval
 and Provider failures become fixed 503/502 errors without raw exception text.
-The A4 lifecycle outbox/ledger remains dormant and is not connected to Memo
-CRUD, this route, a dispatcher, a worker, or automatic indexing.
+Lifecycle/outbox/ledger and current-authority rehydration now have a separate,
+default-disabled single-host opt-in composition. This does not enable a worker
+or automatic indexing by default; see [R5 acceptance](r5-acceptance.md).
+
+## Administrator Agent Provider configuration
+
+With the Agent opt-in enabled, administrator-only browser routes are:
+
+| Method/path | Behavior |
+| --- | --- |
+| `GET /api/ai/agent/provider` | Read versioned metadata and masked credential state, never the key |
+| `PUT /api/ai/agent/provider` | Validate/save `agent-provider-config-v1`; `api_key` is write-only |
+| `POST /api/ai/agent/provider/test` | Test the saved configuration with a fixed synthetic prompt, no Memo data |
+
+Memos authenticates the caller and requires its current administrator role.
+Disabled/unauthenticated/non-admin access maps to 404/401/403; invalid settings
+to 400, Provider test failure to 502, unavailable service/store to 503 with fixed
+public errors. Signed internal counterparts are `/internal/ai/agent/provider`
+and `/internal/ai/agent/provider/test`, not browser APIs.
+
+The shared [fixture](../contracts/agent-provider-config-v1.json) fixes supported
+providers and safe fields, including `api_key_set`/`api_key_hint`. AES-GCM
+credentials require a separately supplied master key; saved settings override
+environment fallback only for Evidence Answer/AgentRun. Ollama requires no key.
+Remote Memo use also requires enabled configuration and explicit export consent.
+Provider execution is bounded at 20 seconds; answer/run execution/connection-test
+BFF budgets are 25 seconds, metadata 10 seconds, with shorter caller deadlines preserved.
 
 ## Experimental project-summary AgentRun execution and artifact BFF
 
@@ -42,14 +70,16 @@ the same-origin artifact route returns its filename, media type, Markdown, and
 digest to the authenticated creator. It does not start a worker, persist a
 free-form task, write back to a Memo, or add approval flow or multi-instance
 claims. All routes remain absent under the default-disabled Agent configuration.
+An explicitly configured Provider may finalize `agent-run-project-summary-v1`;
+output is strictly validated and Markdown is server-rendered. Timeout/error/invalid
+output produces a marked deterministic fallback, not a false Provider-success claim.
 
-R5-I1 through R5-I7 do not add a public or internal runtime endpoint. The fixed
-`/internal/ai/agent/evidence/rehydrate` path currently exists only as an
-authenticated contract fixture; no handler/client is registered. The SQLite
-current-authority reader is likewise unwired and tested only with temporary
-synthetic data. A capability issuer/resolver, HTTP wiring, runtime configuration,
-real-data opt-in, and multi-instance replay/capability storage remain separate
-authorization gates.
+The fixed `/internal/ai/agent/evidence/rehydrate` endpoint and current-authority
+reader are implemented behind explicit rehydration opt-in, scoped keyring and
+lifespan-owned HTTP composition. Memos rechecks current identity/visibility and
+source revisions; AI materializes content only in request memory. Old R5-I1–I7
+"unwired" statements describe earlier slices, not today's runtime. Real data,
+cross-host/multi-instance replay/capability authority remain separate scope.
 
 ## Phase 12 strict TypeScript baseline（no API change）
 
@@ -88,11 +118,16 @@ The subsequent same-profile Chrome check confirmed the existing UI's accepted In
 - The default local CORS allowlist includes both `http://localhost:3001` and `http://127.0.0.1:3001`.
 - `POST /api/ai/summarize` persists an explicit Code Snippet or Bug Report template when `memo_id` is present. The response includes `memo_type` and optional `template_id`; plain Memos do not create templates.
 
-Base URL：http://localhost:8000
+Service-level development URL: `http://localhost:8000`. The contracts below are
+not permission to bypass the Memos BFF from an authenticated Agent browser;
+Agent deployment keeps internal AI ports unpublished.
 
 ## Frontend configuration
 
-VITE_AI_SERVICE_URL 控制前端 AI feature。AI_CORS_ORIGINS 默认允许 http://localhost:3001，Phase 2d 起允许 GET/POST。
+Browser AI features use the same-origin authenticated Memos BFF. Do not put
+AI Service URLs, visibility scopes or delegation secrets into browser settings.
+`AI_CORS_ORIGINS` applies to explicitly configured service-level development,
+not to replacing the BFF authorization boundary. See [AI setup](../README_AI.md).
 
 ## Vector store configuration
 
@@ -385,7 +420,7 @@ Set-Location <repository-root>/ai-service
 
 脚本默认使用 FastEmbed 384 维模型，创建临时 collection 后验证 upsert/search/delete 并清理；`--provider deterministic` 可跳过模型加载，`--mode chunk` 额外验证 chunk metadata、health、重新连接后的持久性和内部 retrieval contract。`--cache-dir` 或 `AI_FASTEMBED_CACHE_DIR` 可指定缓存目录；显式传入 `--collection` 时默认保留 collection，只有加 `--delete-collection` 才清理。
 
-## Planned APIs
+## Historical implementation log (not current pending APIs)
 
 - FastEmbed provider/index pipeline：Phase 3c 已完成；Webhook 索引生命周期：Phase 3d 已完成；Qdrant 真实 smoke：Phase 3e 已完成；Qdrant 重启持久化和缓存治理：Phase 3f 已完成；索引健康与故障边界：Phase 3g 已完成。
 - POST `/api/ai/chat`：Phase 4 已完成最小检索/引用问答；outbox 显式重试、基础观测、ops API 安全、保留预览、告警轮询和清理审计已在 Phase 4d/4e/4f/4g 完成；Phase 5a/5b/5c/5d/5e 离线评估、chunk 边界、可选生命周期和 health 已完成，Phase 5f 已完成独立 Qdrant composition、内部 chunk retrieval contract 和 smoke 脚本，尚未把 chunk retrieval 接入公共 chat。

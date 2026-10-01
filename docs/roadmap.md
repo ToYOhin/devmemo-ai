@@ -1,24 +1,45 @@
 # DevMemo AI 二次开发路线
 
-## 总原则
+路线更新：2026-10-01。当前交付事实以 [项目状态](project-status.zh-CN.md) 为入口，
+文件职责见 [项目结构](structure.md)，Agent 契约见 [Agent 路线](agent-development-roadmap.zh-CN.md)。
 
-保持 Memos upstream，AI 通过 Webhook、HTTP API 和可替换 adapter 接入。每个阶段先做可回滚垂直切片，完成后更新状态、变更、交接和下一阶段 Prompt。
+## 产品目标与原则
 
-## Agent 扩展路线（进行中）
+本轮目标是个人使用/简历演示：记录开发材料 → 权限感知回答 → 固定项目总结 → 可预览/下载报告。
+保持 Memos 权威数据边界，AI 以独立 sidecar、认证同源 BFF、可替换 Provider 接入。
+Windows 一键安装只交付 Web/Memos 核心；不能把核心 EXE 与完整 AI 运行环境混为一谈。
+不为这个目标添加后台 worker、自由任务、写回或商业化多实例体系。
 
-原有 Phase 0–13 产品路线已完成其定义范围。后续 Evidence Answer Agent 使用独立的
-[Agent 开发路线](agent-development-roadmap.zh-CN.md) 和
-[架构契约](agent-architecture.zh-CN.md)：A4-I1 至 A4-I5 已证明 lifecycle event、
-Memos-owned outbox、AI ledger、认证 transport 与一次性故障恢复；R4-I1 至 R4-I3 已证明
-严格 grounded-answer 契约、安全运行时接入和一次性本地 Provider smoke；R5-I1 至
-R5-I7 已依次证明持久化授权检索、当前权威正文 rehydration、独立 HMAC transport、
-Go/Python parity、纯 reader 契约，以及未接线的真实单机 SQLite current-authority reader。
+先完成可用闭环和对应验证，再维护必要文档；已通过且输入未变的检查不重复构建。
+路线保留默认 deterministic/memory、Agent/lifecycle/自动索引关闭的边界，不靠扩大默认开关完成演示。
 
-这些证明不等于生命周期已上线。`AI_AGENT_ENABLED=false`、自动索引关闭和现有 Compose
-默认值均保持不变；A4 outbox/ledger 尚未接入 Memo CRUD、dispatcher、worker 或真实
-VectorStore，R5 也尚未接入 HTTP rehydration、answer runtime 或真实数据。下一授权闸门是
-R5-I8 process-local Memos authority capability issuer/resolver；它仍不得自动扩大到 HTTP、
-runtime secret/configuration、多实例或 AI runtime selection。
+## 当前基线与顺序
+
+Phase 0–13 是历史产品阶段；R1–R6 已在限定单机范围内交付，R7 已具备受控同步
+`project_summary`、artifact UI、Provider 设置/加密存储/动态 Finalizer。R5-I8 不再是下一任务。
+依赖安全修复已经合并；安装器真实错误处理与卸载完成修复已有定向测试和本机候选证明。
+
+| 顺序 | 工作包 | 完成定义 |
+| --- | --- | --- |
+| D1 仓库收尾 | 安装器修复提交、当前文档、exact-head CI、主工作树同步 | 修复与文档独立提交；远端 SHA/门禁状态可核对；本机材料不进入 Git |
+| D2 演示闭环 | 复用现有入口的一体化 deterministic Agent 演示 | 合成 Memo → Provider 设置 → Evidence Answer / `project_summary` → 报告 → 可解释失败回退；实际 UI 若未验收须明示 |
+| D3 小型体验修复 | PowerShell 中文错误详情乱码、演示中实际发现的缺陷 | 真实行为回归与最小实现；不借机引入新框架或扩大产品能力 |
+| 可选发布 | 决定是否发布 v0.4.0，检查目标包身份和适用清单 | 只在另获发布授权时处理；本机候选不能冒充干净 tag 多平台 Release |
+
+D1 的 CI 是提交特定证据；本机安装器通过不代替 AI/浏览器/真实 Provider 验收。
+D2 不需要真实 key 或模型下载；真实 Provider、真实用户数据、多实例是独立可选任务。
+
+## 本次路线纠偏
+
+- 历史“未接线”状态从当前入口移走，避免回到已完成的 R5/R7 切片。
+- 当前状态、目标顺序、结构/API、带日期的验收分别维护，不在每份文档重复提交历史。
+- 每次只保存一份必要的本机交接；不把 Prompt/聊天/日志发布到源码仓库。
+- 保留性能约束和覆盖率门禁，不为简历展示降低认证、凭据、输出校验或超时要求。
+
+## 历史 Phase 0–13 记录
+
+以下是阶段完成时的实现/验证记录，测试数量与“后续”描述属于当时快照，**不是当前待办**。
+当前剩余事项由上方 D1–D3 与项目状态给出；不要按旧阶段重跑全量验证。
 
 ## Phase 0：开发基础
 

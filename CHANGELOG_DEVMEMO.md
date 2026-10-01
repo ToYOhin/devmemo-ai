@@ -8,7 +8,7 @@ See [UPSTREAM.md](UPSTREAM.md) for upstream compatibility information.
 ## [0.4.0] - Unreleased
 
 Prepared release metadata, not a published tag or Release. Complete release
-notes, upgrade guidance, evidence boundaries, and the pending final-package
+notes, upgrade guidance, local candidate results, and remaining distribution
 acceptance checklist are in [the v0.4.0 release guide](docs/releases/v0.4.0.md)
 ([简体中文](docs/releases/v0.4.0.zh-CN.md)).
 
@@ -39,6 +39,10 @@ acceptance checklist are in [the v0.4.0 release guide](docs/releases/v0.4.0.md)
   its backup if rollback fails, and retain uninstall registration when the
   cleanup helper cannot start. Partial shortcut/registry updates require a
   repair rerun; they are not included in executable rollback.
+- Propagate non-terminating PowerShell/COM errors into installer rollback.
+  Execute hidden uninstall scripts with `CREATE_NO_WINDOW`, distinguish scheduling
+  from completion, and remove uninstall registration only after actual file/shortcut
+  cleanup. Publish bounded worker outcome in a separate completion log.
 - Protect static files and `/api`, `/file`, and `/mcp` route boundaries against
   encoded path separators, including `%2F`, without an unintended SPA fallback.
 - Bound thumbnail dimension/metadata decoding, handle malformed TIFF input and
@@ -60,6 +64,9 @@ acceptance checklist are in [the v0.4.0 release guide](docs/releases/v0.4.0.md)
 - Add isolated Windows installer lifecycle regressions to Windows CI and
   synthetic Provider configuration, masking, storage, timeout, and fallback
   regressions without reducing safety or coverage thresholds.
+- Add real hidden-PowerShell execution, locked-COM upgrade rollback and temporary
+  uninstall-worker success/failure regressions. Local Windows candidate acceptance
+  covered 51 checks; that evidence is distinct from source CI and browser acceptance.
 
 ### Security and operational boundaries
 
@@ -73,8 +80,8 @@ acceptance checklist are in [the v0.4.0 release guide](docs/releases/v0.4.0.md)
   changing or losing that key makes existing credentials unreadable.
 - Source CI and synthetic installer tests do not prove final-package installation,
   real Windows integration, real Provider quality, or real-user-data acceptance.
-  The final v0.4.0 package checklist remains pending, and the current Windows
-  build path has no Authenticode signing.
+  A local v0.4.0 core candidate passed real install/rollback/uninstall/data checks;
+  broader distribution rows remain unverified. The build path has no Authenticode signing.
 
 ## [0.3.0] - 2026-08-13
 

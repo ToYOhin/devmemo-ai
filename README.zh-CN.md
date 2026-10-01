@@ -57,18 +57,20 @@ Memo 详情页
   └─ 受限项目总结 AgentRun 与 Markdown artifact
 ```
 
-完整的目录与运行时边界见 [docs/structure.md](docs/structure.md)，接口契约见
+先看 [当前交付与证据](docs/project-status.zh-CN.md) 和 [整体路线](docs/roadmap.md)；历史审计
+是带日期的证明，不是当前任务队列。完整目录与运行时边界见 [docs/structure.md](docs/structure.md)，接口契约见
 [docs/api.md](docs/api.md)。实验性 Agent 的设计与剩余交付闸门分别见
 [docs/agent-architecture.zh-CN.md](docs/agent-architecture.zh-CN.md) 和
 [docs/agent-development-roadmap.zh-CN.md](docs/agent-development-roadmap.zh-CN.md)。sanitized evaluation 方法/结果与当前
-完成闸门见 [docs/agent-evaluation-benchmark.zh-CN.md](docs/agent-evaluation-benchmark.zh-CN.md) 和
+历史完成闸门见 [docs/agent-evaluation-benchmark.zh-CN.md](docs/agent-evaluation-benchmark.zh-CN.md) 和
 [docs/r6-completion-audit.zh-CN.md](docs/r6-completion-audit.zh-CN.md)。
 
 ## 快速开始
 
 ### Windows 一键安装
 
-安装器计划随 **v0.4.0** 提供；整理发布元数据和说明不代表已打 tag、发布 Release 或生成候选包。
+**v0.4.0** 核心安装器已有本机构建/验收候选，但尚未发布稳定 tag/Release。
+本机包验收与干净 tag 分发是不同证据。
 请参阅 [v0.4.0 发布范围与最终候选包隔离验收清单](docs/releases/v0.4.0.zh-CN.md)。
 
 从包含该功能的后续 GitHub Release 下载文件名以 `_setup.exe` 结尾的 Windows 安装程序并双击运行。安装程序
@@ -84,13 +86,16 @@ Memo 数据，升级安装也不会覆盖数据目录。
 若恢复也失败，错误信息会指出保留的程序备份位置。此回滚仅覆盖程序文件，不还原已部分更新的
 快捷方式/注册信息；解决报错原因后，可重新运行安装器修复这些入口。
 若卸载辅助进程无法启动，则保留卸载注册信息。
+PowerShell 命令/快捷方式错误现会进入回滚。卸载启动隐藏 worker；关闭对话框后才能删除正在运行的
+程序。对话框给出 `%LOCALAPPDATA%\DevMemoAI` 下、数据目录外的完成日志路径；只有
+`COMPLETED` 表示清理成功，`FAILED` 表示发生错误。文件/快捷方式清理成功后才删除卸载登记。
 
 Windows 安装程序提供嵌入式 Web 界面和 Memos 核心功能，不包含 Python AI Service。
 Agent、Qdrant、Ollama 和外部 Provider 仍需按下方 Docker/显式 opt-in 路径运行，不能把
 独立 EXE 视为完整 Agent 运行时验收。
 
 当前构建链路尚未配置 Authenticode 代码签名，Windows SmartScreen 可能对下载的 EXE 显示
-未知发布者提示。正式分发前应配置签名证书，并始终核对 Release 中的 SHA-256 校验和。
+未知发布者提示。签名属于广泛分发的独立事项，不作为个人演示前置条件；始终核对产物 SHA-256。
 
 在源码工作树中构建安装程序：
 

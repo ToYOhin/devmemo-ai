@@ -61,13 +61,35 @@ Docker topology only. Do not use it for public or multi-user deployments.
 
 ## Experimental Agent operations
 
-Keep `AI_AGENT_ENABLED=false` unless the Evidence Answer path is being tested
-in an explicitly reviewed local topology. The A4 lifecycle outbox and AI ledger
-are dormant proofs: they do not justify enabling a dispatcher, worker,
-automatic indexing, or a persistent vector store. Any future rollout requires
-an authoritative visibility check, reconciliation and rebuild procedures,
-bounded retries, a shared replay store for multi-instance deployment, and a
-tested disable-and-rebuild rollback.
+Keep `AI_AGENT_ENABLED=false` unless explicitly using the documented single-host
+Agent path. Lifecycle/outbox/ledger/rehydration have opt-in composition; they are
+not merely unwired proofs, but neither are they default-enabled or multi-instance
+authority. Use the [AI guide](../README_AI.md) and [R5 acceptance](r5-acceptance.md)
+for the bounded topology. Worker, automatic indexing, real-data migration and
+shared replay/rebuild authority are separate extensions, not demo prerequisites.
+
+For saved Agent credentials, back up the AI SQLite database and
+`AI_AGENT_PROVIDER_MASTER_KEY` separately. Do not generate a replacement master
+key during upgrade; existing ciphertext would become unreadable. Only Agent
+paths use the administrator's saved configuration; legacy AI routes retain environment settings.
+
+## Windows core installation
+
+Program files are under `%LOCALAPPDATA%\Programs\DevMemoAI`; Memo data/attachments
+are under `%LOCALAPPDATA%\DevMemoAI\data`. Stop the owned application before a
+consistent data-directory backup. A custom portable data directory is not migrated automatically.
+
+An installation/upgrade failure restores the old executable when possible;
+partial shortcut/registry updates may need a repair rerun. PowerShell failures are
+not treated as successful installation. Uninstall schedules a hidden worker:
+close the controller dialog, then inspect its named `uninstall-<pid>.log` under
+`%LOCALAPPDATA%\DevMemoAI`. `STARTING`/`STARTED` are not completion; `COMPLETED`
+means files/shortcuts/registration were removed, while `FAILED` records failure.
+Memo data is retained. Registration remains until actual file/shortcut cleanup succeeds.
+
+This core package does not install/start AI Service or model runtimes. Current
+candidate evidence and unverified browser/distribution checks are in the
+[v0.4.0 guide](releases/v0.4.0.md).
 
 ## Security boundary
 

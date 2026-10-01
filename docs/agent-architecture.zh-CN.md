@@ -1,17 +1,14 @@
 # Evidence Answer Agent
 
-> 状态：A1-A4 与 R4 的既有边界保持不变。R5-I1 至 R5-I16 已完成 durable retrieval、current-authority
-> rehydration、认证 transport、默认关闭的 runtime ownership、verified answer selection 与 completion audit。
-> 获授权的 post-I16 切片现已连接 SQLite mutation/outbox、既有 internal AI listener、generation activation
-> 与 Qdrant derived state；两次 disposable 认证浏览器运行完成 private/public visibility、update/delete、restart、
-> rollback 与精确 cleanup 矩阵。R5 仅在默认关闭的单机范围内完成。R6 本地增加 strict 64-case
-> evaluation/threshold/runner、Python/Go/Web 同步的 retrieval 前 fixed refusal，以及有界、无正文的
-> answer/retrieval/Provider/权威 lifecycle observation；这些本地结果尚未关闭 Python 工程工具、R6 disposable
-> browser、clean-checkout CI 与 reviewed merge/tag/release 闸门。
+当前交付/证据见 [项目状态](project-status.zh-CN.md)，实现归属见 [结构](structure.md)，
+下一顺序见 [Agent 路线](agent-development-roadmap.zh-CN.md)。
 
-交付顺序、当前缺口、验收门槛与可写入简历的完成定义维护在
-[DevMemo Agent 开发路线](agent-development-roadmap.zh-CN.md) 中。本文档仍是安全与
-数据流契约的权威，开发路线不得放宽这些契约。
+R1–R6 与受控 R7 演示已在限定 opt-in 单机范围内交付，lifecycle/rehydration 已有 runtime
+composition，AgentRun 已有同步固定任务与可选 Provider Finalizer，安全默认值保持不变。
+
+本文维护安全/数据流契约，不是当前任务队列。各切片“未接线”描述保留加入时的证明，后续
+composition 已替代相应交付状态。R5/R6 审计保留各自有日期的 runtime/CI/发布证据，不能据此
+推断真实用户模型质量或多实例验收。开发路线不得放宽本文契约。
 
 ## 目标
 
@@ -98,6 +95,9 @@ POST /api/ai/agent/answer
 trace 只包含序号、动作名称、状态和结果数。空索引检索后以 `no_context` 结束，且不得调用 LLM provider。
 
 ## 交付状态
+
+以下保留历史切片加入时的证明状态。当前 composition 与剩余事项见
+[项目状态](project-status.zh-CN.md)，不以早期“未接线”条目覆盖后续实现。
 
 1. **契约与 feature gate — 已完成。** 严格 `AI_AGENT_ENABLED` 解析与 provider-neutral domain type 已有序列化测试。
 2. **只读证据 Agent 与认证 BFF — 已完成。** `EvidenceAnswerAgent`、签名内部路由、Memos BFF、可见性过滤与定向集成测试已实现。

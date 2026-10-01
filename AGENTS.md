@@ -55,6 +55,7 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
 
 - Work in one small, complete vertical slice at a time.
 - Inspect the closest source, tests, and targeted documentation before editing.
+- Locate source/docs with `rg -n`; read at most one file's 120-line interval at a time.
 - Preserve user changes. Do not use destructive Git commands or broad
   formatting rewrites.
 - Use `apply_patch` for intentional file edits.
@@ -62,12 +63,20 @@ AI_PUBLIC_CHUNK_RETRIEVAL=false
   credentials, internal handoffs, and unverified operational claims.
 - Keep English and Chinese public guides in separate files; update both when
   changing shared installation, security, or operational guidance.
+- Route current facts through `docs/project-status.md` and its Chinese companion;
+  keep priorities in the roadmaps and dated evidence in the original audit records.
+  Historical stage-local statuses are not instructions to repeat completed work.
+- Keep one necessary host handoff outside Git when requested; do not regenerate
+  a handoff or duplicate next-stage prompts for every routine change.
 - Do not change Memos auth, permission mapping, default AI safety flags, or
   persisted data boundaries as an incidental refactor.
 
 ## Validation
 
 Run the smallest relevant checks after a change:
+
+Use serial low-resource local checks (`GOMAXPROCS=1`, Go `-p 1`). Reuse evidence
+when its input is unchanged; documentation cleanup does not justify a rebuild.
 
 | Area | Primary checks |
 | --- | --- |
@@ -98,6 +107,7 @@ without real evidence.
 - `README_AI.md` and `README_AI.zh-CN.md`: AI service configuration and safety
   boundaries.
 - `docs/structure.md`: current architecture map.
+- `docs/project-status.md` and `.zh-CN.md`: current delivery and evidence scope.
 - `docs/api.md`: API and webhook contract details.
 - `docs/operations.md` and `docs/operations.zh-CN.md`: backup, restore,
   upgrade, and rollback guidance.

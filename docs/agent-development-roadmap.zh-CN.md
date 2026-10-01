@@ -1,25 +1,26 @@
 # DevMemo Agent 开发路线
 
-> 状态日期：2026-08-13
->
-> 产品方向：面向开发者记忆的 local-first、权限感知 RAG Agent。
->
-> 当前交付状态：A0-A4 与 R1-R5 已在文档限定、默认关闭的单机范围内完成。R6 实现、evaluation、canary
-> 修复、clean-checkout CI 与 release publication 已在 peeled `v0.2.0` tag
-> `eddaa602537cda1adc27c0cd1d8c58b40c8e503b` 完成。双语 R7-I0 definition gate 已通过 PR #8
-> 合并。R7-I1 的 contract-only Python 实现与 deterministic sanitized fixture 已通过 PR #9 合并于
-> `0358fb120fd539a97d67b04c47787df0fa72c9ff`。R7-I2 通过 PR #10 在
-> `39068613b387d1154b7f7e4bf9d32fc230b3ed39` 将 legacy 浏览器 AI 路径统一到同源 Memos BFF。
-> R7-I3 的 dormant single-host SQLite AgentRun persistence 已通过 PR #12 squash merge 于
-> `571e3fc5856485f4ce352af4163c625fd445794d`。R7-I4 的 dormant bounded runner/runtime
-> 已通过 PR #13 squash merge 于 `9d7e508259e4b07d416751e9da0514d588a4424f`。Evidence Answer
-> 演示 UI 与一键本地演示包装随后分别通过 PR #14、PR #15 合并于
-> `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7`、`79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`。
-> PR #16 已合并显式 opt-in 的 DeepSeek 切片，增加 bounded
-> non-thinking JSON adapter 与 synthetic real-endpoint smoke，默认 Provider 仍为 deterministic，且不使用真实 Memo。
+[English](agent-development-roadmap.md) · [当前状态](project-status.zh-CN.md)
 
-本文档是 Agent 产品线的交付权威。`docs/roadmap.md` 继续保存 DevMemo AI
-整体项目的历史阶段记录；本文档则定义把 Agent 做成完整、可写入简历的正式项目还需要完成什么。
+更新：**2026-10-01**。目标是 local-first、权限感知的开发者记忆 Agent，适用于个人/简历
+可复现演示，不按通用自治平台推进。
+
+## 当前交付与下一顺序
+
+R1–R6 已在文档限定的 opt-in 单机范围内交付。R7 已包含固定同步 `project_summary`
+BFF/runtime、创建者报告 UI、管理员 Provider 设置、加密凭据与可选的严格报告 Finalizer。
+默认仍为 deterministic，不增加 worker、approval 或 Memo 写回。Windows 安装器仅交付
+核心；启用 AI 需要独立服务。
+
+| 顺序 | 工作包 | 完成定义 |
+| --- | --- | --- |
+| D1 | 仓库/文档收尾 | 安装器修复和文档提交，核对 exact-head CI 与远端同步 |
+| D2 | 一体化 deterministic 演示 | 合成记录 → 设置 → Evidence Answer/报告 → 标记回退；明确服务缺失，UI 主张需真实界面证据 |
+| D3 | 定向体验缺陷 | 修复安装器本地化错误编码及演示中实际复现的问题，补相应回归 |
+| 可选 | 真实 Provider 或更广部署 | 独立范围/证据，不作为当前简历演示前置条件 |
+
+[当前状态](project-status.zh-CN.md) 维护证据身份和未解决事项，[结构](structure.md) 维护归属，
+[整体路线](roadmap.md) 定义优先级。不要依据历史 R5/R6 闸门重启已完成实现。
 
 ## 产品契约
 
@@ -44,9 +45,12 @@ Agent，而不是通用自治助手：
 - Agent 只有一个受限工具，并使用严格的安全响应投影。
 - 显式本地覆盖层不向宿主机发布 AI Service 端口，默认 Compose 仍关闭 Agent。
 - 已使用一次性环境验证 Provider 成功、空检索和安全故障映射，未持久化真实 Memo 派生数据。
-- A4 已设计 Memos-owned outbox、有序幂等、tombstone、隔离、重试、重建、可观测性和回滚边界。
+- 已实现的单机 A4/R5 composition 保持 Memos-owned outbox、有序幂等、tombstone、隔离、重试、重建和回滚边界。
 
-## 阻碍项目完善的缺口
+## 历史缺口评估（2026-08-13）
+
+此表保留当时阶段评估，不是今天的阻塞清单。多实例/真实用户扩展是当前演示的可选项。
+当前优先级和证据统一见 [项目状态](project-status.zh-CN.md)。
 
 | 优先级 | 缺口 | 当前影响 | 退出标准 |
 | --- | --- | --- | --- |
@@ -67,7 +71,10 @@ Agent，而不是通用自治助手：
 4. 每阶段记录回滚方法与不含正文的运行证据。
 5. 如果里程碑要求进程重启、store 重建、认证浏览器路径或正式发布，不能只凭单元测试宣称完成。
 
-## 里程碑
+## 历史里程碑规格
+
+下方“未接线”是各切片加入时的证明状态，后续 composition 已替代其中部分状态。
+判断当前实现须看状态/结构入口；修改既有契约时再参考这些规格，不自动重复完成阶段。
 
 ### R0 — 产品基线与权威路线
 

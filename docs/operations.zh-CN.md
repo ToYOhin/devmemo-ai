@@ -51,10 +51,29 @@ Memos 登录与可见性，再验证 `GET /health`、AI 详情页和已接受 In
 
 ## 实验性 Agent 运维边界
 
-除非正在经过明确审查的本地拓扑中测试 Evidence Answer，否则保持
-`AI_AGENT_ENABLED=false`。A4 lifecycle outbox 与 AI ledger 仍是 dormant 证明，不能据此
-启用 dispatcher、worker、自动索引或持久化向量库。未来 rollout 必须先具备权威可见性检查、
-对账与重建步骤、有界重试、多实例共享 replay store，以及经过测试的关闭并重建回滚方案。
+除非显式使用文档限定的单机 Agent 路径，否则保持 `AI_AGENT_ENABLED=false`。
+lifecycle/outbox/ledger/rehydration 已有 opt-in composition，不再只是未接线证明；但不是
+默认启用或多实例 authority。受控拓扑见 [AI 指南](../README_AI.zh-CN.md) 和
+[R5 验收](r5-acceptance.zh-CN.md)。worker、自动索引、真实数据迁移、共享 replay/rebuild
+authority 属于独立扩展，不作为简历演示前置条件。
+
+保存 Agent 凭据时，AI SQLite 与 `AI_AGENT_PROVIDER_MASTER_KEY` 分开备份。
+升级不要重新生成主密钥，否则已有密文无法解密。管理员保存配置只作用于 Agent 路径，
+旧 AI 路由仍使用环境配置。
+
+## Windows 核心安装与卸载
+
+程序位于 `%LOCALAPPDATA%\Programs\DevMemoAI`，Memo 数据/附件位于
+`%LOCALAPPDATA%\DevMemoAI\data`。一致备份前停止本安装程序；自定义便携数据目录不会自动迁移。
+
+安装/升级失败尽可能恢复旧 EXE；部分更新的快捷方式/注册表可能需要重新安装修复。
+PowerShell 执行失败不会再被当作安装成功。卸载先调度隐藏 worker，关闭控制器对话框后，
+查看其给出的 `%LOCALAPPDATA%\DevMemoAI\uninstall-<pid>.log`。
+`STARTING`/`STARTED` 不是完成；`COMPLETED` 表示程序/快捷方式/登记清理成功，`FAILED`
+记录失败。Memo 数据保留；实际文件/快捷方式清理成功前保留卸载登记。
+
+核心包不安装/启动 AI Service 或模型运行时；当前候选证明及未验证的浏览器/分发事项见
+[v0.4.0 指南](releases/v0.4.0.zh-CN.md)。
 
 ## 安全边界
 

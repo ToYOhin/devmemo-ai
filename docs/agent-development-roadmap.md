@@ -1,34 +1,28 @@
 # DevMemo Agent Development Roadmap
 
-> Status date: 2026-08-13
->
-> Product direction: a local-first, permission-aware RAG Agent for developer
-> memory.
->
-> Current delivery state: A0-A4 and R1-R5 are complete for the documented,
-> default-disabled single-host scope. R6 implementation, evaluation, canary
-> fixes, clean-checkout CI, and release publication are complete at the peeled
-> `v0.2.0` tag `eddaa602537cda1adc27c0cd1d8c58b40c8e503b`. The bilingual R7-I0
-> definition gate was merged through PR #8. R7-I1's contract-only Python
-> implementation and deterministic sanitized fixtures were merged through PR
-> #9 at `0358fb120fd539a97d67b04c47787df0fa72c9ff`. R7-I2 unified the legacy
-> browser AI paths behind the same-origin Memos BFF through PR #10 at
-> `39068613b387d1154b7f7e4bf9d32fc230b3ed39`. R7-I3's dormant single-host
-> SQLite AgentRun persistence was squash-merged through PR #12 at
-> `571e3fc5856485f4ce352af4163c625fd445794d`. R7-I4's dormant bounded
-> runner/runtime was squash-merged through PR #13 at
-> `9d7e508259e4b07d416751e9da0514d588a4424f`. Evidence Answer
-> demo polish and one-command local packaging followed through PR #14 at
-> `3ff3f2b1e62c83ff499ca5cffd1361e44e048fb7` and PR #15 at
-> `79602df8e8d7bed53dbe99bc0f4c3b8b1bcd54e9`. PR #16 merged an opt-in DeepSeek
-> slice that adds a
-> bounded non-thinking JSON adapter and synthetic real-endpoint smoke while
-> preserving deterministic as the default; it does not use real Memos.
+[简体中文](agent-development-roadmap.zh-CN.md) · [Current status](project-status.md)
 
-This document is the delivery authority for the Agent product line. The
-historical phase log in `docs/roadmap.md` remains useful for the broader DevMemo
-AI project, while this roadmap defines what is still required before the Agent
-can be presented as a complete, resume-ready project.
+Updated: **2026-10-01**. Target: a local-first, permission-aware developer-memory
+Agent suitable for a reproducible personal/portfolio demo, not a general autonomous platform.
+
+## Current delivery and next sequence
+
+R1–R6 have been delivered within the documented opt-in single-host scope. R7 now
+includes the fixed synchronous `project_summary` BFF/runtime, creator-bound report
+UI, admin Provider settings, encrypted credentials and optional validated report
+finalization. Deterministic remains the default; no worker, approval or Memo write-back is added.
+Windows installation delivers core only; enabling AI requires its separate service.
+
+| Order | Work package | Exit criterion |
+| --- | --- | --- |
+| D1 | Repository/document closeout | Installer fix and documentation committed; exact-head CI and remote parity checked |
+| D2 | Integrated deterministic demo | Synthetic notes → settings → Evidence Answer/report → marked fallback; unavailable service is explicit and UI claims have actual UI evidence |
+| D3 | Focused usability defects | Fix localized installer error encoding and defects actually reproduced in the demo, with focused regressions |
+| Optional | Real Provider or broader deployment | Separate scope/evidence; not a prerequisite for this portfolio demo |
+
+See [project status](project-status.md) for current proof identities and unresolved
+items, [structure](structure.md) for ownership, and [project roadmap](roadmap.md)
+for priorities. Historical R5/R6 gates must not restart completed implementation.
 
 ## Product contract
 
@@ -64,10 +58,14 @@ answers, measurable quality, and reproducible recovery**.
   leaves the default Compose path disabled.
 - A disposable Provider smoke has covered success, empty retrieval, and safe
   Provider failure mapping without persisting real Memo data.
-- The A4 design defines a Memos-owned outbox, ordered idempotency, tombstones,
-  quarantine, retry, rebuild, observability, and rollback boundaries.
+- The implemented single-host A4/R5 composition preserves source-owned outbox,
+  ordered idempotency, tombstones, quarantine, retry, rebuild and rollback boundaries.
 
-## Gaps that block a complete Agent project
+## Historical gap assessment (2026-08-13)
+
+This table preserves the earlier stage assessment, not today's blocking list.
+Multi-instance/real-user expansion is optional for the current demo. Current
+priorities and evidence are maintained in [project status](project-status.md).
 
 | Priority | Gap | Current impact | Exit criterion |
 | --- | --- | --- | --- |
@@ -92,7 +90,11 @@ Every stage below follows the same rules:
 5. Do not claim completion from unit tests alone when the milestone requires a
    process restart, store rebuild, authenticated browser path, or release.
 
-## Milestones
+## Historical milestone specifications
+
+Stage-local "unwired" states below describe the proof when that stage was added.
+Later composition supersedes those states; use the current status/structure to
+decide what is implemented. These specifications remain useful when changing a contract.
 
 ### R0 — Product baseline and authoritative roadmap
 
