@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/usememos/memos/internal/version"
@@ -41,7 +42,8 @@ func maybeRunWindowsInstaller() bool {
 			showWindowsMessage("Uninstall failed", err.Error(), 0x10)
 			return true
 		}
-		showWindowsMessage(windowsAppName, "DevMemo AI was uninstalled. Your memo data was preserved.", 0x40)
+		paths, _ := defaultWindowsInstallPaths()
+		showWindowsMessage(windowsAppName, fmt.Sprintf("Uninstall started. Close this dialog to finish removal. Your memo data will be preserved.\n\nCompletion status: %s", windowsUninstallStatusPath(paths)), 0x40)
 		return true
 	}
 
@@ -265,12 +267,14 @@ func launchInstalledWindowsApp(paths windowsInstallPaths) error {
 }
 
 func uninstallWindowsApp(currentExecutable string) error {
-	return uninstallWindowsAppWithOperations(currentExecutable, runWindowsPowerShell, func() {
-		_ = registry.DeleteKey(registry.CURRENT_USER, windowsUninstallKey)
-	})
+	return uninstallWindowsAppWithOperations(currentExecutable, runWindowsPowerShell)
 }
 
-func uninstallWindowsAppWithOperations(currentExecutable string, runPowerShell func(string, bool) (string, error), removeRegistration func()) error {
+func windowsUninstallStatusPath(paths windowsInstallPaths) string {
+	return filepath.Join(filepath.Dir(paths.DataDir), fmt.Sprintf("uninstall-%d.log", os.Getpid()))
+}
+
+func uninstallWindowsAppWithOperations(currentExecutable string, runPowerShell func(string, bool) (string, error)) error {
 	paths, err := defaultWindowsInstallPaths()
 	if err != nil {
 		return err
@@ -286,33 +290,66 @@ func uninstallWindowsAppWithOperations(currentExecutable string, runPowerShell f
 	if !strings.EqualFold(currentAbsolute, installedAbsolute) {
 		return errors.New("uninstall must be run from the installed application")
 	}
+	statusPath := windowsUninstallStatusPath(paths)
+	if err := os.WriteFile(statusPath, []byte("STARTING\n"), 0600); err != nil {
+		return fmt.Errorf("create uninstall completion status: %w", err)
+	}
 
 	script := fmt.Sprintf(`
-$desktop = [Environment]::GetFolderPath('Desktop')
-$programs = [Environment]::GetFolderPath('Programs')
 $installedExecutable = '%s'
 $uninstallerPid = %d
-Remove-Item -LiteralPath (Join-Path $desktop 'DevMemo AI.lnk') -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath (Join-Path $programs 'DevMemo AI') -Recurse -Force -ErrorAction SilentlyContinue
-Get-Process -Name 'DevMemoAI' -ErrorAction SilentlyContinue |
-  Where-Object { $_.Id -ne $uninstallerPid -and $_.Path -eq $installedExecutable } |
-  Stop-Process -Force -ErrorAction SilentlyContinue
-Wait-Process -Id $uninstallerPid -Timeout 300 -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath '%s' -Recurse -Force -ErrorAction SilentlyContinue
-`, powershellQuote(paths.Executable), os.Getpid(), powershellQuote(paths.InstallDir))
+$installDir = '%s'
+$statusFile = '%s'
+try {
+  Set-Content -LiteralPath $statusFile -Value 'STARTED' -Encoding UTF8
+  $parent = Get-Process -Id $uninstallerPid -ErrorAction SilentlyContinue
+  if ($null -ne $parent -and $parent.Path -eq $installedExecutable) {
+    Wait-Process -Id $uninstallerPid -Timeout 120
+  }
+  Get-Process -Name 'DevMemoAI' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Id -ne $uninstallerPid -and $_.Path -eq $installedExecutable } |
+    Stop-Process -Force
+  # A terminated process can briefly keep its image mapped. Retry only this installation.
+  for ($attempt = 0; $attempt -lt 50; $attempt++) {
+    try {
+      if (Test-Path -LiteralPath $installDir) { Remove-Item -LiteralPath $installDir -Recurse -Force }
+      break
+    } catch {
+      if ($attempt -eq 49) { throw }
+      Start-Sleep -Milliseconds 100
+    }
+  }
+  $desktop = [Environment]::GetFolderPath('Desktop')
+  $programs = [Environment]::GetFolderPath('Programs')
+  $desktopShortcut = Join-Path $desktop 'DevMemo AI.lnk'
+  $programsFolder = Join-Path $programs 'DevMemo AI'
+  if (Test-Path -LiteralPath $desktopShortcut) { Remove-Item -LiteralPath $desktopShortcut -Force }
+  if (Test-Path -LiteralPath $programsFolder) { Remove-Item -LiteralPath $programsFolder -Recurse -Force }
+  # Keep the uninstall entry until actual file and shortcut removal has succeeded.
+  $registration = 'HKCU:\%s'
+  if (Test-Path -LiteralPath $registration) { Remove-Item -LiteralPath $registration -Force }
+  Set-Content -LiteralPath $statusFile -Value 'COMPLETED' -Encoding UTF8
+} catch {
+  Set-Content -LiteralPath $statusFile -Value ('FAILED: ' + $_.Exception.Message) -Encoding UTF8
+  exit 1
+}
+`, powershellQuote(paths.Executable), os.Getpid(), powershellQuote(paths.InstallDir), powershellQuote(statusPath), windowsUninstallKey)
 	if _, err := runPowerShell(script, true); err != nil {
 		return fmt.Errorf("schedule installed files removal: %w", err)
 	}
-	removeRegistration()
 	return nil
 }
 
 func runWindowsPowerShell(script string, detached bool) (string, error) {
 	powerShell := filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
-	command := exec.Command(powerShell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
+	command := exec.Command(powerShell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "$ErrorActionPreference = 'Stop';\n"+script)
+	// Windows PowerShell needs CREATE_NO_WINDOW, not DETACHED_PROCESS, to execute without a console.
+	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW, HideWindow: true}
 	if detached {
-		command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000008, HideWindow: true}
-		return "", command.Start()
+		if err := command.Start(); err != nil {
+			return "", err
+		}
+		return "", command.Process.Release()
 	}
 	output, err := command.CombinedOutput()
 	return string(output), err

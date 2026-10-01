@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func TestIsWindowsSetupExecutable(t *testing.T) {
@@ -34,6 +36,130 @@ func TestDefaultWindowsInstallPaths(t *testing.T) {
 
 func TestPowerShellQuote(t *testing.T) {
 	require.Equal(t, `C:\Data\O''Brien`, powershellQuote(`C:\Data\O'Brien`))
+}
+
+func TestWindowsPowerShellStopsOnCommandError(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "must-not-run.txt")
+	output, err := runWindowsPowerShell(fmt.Sprintf("Write-Error 'synthetic command error'; Set-Content -LiteralPath '%s' -Value 'unexpected continuation'", powershellQuote(marker)), false)
+	require.Error(t, err, "a PowerShell command error must reach the installer: %s", output)
+	require.NoFileExists(t, marker, "failed scripts must not continue to later mutations")
+}
+
+func TestWindowsDetachedPowerShellExecutes(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "helper-started.txt")
+	_, err := runWindowsPowerShell(fmt.Sprintf("Set-Content -LiteralPath '%s' -Value 'synthetic helper completed'", powershellQuote(marker)), true)
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		content, readErr := os.ReadFile(marker)
+		return readErr == nil && strings.Contains(string(content), "synthetic helper completed")
+	}, 5*time.Second, 50*time.Millisecond, "starting a hidden helper must actually execute the script")
+}
+
+func TestWindowsUpgradePowerShellErrorRollsBack(t *testing.T) {
+	paths, source := windowsInstallerFixture(t, true)
+	shortcut := filepath.Join(filepath.Dir(source), "owned-shortcut.lnk")
+	shortcutScript := fmt.Sprintf(`$shell = New-Object -ComObject WScript.Shell; $shortcut = $shell.CreateShortcut('%s'); $shortcut.TargetPath = '%s'; $shortcut.Save()`, powershellQuote(shortcut), powershellQuote(paths.Executable))
+	output, err := runWindowsPowerShell(shortcutScript, false)
+	require.NoError(t, err, "%s", output)
+	name, err := windows.UTF16PtrFromString(shortcut)
+	require.NoError(t, err)
+	handle, err := windows.CreateFile(name, windows.GENERIC_READ, 0, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	require.NoError(t, err)
+	defer windows.CloseHandle(handle)
+	var calls []string
+	ops := fakeWindowsInstallOperations(t, paths, &calls)
+	ops.createShortcuts = func(windowsInstallPaths) error {
+		_, err := runWindowsPowerShell(shortcutScript, false)
+		return err
+	}
+	require.Error(t, installWindowsAppWithOperations(source, paths, ops))
+	require.Equal(t, "synthetic old executable", readInstallerFile(t, paths.Executable))
+	require.Equal(t, "synthetic memo data", readInstallerFile(t, filepath.Join(paths.DataDir, "memos_prod.db")))
+	require.Empty(t, calls, "registration must not run after a real PowerShell failure")
+}
+
+func TestWindowsUninstallWorkerFilesystem(t *testing.T) {
+	for _, locked := range []bool{false, true} {
+		t.Run(fmt.Sprintf("locked=%t", locked), func(t *testing.T) {
+			paths, source := windowsInstallerFixture(t, true)
+			root := filepath.Dir(source)
+			desktop := filepath.Join(root, "synthetic-desktop")
+			programs := filepath.Join(root, "synthetic-start-menu")
+			menu := filepath.Join(programs, windowsAppName)
+			require.NoError(t, os.MkdirAll(desktop, 0700))
+			require.NoError(t, os.MkdirAll(menu, 0700))
+			shortcuts := []string{filepath.Join(desktop, "DevMemo AI.lnk"), filepath.Join(menu, "DevMemo AI.lnk"), filepath.Join(menu, "Uninstall DevMemo AI.lnk")}
+			for _, shortcut := range shortcuts {
+				require.NoError(t, os.WriteFile(shortcut, []byte("synthetic shortcut"), 0600))
+			}
+			registration := filepath.Join(root, "synthetic-registration.txt")
+			require.NoError(t, os.WriteFile(registration, []byte("synthetic registration"), 0600))
+			lockedHandle := windows.InvalidHandle
+			if locked {
+				name, err := windows.UTF16PtrFromString(paths.Executable)
+				require.NoError(t, err)
+				handle, err := windows.CreateFile(name, windows.GENERIC_READ, 0, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL, 0)
+				require.NoError(t, err)
+				lockedHandle = handle
+				t.Cleanup(func() {
+					if lockedHandle != windows.InvalidHandle {
+						_ = windows.CloseHandle(lockedHandle)
+					}
+				})
+			}
+			run := func(script string, detached bool) (string, error) {
+				// Execute the real helper, but replace every real-user shortcut/registry target
+				// with this test's temporary files. The fixture EXE cannot match a running app.
+				for old, replacement := range map[string]string{
+					"[Environment]::GetFolderPath('Desktop')":        "'" + powershellQuote(desktop) + "'",
+					"[Environment]::GetFolderPath('Programs')":       "'" + powershellQuote(programs) + "'",
+					`HKCU:\` + windowsUninstallKey:                   powershellQuote(registration),
+					fmt.Sprintf("$uninstallerPid = %d", os.Getpid()): "$uninstallerPid = 0",
+				} {
+					require.Equal(t, 1, strings.Count(script, old), "test isolation replacement must be exact")
+					script = strings.ReplaceAll(script, old, replacement)
+				}
+				return runWindowsPowerShell(script, detached)
+			}
+			require.NoError(t, uninstallWindowsAppWithOperations(paths.Executable, run))
+			status := "COMPLETED"
+			if locked {
+				status = "FAILED:"
+			}
+			var lastStatus string
+			deadline := time.Now().Add(20 * time.Second)
+			for time.Now().Before(deadline) {
+				content, err := os.ReadFile(windowsUninstallStatusPath(paths))
+				if err == nil {
+					lastStatus = string(content)
+					if strings.Contains(lastStatus, status) || strings.Contains(lastStatus, "FAILED:") {
+						break
+					}
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+			require.Contains(t, lastStatus, status, "real hidden worker must publish its actual outcome")
+			if lockedHandle != windows.InvalidHandle {
+				require.NoError(t, windows.CloseHandle(lockedHandle))
+				lockedHandle = windows.InvalidHandle
+			}
+			require.Equal(t, "synthetic memo data", readInstallerFile(t, filepath.Join(paths.DataDir, "memos_prod.db")))
+			if locked {
+				require.Equal(t, "synthetic old executable", readInstallerFile(t, paths.Executable))
+				require.Equal(t, "synthetic registration", readInstallerFile(t, registration), "retain registration when actual removal fails")
+				for _, shortcut := range shortcuts {
+					require.FileExists(t, shortcut)
+				}
+			} else {
+				require.NoDirExists(t, paths.InstallDir)
+				require.NoFileExists(t, registration)
+				require.NoDirExists(t, menu)
+				for _, shortcut := range shortcuts {
+					require.NoFileExists(t, shortcut)
+				}
+			}
+		})
+	}
 }
 
 func TestWindowsInstallLifecycle(t *testing.T) {
@@ -183,26 +309,26 @@ func TestWindowsUninstallPreservesData(t *testing.T) {
 		removalScript = script
 		return "", nil
 	}
-	removeRegistration := func() { calls = append(calls, "registry") }
-
-	require.NoError(t, uninstallWindowsAppWithOperations(strings.ToUpper(paths.Executable), runPowerShell, removeRegistration))
-	require.Equal(t, []string{"schedule", "registry"}, calls)
+	require.NoError(t, uninstallWindowsAppWithOperations(strings.ToUpper(paths.Executable), runPowerShell))
+	require.Equal(t, []string{"schedule"}, calls, "starting a helper is not completion; do not delete registration in Go")
 	// Scheduling is simulated; only the mocked script below is executed, with no system side effects.
 	require.Contains(t, removalScript, "$installedExecutable = '"+powershellQuote(paths.Executable)+"'")
-	require.Contains(t, removalScript, "Remove-Item -LiteralPath '"+powershellQuote(paths.InstallDir)+"' -Recurse")
+	require.Contains(t, removalScript, "$installDir = '"+powershellQuote(paths.InstallDir)+"'")
+	require.Contains(t, removalScript, "Remove-Item -LiteralPath $installDir -Recurse")
 	require.Contains(t, removalScript, "$_.Id -ne $uninstallerPid -and $_.Path -eq $installedExecutable")
 	require.Contains(t, removalScript, "Wait-Process -Id $uninstallerPid")
 	require.NotContains(t, removalScript, powershellQuote(paths.DataDir))
 	require.Equal(t, "synthetic old executable", readInstallerFile(t, paths.Executable), "scheduling must not delete the running executable")
 
 	removals := simulateWindowsUninstallScript(t, removalScript, paths)
-	require.Len(t, removals, 3)
-	require.Equal(t, "DevMemo AI.lnk", filepath.Base(removals[0].Path))
-	require.False(t, removals[0].Recurse)
-	require.Equal(t, "DevMemo AI", filepath.Base(removals[1].Path))
-	require.True(t, removals[1].Recurse)
-	require.Equal(t, paths.InstallDir, removals[2].Path)
+	require.Len(t, removals, 4)
+	require.Equal(t, paths.InstallDir, removals[0].Path)
+	require.True(t, removals[0].Recurse)
+	require.Equal(t, "DevMemo AI.lnk", filepath.Base(removals[1].Path))
+	require.False(t, removals[1].Recurse)
+	require.Equal(t, "DevMemo AI", filepath.Base(removals[2].Path))
 	require.True(t, removals[2].Recurse)
+	require.Equal(t, `HKCU:\`+windowsUninstallKey, removals[3].Path, "registration is removed last by the successful worker")
 	// Only the exact fixture installation target is physically removed, never a shortcut target.
 	require.NoError(t, os.RemoveAll(paths.InstallDir))
 	require.NoDirExists(t, paths.InstallDir)
@@ -212,13 +338,11 @@ func TestWindowsUninstallPreservesData(t *testing.T) {
 func TestWindowsUninstallScheduleFailureRetainsRegistration(t *testing.T) {
 	paths, _ := windowsInstallerFixture(t, true)
 	injected := errors.New("synthetic helper start failure")
-	removed := false
 	err := uninstallWindowsAppWithOperations(paths.Executable, func(string, bool) (string, error) {
 		return "", injected
-	}, func() { removed = true })
+	})
 
 	require.ErrorIs(t, err, injected)
-	require.False(t, removed, "retain the uninstall entry when the helper cannot start")
 	require.Equal(t, "synthetic old executable", readInstallerFile(t, paths.Executable))
 	require.Equal(t, "synthetic memo data", readInstallerFile(t, filepath.Join(paths.DataDir, "memos_prod.db")))
 }
@@ -228,7 +352,7 @@ func TestWindowsUninstallRejectsOtherExecutable(t *testing.T) {
 	err := uninstallWindowsAppWithOperations(source, func(string, bool) (string, error) {
 		t.Fatal("must not start helper for an uninstalled executable")
 		return "", nil
-	}, func() { t.Fatal("must not delete registration for an uninstalled executable") })
+	})
 
 	require.ErrorContains(t, err, "uninstall must be run from the installed application")
 	require.Equal(t, "synthetic old executable", readInstallerFile(t, paths.Executable))
@@ -298,7 +422,8 @@ function Remove-Item {
   $script:removals += [PSCustomObject]@{Path=$LiteralPath; Recurse=[bool]$Recurse}
 }
 function Get-Process {
-  [CmdletBinding()] param([string]$Name)
+  [CmdletBinding()] param([string]$Name, [int]$Id)
+  if ($PSBoundParameters.ContainsKey('Id')) { return [PSCustomObject]@{Id=%d; Path='%s'} }
   @([PSCustomObject]@{Id=%d; Path='%s'},
     [PSCustomObject]@{Id=-1; Path='%s'},
     [PSCustomObject]@{Id=-2; Path='unrelated.exe'})
@@ -311,11 +436,18 @@ function Wait-Process {
   [CmdletBinding()] param([int]$Id, [int]$Timeout)
   $script:waited += $Id
 }
+function Test-Path {
+  [CmdletBinding()] param([string]$LiteralPath)
+  return @($script:removals | Where-Object { $_.Path -eq $LiteralPath }).Count -eq 0
+}
+function Set-Content {
+  [CmdletBinding()] param([string]$LiteralPath, [string]$Value, [string]$Encoding)
+}
 $target = {
-`, os.Getpid(), powershellQuote(paths.Executable), powershellQuote(paths.Executable))
+`, os.Getpid(), powershellQuote(paths.Executable), os.Getpid(), powershellQuote(paths.Executable), powershellQuote(paths.Executable))
 	suffix := fmt.Sprintf(`
 }
-$allowed = @('Remove-Item', 'Join-Path', 'Get-Process', 'Where-Object', 'Stop-Process', 'Wait-Process')
+$allowed = @('Remove-Item', 'Join-Path', 'Get-Process', 'Where-Object', 'Stop-Process', 'Wait-Process', 'Test-Path', 'Set-Content', 'Start-Sleep')
 foreach ($node in $target.Ast.FindAll({param($n) $n -is [System.Management.Automation.Language.CommandAst]}, $true)) {
   if ($allowed -cnotcontains $node.GetCommandName()) { throw 'Unexpected command in uninstall script' }
 }
