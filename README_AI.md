@@ -121,6 +121,9 @@ path are available.
 
 ## Experimental Evidence Answer Agent
 
+With a compatible core binary, the [native Agent demo](docs/native-agent-demo.md) combines
+the Python sidecar, isolated synthetic data, and HTTP checks without Docker or a real Provider.
+
 The read-only Evidence Answer feature is disabled by default. When explicitly
 configured, the browser calls only the authenticated Memos BFF at
 `POST /api/ai/agent/answer`; Memos derives the caller's visible Memo scope and

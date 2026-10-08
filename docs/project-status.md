@@ -50,6 +50,21 @@ starts, locked-shortcut upgrade failure/rollback, and real worker uninstall/data
 preservation. The install success dialog was not confirmed to auto-open a browser.
 Detailed logs, synthetic data and host handoffs remain outside Git.
 
+## D2 local verification record (2026-10-01)
+
+The [native demo entry point](native-agent-demo.md) reuses an existing core binary and
+current Python source with isolated synthetic data. It covers settings, cited answers,
+consecutive summaries, download/replay, marked configuration fallback, and unavailable
+service handling. **25/25 real local HTTP checks** passed; both demo children and listeners
+stopped. Docker and browsers were not started, and no real Provider was called.
+Run-scoped step IDs also fix the database identity collision on a second AgentRun;
+regression coverage checks independent reports and replay of the first run.
+
+Python validation: **983 passed**, **88.6% branch coverage** against the unchanged 88.0%
+threshold, Ruff and mypy passed. This is dated local evidence; exact-head CI must be
+checked separately after committing. It is not a rebuilt installer or Release. UI interaction remains unverified;
+existing Web assets must include the AI UI build-time opt-in to display the panels.
+
 ## Progression problems and remaining work
 
 Historical stage-local "unwired" text sent work back to completed R5/R7 gates.
@@ -61,7 +76,7 @@ have separate entry points.
 | Priority | Remaining item | Completion criterion |
 | --- | --- | --- |
 | Closeout | Exact-head CI and repository state | Check pushed source gates, clean main/remote parity and dated alert snapshot |
-| Next product task | Reproducible integrated Agent demo | Synthetic notes → settings → answer/report → fallback; honest unavailable-service handling and real UI evidence if claimed |
+| D2 finish | Native HTTP flow passed; UI demonstration remains | Reuse the native entry point, check existing Web AI UI opt-in, and obtain actual interface evidence |
 | Small follow-up | Localized PowerShell error mojibake | Focused encoding regression and readable detail; failure detection/rollback already works |
 | Optional distribution | Broader installation/package coverage | Browser/shortcut auto-launch, port conflicts, portable migration, clean-tag multi-platform packaging and downloaded unsigned behavior; see [release guide](releases/v0.4.0.md) |
 | Outside current scope | Worker, approvals, write-back, real-user Provider quality, multi-instance authority | New product scope and independent evidence; do not enable incidentally |

@@ -66,7 +66,7 @@ class AgentRunDemoExecutor:
             or run.source_snapshot != snapshot
         ):
             raise AgentRunDemoError("invalid AgentRun demo execution")
-        plan = _plan(run.request_digest, request.task_kind, request.sources)
+        plan = _plan(run.run_id, run.request_digest, request.task_kind, request.sources)
         runtime = BoundedAgentRunRuntime(
             store=self._runs,
             authority=_RequestAuthority(run.subject_id, run.scope_ref, snapshot),
@@ -144,21 +144,23 @@ class _MarkdownToolExecutor:
         return ToolResult(ToolResultStatus.SUCCEEDED, "report_created", artifact)
 
 
-def _plan(request_digest: str, task_kind: str, sources: tuple[ReportSource, ...]) -> BoundedAgentRunPlan:
+def _plan(run_id: str, request_digest: str, task_kind: str, sources: tuple[ReportSource, ...]) -> BoundedAgentRunPlan:
+    # SQLite step IDs are global keys. Keep IDs stable for replay and distinct across runs.
+    run_digest = _digest(run_id)
     source_material = "|".join(
         f"{item.source_id}:{item.revision}:{_digest(item.content)}" for item in sources
     )
     return BoundedAgentRunPlan(
         request_digest=request_digest,
-        plan_step_id="step-plan-001",
+        plan_step_id=f"step-plan-{run_digest}",
         tool_calls=(
             RuntimeToolCall(
-                "step-report-001",
+                f"step-report-{run_digest}",
                 "create_report_artifact",
                 _digest(f"{task_kind}|{source_material}"),
             ),
         ),
-        finalize_step_id="step-finalize-001",
+        finalize_step_id=f"step-finalize-{run_digest}",
         finalize_digest=_digest(f"finalize|{task_kind}|{source_material}"),
     )
 

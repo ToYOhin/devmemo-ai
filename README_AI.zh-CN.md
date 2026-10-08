@@ -101,6 +101,9 @@ Memos visibility mapping、受控灰度和已验证回滚路径时，才可设�
 
 ## 实验性 Evidence Answer Agent
 
+已有兼容核心 EXE 时，使用[原生 Agent 演示](docs/native-agent-demo.zh-CN.md)组合 Python
+sidecar、独立合成数据和 HTTP 检查，无需 Docker 或真实 Provider。
+
 只读 Evidence Answer 默认关闭。显式配置后，浏览器只访问经过认证的 Memos BFF
 `POST /api/ai/agent/answer`；Memos 计算当前调用者可见 Memo 范围，再用短时、purpose
 隔离的 HMAC 请求委托给 AI Service。浏览器不会获得委托 secret，也不能自行提交可见范围。

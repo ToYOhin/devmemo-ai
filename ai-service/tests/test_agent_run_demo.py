@@ -28,12 +28,12 @@ SOURCES = (
 )
 
 
-def _create_run(database, task_kind="project_summary") -> dict[str, object]:
-    return AgentRunAPI(database, utc_now=lambda: NOW, run_id_factory=lambda: "run-demo-001").create(
+def _create_run(database, task_kind="project_summary", *, run_id="run-demo-001", request_key="request-demo-001") -> dict[str, object]:
+    return AgentRunAPI(database, utc_now=lambda: NOW, run_id_factory=lambda: run_id).create(
         AgentRunCreateRequest(
             subject_id="user-17",
             scope_ref="scope-demo-001",
-            request_key="request-demo-001",
+            request_key=request_key,
             request_digest=hashlib.sha256(task_kind.encode()).hexdigest(),
             source_snapshot=(SourceRevision("memo-616263", "rev-1700000000"),),
         )
@@ -72,6 +72,29 @@ def test_demo_executor_is_idempotent_after_terminal_checkpoint(tmp_path) -> None
     assert replay.run == first.run
     assert replay.artifacts == first.artifacts
     assert SQLiteAgentRunStore(database).load_snapshot("run-demo-001") == replay
+
+
+def test_demo_executor_supports_multiple_reports_in_one_database(tmp_path) -> None:
+    database = tmp_path / "agent-runs.db"
+    executor = AgentRunDemoExecutor(database, utc_now=lambda: NOW)
+    results = []
+    for index in (1, 2):
+        run_id = f"run-demo-{index:03}"
+        _create_run(database, run_id=run_id, request_key=f"request-demo-{index:03}")
+        result = asyncio.run(executor.execute(AgentRunDemoRequest("user-17", run_id, "project_summary", SOURCES)))
+        assert result.run.status is RunStatus.SUCCEEDED
+        assert len(result.artifacts) == 1
+        results.append(result)
+
+    first_ids = {step.step_id for step in results[0].steps}
+    second_ids = {step.step_id for step in results[1].steps}
+    assert first_ids.isdisjoint(second_ids)
+    assert results[0].artifacts[0].artifact_id != results[1].artifacts[0].artifact_id
+    store = SQLiteAgentRunStore(database)
+    for result in results:
+        assert store.load_snapshot(result.run.run_id) == result
+    replay = asyncio.run(executor.execute(AgentRunDemoRequest("user-17", "run-demo-001", "project_summary", SOURCES)))
+    assert replay == results[0]
 
 
 def test_demo_executor_rejects_task_or_subject_mismatch(tmp_path) -> None:

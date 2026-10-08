@@ -134,6 +134,16 @@ docker pull ghcr.io/toyohin/devmemo-ai:stable
 
 ## 运行本地 Agent 演示
 
+已有兼容便携 EXE 和 Python 环境时，可直接运行原生演示，无需 Docker 或重新构建：
+
+```powershell
+.\scripts\start-agent-demo-native.ps1 -MemosExe .\build\DevMemoAI.exe
+```
+
+脚本创建独立合成数据，验证设置、带引用回答、连续项目报告和标记回退，打印地址及合成登录信息。
+加 `-VerifyOnly` 完成 25 项 HTTP 检查后自动停止；详情及 UI 验证边界见
+[原生演示指南](docs/native-agent-demo.zh-CN.md)。
+
 源码构建演示需要 Docker Desktop、Node.js 24 或更高版本，以及 pnpm 11。在仓库根目录运行：
 
 ```powershell

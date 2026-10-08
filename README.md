@@ -165,6 +165,18 @@ Releases](https://github.com/ToYOhin/devmemo-ai/releases).
 
 ## Run the local Agent demo
 
+With a compatible portable executable and Python environment, run the native demo without
+Docker or rebuilding:
+
+```powershell
+.\scripts\start-agent-demo-native.ps1 -MemosExe .\build\DevMemoAI.exe
+```
+
+It creates isolated synthetic data, verifies settings, cited answers, consecutive reports,
+and marked fallback, then prints the URL and synthetic login. Add `-VerifyOnly` to perform
+25 HTTP checks and stop automatically. See the [native demo guide](docs/native-agent-demo.md)
+for prerequisites and UI evidence boundaries.
+
 The source-build demo requires Docker Desktop, Node.js 24 or later, and pnpm
 11. From the repository root, run:
 
