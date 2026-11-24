@@ -43,7 +43,7 @@
     "fuse.js": "^7.3.0",
     "highlight.js": "^11.11.1",
     "html-to-image": "^1.11.13",
-    "i18next": "^26.0.10",
+    "i18next": "^26.3.4",
     "katex": "^0.18.2",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
